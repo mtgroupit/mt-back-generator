@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Lisss13/french-back-template/generator/models"
+	"github.com/mtgroupit/mt-back-generator/french-back-template/generator/models"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"

@@ -1,4 +1,4 @@
-module github.com/Lisss13/french-back-template/generator
+module github.com/mtgroupit/mt-back-generator/french-back-template/generator
 
 go 1.14
 

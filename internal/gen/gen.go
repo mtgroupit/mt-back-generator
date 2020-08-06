@@ -9,9 +9,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/Lisss13/french-back-template/generator/internal/parser"
+	"github.com/mtgroupit/mt-back-generator/french-back-template/generator/internal/parser"
 
-	"github.com/Lisss13/french-back-template/generator/models"
+	"github.com/mtgroupit/mt-back-generator/french-back-template/generator/models"
 )
 
 var goTmplFuncs = template.FuncMap{
