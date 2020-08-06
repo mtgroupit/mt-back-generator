@@ -1,0 +1,13 @@
+FROM ubuntu
+
+WORKDIR /app/cmd/main/migration
+
+ADD /migration/*.sql .
+
+WORKDIR /app/cmd/main
+
+ADD /bin/main .
+
+EXPOSE 5432
+
+CMD ["./main"]

@@ -1,0 +1,90 @@
+swagger: "2.0"
+info:
+  description: {{ .Description }}
+  title: {{.Name}}
+  version: 1.0.0
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.Methods}}
+  /{{$modelName}}/{{$method}}:    
+    {{index $model.HTTPMethods $i}}:
+      operationId: {{$method}}{{$model.TitleName}}
+      parameters:
+        - name: body
+          in: body
+          schema: {{if or (eq $method "list") (eq $method "filter")}} {{if eq $method "list"}}
+            $ref: "#/definitions/listParams" {{else}}
+            type: array
+            items:
+              $ref: "#/definitions/filterParams" {{end}}{{else}}
+            $ref: "#/definitions/{{$modelName}}" {{end}}
+      responses:        {{if eq $method "delete"}}
+        204:
+          description: Deleted        {{else}}{{if eq $method "add"}}
+        201:
+          description: Created        {{else}}
+        200:
+          description: OK        {{end}}{{end}}        {{if or (eq $method "list") (eq $method "filter") (eq $method "get")}}
+          schema:          {{if or (eq $method "list") (eq $method "filter")}}
+            type: array
+            items:          {{end}}
+              $ref: "#/definitions/{{$modelName}}" {{end}}{{end}} {{range $funcName, $func := $.Functions}}
+  /{{$modelName}}/{{$funcName}}:
+    post:
+      operationId: {{$modelName}}{{$funcName}}
+      parameters:
+        - name: body
+          in: body
+          schema:                      
+            $ref: "#/definitions/{{$funcName}}Params"                      
+      responses:        
+        200:
+          description: OK                
+          schema:             
+            $ref: "#/definitions/{{$funcName}}Params" {{end}}{{end}}
+definitions:  {{range $modelName, $model := $.Models}}  
+  {{$modelName}}:
+    type: object
+    description: {{.Description}}
+    properties:      {{range $name, $options := $model.Columns}} {{if $options.IsStruct}}{{if $options.IsArray}}  
+      {{$name}}:
+        type: array
+        items:
+          $ref: "#/definitions/{{$options.Type}}"{{else}}            
+      {{$name}}:
+        $ref: "#/definitions/{{$options.Type}}"{{end}} {{else}}
+      {{$name}}:
+        type: {{$options.Type}} {{if $options.Format}}
+        format: {{$options.Format}}{{end}}{{if .Length}}
+        maxLength: {{.Length}}{{end}}{{if .Default}}
+        default: {{.Default}}{{end}}{{end}}{{end}}{{end}} {{if .HaveListMethod}}
+  listParams:
+    type: object
+    description: params for list method
+    properties:
+      limit:
+        type: integer
+        default: 10
+      offset:
+        type: integer
+        default: 1  {{end}}  {{if .HaveFilterMethod}}
+  filterParams:
+    type: object
+    description: params for filter method
+    properties:
+      include:
+        type: boolean
+      key:
+        type: string
+      value:
+        type: string  {{end}} {{range $funcName, $func := $.Functions}}  
+  {{$funcName}}Params:
+    type: object
+    description: params for {{$funcName}} method
+    properties: {{range $param, $paramType := $func.In}}
+      {{$param}}:
+        type: {{$paramType}} {{end}} {{range $param, $paramType := $func.Out}}
+      {{$param}}:
+        type: {{$paramType}} {{end}}{{end}}

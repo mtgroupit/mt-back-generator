@@ -1,0 +1,31 @@
+GOCMD=go
+GOBUILD=$(GOCMD) build
+BINARY_NAME=./bin/main
+
+DB_CONTAINER_NAME=test-postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=test
+
+DOCKER_IMAGE_NAME={{ToLower .Name}}_service
+DOCKER_CONTAINER_NAME={{ToLower .Name}}
+
+PORT=8080
+
+build:
+	$(GOBUILD) -o $(BINARY_NAME) ./cmd/main
+
+start: 
+	MSRV_PORT=$(PORT) MSRV_DB_USER=$(POSTGRES_USER) MSRV_DB_PASS=$(POSTGRES_PASSWORD) MSRV_DB_NAME=$(POSTGRES_DB) $(BINARY_NAME)
+
+db_start:
+	docker run --name $(DB_CONTAINER_NAME) -e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) -e POSTGRES_DB=$(POSTGRES_DB) -d -p 5432:5432 --rm postgres
+
+db_stop:
+	docker stop $(DB_CONTAINER_NAME)
+
+start_docker:
+	docker build -t $(DOCKER_IMAGE_NAME) .
+
+	MSRV_DB_USER=$(POSTGRES_USER) MSRV_DB_PASS=$(POSTGRES_PASSWORD) MSRV_DB_NAME=$(POSTGRES_DB) \
+		docker run --rm -it -e MSRV_DB_USER -e MSRV_DB_PASS -e MSRV_DB_NAME --network=host $(DOCKER_IMAGE_NAME)
