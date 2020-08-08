@@ -81,12 +81,8 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 
 		psql := []models.PsqlParams{}
 		for column, options := range model.Columns {
-
 			if options.IsStruct, options.IsArray, options.GoType, err = checkColumn(options.Type, cfg); err != nil {
 				return
-			}
-			if options.IsArray {
-				model.LenParams--
 			}
 
 			if options.Format == "date-time" {
@@ -175,8 +171,8 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 
 			psql = append(psql, pp)
 		}
+		psql[len(psql)-1].Last = true
 		model.Psql = psql
-		model.LenParams = len(psql) - 1
 
 		var sqlSelect, sqlAdd, sqlEdit, sqlExexParams, countFields []string
 		count := 1

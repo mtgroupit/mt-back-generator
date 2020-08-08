@@ -1,7 +1,7 @@
 {{$MaxDeepNesting:=.MaxDeepNesting}}-- +goose Up{{range $i := Iterate $MaxDeepNesting}}{{range $modelName, $model := $.Models}}{{if eq $model.DeepNesting $i}}
 CREATE TABLE {{$modelName}}s
-({{range $i, $psqlParams := $model.Psql}}{{if not $psqlParams.IsArray}}
-    {{$psqlParams.SqlName}} {{$psqlParams.TypeSql}}{{if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}{{if $psqlParams.Unique}} UNIQUE{{end}}{{if $psqlParams.IsStruct}}  REFERENCES {{$psqlParams.Type}}s({{$psqlParams.FK}}){{end}}{{if ne $model.LenParams $i}},{{end}}{{end}}{{end}}
+({{range $j, $psqlParams := $model.Psql}}{{if not $psqlParams.IsArray}}
+    {{$psqlParams.SqlName}} {{$psqlParams.TypeSql}}{{if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}{{if $psqlParams.Unique}} UNIQUE{{end}}{{if $psqlParams.IsStruct}}  REFERENCES {{$psqlParams.Type}}s({{$psqlParams.FK}}){{end}}{{if not $psqlParams.Last}},{{end}}{{end}}{{end}}
 );{{end}}{{end}}{{end}}
 {{range $i, $et := $.ExtraTables}}
 CREATE TABLE {{$et.Name}}

@@ -24,6 +24,7 @@ type PsqlParams struct {
 	IsArray  bool
 	IsStruct bool
 	FK       string
+	Last     bool
 }
 
 //Bind binds tables for deleting
@@ -39,7 +40,6 @@ type Model struct {
 	Columns     map[string]Options
 	Fields      map[string]string
 	Psql        []PsqlParams
-	LenParams   int
 	// HaveReferences  bool
 	DeepNesting     int
 	HaveLazyLoading bool
