@@ -50,9 +50,11 @@ type Model struct {
 	FirstLetter     string
 	TitleName       string
 
-	Binds       []Bind
-	Methods     []string
-	HTTPMethods []string
+	Binds               []Bind
+	Methods             []string
+	HTTPMethods         []string
+	SqlSelectListStrs   []string
+	NeedListLazyLoading []bool
 }
 
 // Function contain input and output params

@@ -70,7 +70,7 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 			}
 			httpMethods = append(httpMethods, httpMethod)
 
-			if method == "list" {
+			if method == "list" || IsCustomList(method) {
 				cfg.HaveListMethod = true
 			}
 			if method == "filter" {
@@ -206,6 +206,56 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 		model.SqlEditStr = strings.Join(sqlEdit, ", ")
 		model.SqlExecParams = strings.Join(sqlExexParams, ", ")
 
+		var selectStrs []string
+		var needListLazyLoadingSlice []bool
+		for i, method := range model.Methods {
+			var sqlSelect []string
+			var needListLazyLoading bool
+			if IsCustomList(method) {
+				var fields []string
+				fields, err = extractFields(method)
+				if err != nil {
+					return
+				}
+				for i := range fields {
+					var haveFieldInColumns bool
+					for column := range model.Columns {
+						if column == fields[i] {
+							haveFieldInColumns = true
+						}
+					}
+					if !haveFieldInColumns {
+						err = errors.Errorf(`model "%s" not contain "%s" column for method "%s"`, name, fields[i], method)
+						return
+					}
+
+					if fields[i] == "id" {
+						fields[i] = strings.ToUpper(fields[i])
+					} else {
+						fields[i] = strings.Title(fields[i])
+					}
+
+					for column, options := range model.Columns {
+						if fields[i] == options.TitleName {
+							if !options.IsStruct {
+								sqlSelect = append(sqlSelect, string(name[0])+"_"+column)
+							} else {
+								needListLazyLoading = true
+								if !options.IsArray {
+									sqlSelect = append(sqlSelect, "COALESCE("+strings.ToLower(options.TitleName)+"_id, 0) AS "+strings.ToLower(options.TitleName)+"_id")
+								}
+							}
+						}
+					}
+				}
+				model.Methods[i] = "list" + strings.Join(fields, "")
+			}
+			selectStrs = append(selectStrs, strings.Join(sqlSelect, ", "))
+			needListLazyLoadingSlice = append(needListLazyLoadingSlice, needListLazyLoading)
+		}
+		model.SqlSelectListStrs = selectStrs
+		model.NeedListLazyLoading = needListLazyLoadingSlice
+
 		cfg.Models[name] = model
 	}
 	for name, model := range cfg.Models {
@@ -310,4 +360,24 @@ func Titleize(cfg *models.Config) {
 		titleModels[strings.Title(modelName)] = model
 	}
 	cfg.Models = titleModels
+}
+
+func IsCustomList(method string) bool {
+	if strings.HasPrefix(strings.ToLower(method), "list") && len(method) > 4 {
+		return true
+	}
+	return false
+}
+func extractFields(method string) ([]string, error) {
+	reg, err := regexp.Compile("[^a-zA-Z0-9]+")
+	if err != nil {
+		return nil, err
+	}
+	var fields []string
+	for _, field := range reg.Split(method, -1)[1:] {
+		if field != "" {
+			fields = append(fields, field)
+		}
+	}
+	return fields, nil
 }

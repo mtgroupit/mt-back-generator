@@ -144,18 +144,42 @@ func (a *App) Close() {
 	return nil
 }{{end}}
 
-{{if eq $method "List"}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64) ([]*app.{{$modelName}}, error) { 
+{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64) ([]*app.{{$modelName}}, error) { 
 	ms := []{{$modelName}}{}
-	if err := a.db.Select(&ms, `SELECT {{$model.SqlSelectStr}} FROM {{$modelName}}s OFFSET $1 LIMIT $2`, offset, limit); err != nil {
+	if err := a.db.Select(&ms, `SELECT {{if  (IsCustomList $method)}}{{index $model.SqlSelectListStrs $i}}{{else}}{{$model.SqlSelectStr}}{{end}} FROM {{$modelName}}s OFFSET $1 LIMIT $2`, offset, limit); err != nil {
 		return nil, err
-	}{{if $model.HaveLazyLoading}}
+	}{{if $model.HaveLazyLoading}}{{if  (IsCustomList $method)}}{{if (index $model.NeedListLazyLoading $i)}}
+	for i := range ms {
+		if err := ms[i].LazyLoading{{$method}}(a); err != nil {
+			return nil, err
+		}
+	}{{end}}{{else}}
 	for i := range ms {
 		if err := ms[i].LazyLoading(a); err != nil {
 			return nil, err
 		}
-	}{{end}}
+	}{{end}}{{end}}
 	return app{{$modelName}}s(ms), nil
 }{{end}}
+{{if and (IsCustomList $method) (index $model.NeedListLazyLoading $i)}}
+func (m *{{$modelName}}) LazyLoading{{$method}}(a *App) error { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if and (eq $modelName2 $options.GoType) (HaveField $method $modelName2)}}{{if  $options.IsArray}}
+	slice{{$options.TitleName}} := []{{$modelName}}{{$options.GoType}}{}
+	if err := a.db.Select(&slice{{$options.TitleName}}, `SELECT * FROM {{$modelName}}_{{$options.TitleName}} WHERE {{$modelName}}_id=$1`, m.ID); err != nil {
+		return err
+	}
+	for _, cd := range slice{{$options.TitleName}} {
+		var {{$column}} {{$options.GoType}}
+		if err := a.db.Get(&{{$column}}, `SELECT {{$model2.SqlSelectStr}} FROM {{$options.GoType}}s WHERE {{$model2.FirstLetter}}_id=$1`, cd.{{$options.GoType}}ID); err != nil {
+			return err
+		}
+		m.{{$options.TitleName}} = append(m.{{$options.TitleName}}, {{$column}})
+	}{{else}}
+	if err := a.db.Get(&m.{{$options.TitleName}}, `SELECT {{$model2.SqlSelectStr}} FROM {{$modelName2}}s WHERE {{$model2.FirstLetter}}_id=$1`, m.{{$options.TitleName}}ID); err != nil {
+		return err
+	}{{end}}{{end}}{{end}}{{end}}
+	return nil
+}
+{{end}}
 {{if eq $method "Filter"}}func (a *App) {{$method}}{{$modelName}}(filters []*app.Filter) ([]*app.{{$modelName}}, error) { 
 	ms := []{{$modelName}}{}
 	if err := a.db.Select(&ms, `SELECT {{$model.SqlSelectStr}} FROM {{$modelName}}s`); err != nil {
@@ -215,7 +239,7 @@ func (a *App) Close() {
 
 	return app{{$modelName}}s(res), nil
 }{{end}}
-{{if  and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (ne $method "Filter")}}
+{{if  and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (ne $method "Filter")  (not (IsCustomList $method))}}
 func (a *App) {{$method}}{{$modelName}}(m *app.{{$modelName}}) error {
 	return nil
 }{{end}}

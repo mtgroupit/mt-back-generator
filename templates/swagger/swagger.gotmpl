@@ -14,7 +14,7 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
       parameters:
         - name: body
           in: body
-          schema: {{if or (eq $method "list") (eq $method "filter")}} {{if eq $method "list"}}
+          schema: {{if or (eq $method "list") (eq $method "filter") (IsCustomList $method)}} {{if or (eq $method "list") (IsCustomList $method)}}
             $ref: "#/definitions/listParams" {{else}}
             type: array
             items:
@@ -26,8 +26,8 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
         201:
           description: Created        {{else}}
         200:
-          description: OK        {{end}}{{end}}        {{if or (eq $method "list") (eq $method "filter") (eq $method "get")}}
-          schema:          {{if or (eq $method "list") (eq $method "filter")}}
+          description: OK        {{end}}{{end}}        {{if or (eq $method "list") (eq $method "filter") (IsCustomList $method) (eq $method "get")}}
+          schema:          {{if or (eq $method "list") (eq $method "filter") (IsCustomList $method)}}
             type: array
             items:          {{end}}
               $ref: "#/definitions/{{$modelName}}" {{end}}{{end}} {{range $funcName, $func := $.Functions}}

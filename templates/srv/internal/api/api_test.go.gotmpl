@@ -129,7 +129,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 		t.Nil(err)
 	}){{end}}
 
-	{{if eq $method "List"}}
+	{{if or (eq $method "List") (IsCustomList $method)}}
 	params.Body = test{{$method}}
 	mockApp.EXPECT().{{$method}}{{$modelName}}(*params.Body.Offset, *params.Body.Limit).Return(app{{$modelName}}s(test{{$modelName}}s), nil)
 
@@ -149,7 +149,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 		t.Nil(err)
 		t.DeepEqual(list.Payload, test{{$modelName}}s)
 	}){{end}}
-	{{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (ne $method "Filter")}}
+	{{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (ne $method "Filter")  (not (IsCustomList $method))}}
 	params.Body = test{{$modelName}}1
 	mockApp.EXPECT().{{$method}}{{$modelName}}(app{{$modelName}}(test{{$modelName}}1)).Return(nil)
 

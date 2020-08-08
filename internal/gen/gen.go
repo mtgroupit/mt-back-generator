@@ -42,6 +42,10 @@ var goTmplFuncs = template.FuncMap{
 	"ToLower": func(in string) string {
 		return strings.ToLower(in)
 	},
+	"IsCustomList": parser.IsCustomList,
+	"HaveField": func(method, modelName string) bool {
+		return strings.Contains(method, modelName)
+	},
 }
 
 // Srv - generate dir with service
@@ -105,7 +109,7 @@ func gen(dirTMPL, dirTarget string, cfg models.Config) error {
 
 // swagger generate swagger.yaml file in dir directory
 func swagger(dir string, cfg models.Config) error {
-	tmp, err := template.ParseFiles("./templates/swagger/swagger.gotmpl")
+	tmp, err := template.New("swagger.gotmpl").Funcs(goTmplFuncs).ParseFiles("./templates/swagger/swagger.gotmpl")
 	if err != nil {
 		return err
 	}

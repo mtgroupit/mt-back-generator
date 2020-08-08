@@ -57,7 +57,7 @@ func Test{{$method}}{{$modelName}}Smoke(tt *testing.T) {
 	addTestData(t)
 	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID, test{{$modelName}}2)){{end}}
 
-	{{if eq $method "List"}}	
+	{{if or (eq $method "List") (IsCustomList $method)}}	
 	list, err := testApp.{{$method}}{{$modelName}}(offset, limit)
 	t.Nil(err)
 	t.DeepEqual(list, test{{$modelName}}s){{end}}
@@ -65,7 +65,7 @@ func Test{{$method}}{{$modelName}}Smoke(tt *testing.T) {
 	list, err := testApp.{{$method}}{{$modelName}}(filters)
 	t.Nil(err)
 	t.DeepEqual(list, []*app.{{$modelName}}{test{{$modelName}}1}){{end}}
-	{{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (ne $method "Filter")}}
+	{{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (ne $method "Filter")  (not (IsCustomList $method))}}
 	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1)){{end}}
 
 	t.Nil(testApp.truncate())
