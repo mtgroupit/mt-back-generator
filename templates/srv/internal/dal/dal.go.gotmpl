@@ -146,9 +146,9 @@ func (a *App) Close() {
 
 {{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64) ([]*app.{{$modelName}}, error) { 
 	ms := []{{$modelName}}{}
-	if err := a.db.Select(&ms, `SELECT {{if  (IsCustomList $method)}}{{index $model.SqlSelectListStrs $i}}{{else}}{{$model.SqlSelectStr}}{{end}} FROM {{$modelName}}s OFFSET $1 LIMIT $2`, offset, limit); err != nil {
+	if err := a.db.Select(&ms, `SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSqlSelect}}{{else}}{{$model.SqlSelectStr}}{{end}} FROM {{$modelName}}s OFFSET $1 LIMIT $2`, offset, limit); err != nil {
 		return nil, err
-	}{{if $model.HaveLazyLoading}}{{if  (IsCustomList $method)}}{{if (index $model.NeedListLazyLoading $i)}}
+	}{{if $model.HaveLazyLoading}}{{if  (IsCustomList $method)}}{{if ((index $model.MethodsProps $i).NeedLazyLoading)}}
 	for i := range ms {
 		if err := ms[i].LazyLoading{{$method}}(a); err != nil {
 			return nil, err
@@ -161,25 +161,32 @@ func (a *App) Close() {
 	}{{end}}{{end}}
 	return app{{$modelName}}s(ms), nil
 }{{end}}
-{{if and (IsCustomList $method) (index $model.NeedListLazyLoading $i)}}
-func (m *{{$modelName}}) LazyLoading{{$method}}(a *App) error { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if and (eq $modelName2 $options.GoType) (HaveField $method $modelName2)}}{{if  $options.IsArray}}
-	slice{{$options.TitleName}} := []{{$modelName}}{{$options.GoType}}{}
-	if err := a.db.Select(&slice{{$options.TitleName}}, `SELECT * FROM {{$modelName}}_{{$options.TitleName}} WHERE {{$modelName}}_id=$1`, m.ID); err != nil {
+{{if and (IsCustomList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}{{range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
+func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}) LazyLoading{{$method}}{{$nestedObj.Path}}(a *App) error { {{$model2 := (index $.Models $nestedObj.Name)}}{{$options := (index $model2.Columns (LowerTitle $nestedObj.Name))}}{{if  $nestedObj.IsArray}}
+	slice{{$options.TitleName}} := []{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}{{$nestedObj.Type}}{}
+	if err := a.db.Select(&slice{{$options.TitleName}}, `SELECT * FROM {{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}_{{$nestedObj.Name}} WHERE {{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}_id=$1`, m.ID); err != nil {
 		return err
 	}
 	for _, cd := range slice{{$options.TitleName}} {
-		var {{$column}} {{$options.GoType}}
-		if err := a.db.Get(&{{$column}}, `SELECT {{$model2.SqlSelectStr}} FROM {{$options.GoType}}s WHERE {{$model2.FirstLetter}}_id=$1`, cd.{{$options.GoType}}ID); err != nil {
+		var elem {{$nestedObj.Type}}
+		if err := a.db.Get(&elem, `SELECT {{$nestedObj.SqlSelect}} FROM {{$nestedObj.Type}}s WHERE {{$nestedObj.FirstLetter}}_id=$1`, cd. {{$nestedObj.Type}}ID); err != nil {
 			return err
 		}
-		m.{{$options.TitleName}} = append(m.{{$options.TitleName}}, {{$column}})
+		{{if $nestedObj.NeedLazyLoading}}
+		if err := elem.LazyLoading{{$method}}{{$nestedObj.Path}}{{$nestedObj.Name}}(a); err != nil {
+			return err
+		}{{end}}
+		m.{{$nestedObj.Name}} = append(m.{{$nestedObj.Name}}, elem)
 	}{{else}}
-	if err := a.db.Get(&m.{{$options.TitleName}}, `SELECT {{$model2.SqlSelectStr}} FROM {{$modelName2}}s WHERE {{$model2.FirstLetter}}_id=$1`, m.{{$options.TitleName}}ID); err != nil {
+	if err := a.db.Get(&m.{{$nestedObj.Name}}, `SELECT {{$nestedObj.SqlSelect}} FROM {{$nestedObj.Type}}s WHERE {{$nestedObj.FirstLetter}}_id=$1`, m.{{$nestedObj.Name}}ID); err != nil {
 		return err
-	}{{end}}{{end}}{{end}}{{end}}
+	}{{if $nestedObj.NeedLazyLoading}}
+	if err := m.{{$nestedObj.Name}}.LazyLoading{{$method}}{{$nestedObj.Name}}(a); err != nil {
+		return err
+	}{{end}}{{end}}
 	return nil
 }
-{{end}}
+{{end}}{{end}}
 {{if eq $method "Filter"}}func (a *App) {{$method}}{{$modelName}}(filters []*app.Filter) ([]*app.{{$modelName}}, error) { 
 	ms := []{{$modelName}}{}
 	if err := a.db.Select(&ms, `SELECT {{$model.SqlSelectStr}} FROM {{$modelName}}s`); err != nil {

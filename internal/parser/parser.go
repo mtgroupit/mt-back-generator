@@ -57,18 +57,18 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 		model.FirstLetter = string(name[0])
 		model.TitleName = strings.Title(name)
 
-		var httpMethods []string
+		var props []models.MethodProps
 		for _, method := range model.Methods {
-			var httpMethod string
+			var prop models.MethodProps
 			switch method {
 			case "edit":
-				httpMethod = "put"
+				prop.HTTPMethod = "put"
 			case "delete":
-				httpMethod = "delete"
+				prop.HTTPMethod = "delete"
 			default:
-				httpMethod = "post"
+				prop.HTTPMethod = "post"
 			}
-			httpMethods = append(httpMethods, httpMethod)
+			props = append(props, prop)
 
 			if method == "list" || IsCustomList(method) {
 				cfg.HaveListMethod = true
@@ -77,7 +77,7 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 				cfg.HaveFilterMethod = true
 			}
 		}
-		model.HTTPMethods = httpMethods
+		model.MethodsProps = props
 
 		psql := []models.PsqlParams{}
 		for column, options := range model.Columns {
@@ -202,56 +202,6 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 		model.SqlEditStr = strings.Join(sqlEdit, ", ")
 		model.SqlExecParams = strings.Join(sqlExexParams, ", ")
 
-		var selectStrs []string
-		var needListLazyLoadingSlice []bool
-		for i, method := range model.Methods {
-			var sqlSelect []string
-			var needListLazyLoading bool
-			if IsCustomList(method) {
-				var fields []string
-				fields, err = extractFields(method)
-				if err != nil {
-					return
-				}
-				for i := range fields {
-					var haveFieldInColumns bool
-					for column := range model.Columns {
-						if column == fields[i] {
-							haveFieldInColumns = true
-						}
-					}
-					if !haveFieldInColumns {
-						err = errors.Errorf(`model "%s" not contain "%s" column for method "%s"`, name, fields[i], method)
-						return
-					}
-
-					if fields[i] == "id" {
-						fields[i] = strings.ToUpper(fields[i])
-					} else {
-						fields[i] = strings.Title(fields[i])
-					}
-
-					for column, options := range model.Columns {
-						if fields[i] == options.TitleName {
-							if !options.IsStruct {
-								sqlSelect = append(sqlSelect, string(name[0])+"_"+column)
-							} else {
-								needListLazyLoading = true
-								if !options.IsArray {
-									sqlSelect = append(sqlSelect, "COALESCE("+strings.ToLower(options.TitleName)+"_id, 0) AS "+strings.ToLower(options.TitleName)+"_id")
-								}
-							}
-						}
-					}
-				}
-				model.Methods[i] = "list" + strings.Join(fields, "")
-			}
-			selectStrs = append(selectStrs, strings.Join(sqlSelect, ", "))
-			needListLazyLoadingSlice = append(needListLazyLoadingSlice, needListLazyLoading)
-		}
-		model.SqlSelectListStrs = selectStrs
-		model.NeedListLazyLoading = needListLazyLoadingSlice
-
 		cfg.Models[name] = model
 	}
 	for name, model := range cfg.Models {
@@ -261,6 +211,11 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 				break
 			}
 		}
+
+		if err = handleCustomLists(cfg.Models, &model, name); err != nil {
+			return
+		}
+
 		cfg.Models[name] = model
 	}
 
@@ -359,21 +314,209 @@ func Titleize(cfg *models.Config) {
 }
 
 func IsCustomList(method string) bool {
-	if strings.HasPrefix(strings.ToLower(method), "list") && len(method) > 4 {
-		return true
-	}
-	return false
+	return regexp.MustCompile(`^list\(.+\)$`).Match([]byte(method))
 }
-func extractFields(method string) ([]string, error) {
-	reg, err := regexp.Compile("[^a-zA-Z0-9]+")
-	if err != nil {
-		return nil, err
-	}
-	var fields []string
-	for _, field := range reg.Split(method, -1)[1:] {
-		if field != "" {
-			fields = append(fields, field)
+func expandStrNestedFields(method string) (string, string) {
+	pattern := regexp.MustCompile(`^[a-zA-Z0-9]+\((?P<value>.+)\)$`)
+	result := []byte{}
+	template := "$value"
+	result = pattern.ExpandString(result, template, method, pattern.FindSubmatchIndex([]byte(method)))
+
+	return regexp.MustCompile("[^a-zA-Z0-9]").Split(method, 2)[0], string(result)
+}
+func splitFields(fields string) []string {
+	var result []string
+	for {
+		fields = strings.Trim(fields, ", ")
+		if strings.Index(fields, ",") >= 0 {
+			if strings.Index(fields, ",") < strings.Index(fields, "(") || strings.Index(fields, "(") == -1 {
+				substrs := regexp.MustCompile("[^a-zA-Z0-9]+").Split(fields, 2)
+				result = append(result, substrs[0])
+				fields = substrs[1]
+			} else {
+				counter := 0
+				var endBracket int
+				for i, symb := range []rune(fields) {
+					switch symb {
+					case []rune("(")[0]:
+						counter++
+					case []rune(")")[0]:
+						counter--
+						if counter == 0 {
+							endBracket = i
+						}
+					}
+					if counter == 0 && i > strings.Index(fields, "(") {
+						break
+					}
+				}
+				result = append(result, fields[:endBracket+1])
+				fields = fields[endBracket+1:]
+			}
+		} else {
+			if fields != "" {
+				result = append(result, fields)
+			}
+			break
 		}
 	}
-	return fields, nil
+	return result
+}
+func trimFieldsSuffix(fields []string) (out []string) {
+	for i := range fields {
+		out = append(out, regexp.MustCompile("[^a-zA-Z0-9]").Split(fields[i], 2)[0])
+	}
+	return
+}
+func isStruct(method string) bool {
+	return regexp.MustCompile(`^[a-zA-Z0-9]+\(.+\)$`).Match([]byte(method))
+}
+func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting, parent string, isArray bool) ([]models.NestedObjProps, error) {
+	objs := []models.NestedObjProps{}
+	obj := models.NestedObjProps{}
+
+	field, fieldsStr := expandStrNestedFields(elem)
+	fieldsFull := splitFields(fieldsStr)
+	fields := trimFieldsSuffix(fieldsFull)
+	sqlSelect := []string{}
+	haveID := false
+	haveArr := false
+	for i := range fields {
+		var haveFieldInColumns bool
+		var structModel string
+		for column, options := range modelsIn[modelName].Columns {
+			if column == fields[i] {
+				structModel = LowerTitle(options.GoType)
+				obj.Type = strings.Title(modelName)
+				obj.FirstLetter = string(modelName[0])
+				haveFieldInColumns = true
+				break
+			}
+		}
+		if !haveFieldInColumns {
+			return nil, errors.Errorf(`model "%s" not contain "%s" column for custom method`, modelName, fields[i])
+		}
+		if strings.ToLower(fields[i]) == "id" {
+			haveID = true
+		}
+
+		structIsArr := false
+		for column, options := range modelsIn[modelName].Columns {
+			if fields[i] == column {
+				if !options.IsStruct {
+					sqlSelect = append(sqlSelect, string(modelName[0])+"_"+column)
+				} else {
+					if !options.IsArray {
+						sqlSelect = append(sqlSelect, "COALESCE("+fields[i]+"_id, 0) AS "+fields[i]+"_id")
+					} else {
+						haveArr = true
+						structIsArr = true
+					}
+					obj.NeedLazyLoading = true
+				}
+			}
+		}
+
+		if isStruct(fieldsFull[i]) {
+			objsForAdd, err := handleNestedObjs(modelsIn, structModel, fieldsFull[i], nesting+strings.Title(field), strings.Title(modelName), structIsArr)
+			if err != nil {
+				return nil, err
+			}
+			objs = append(objs, objsForAdd...)
+		}
+
+	}
+	if !haveID && haveArr {
+		sqlSelect = append(sqlSelect, string(modelName[0])+"_id")
+	}
+	obj.SqlSelect = strings.Join(sqlSelect, ", ")
+	obj.Path = nesting
+	obj.ParentStruct = parent
+	obj.IsArray = isArray
+	obj.Name = strings.Title(field)
+
+	result := []models.NestedObjProps{}
+	result = append(result, obj)
+	if len(objs) > 0 {
+		result = append(result, objs...)
+	}
+	return result, nil
+}
+func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
+	result := *model
+	for i, method := range result.Methods {
+		if IsCustomList(method) {
+			var sqlSelect []string
+			_, fieldsStr := expandStrNestedFields(method)
+			fieldsFull := splitFields(fieldsStr)
+			fields := trimFieldsSuffix(fieldsFull)
+			haveID := false
+			haveArr := false
+			for j := range fields {
+				var haveFieldInColumns bool
+				var structModel string
+				for column, options := range result.Columns {
+					if column == fields[j] {
+						structModel = options.Type
+						haveFieldInColumns = true
+					}
+				}
+				if !haveFieldInColumns {
+					return errors.Errorf(`model "%s" not contain "%s" column for method "%s"`, modelName, fields[j], method)
+				}
+
+				if strings.ToLower(fields[j]) == "id" {
+					haveID = true
+					fields[j] = strings.ToUpper(fields[j])
+				} else {
+					fields[j] = strings.Title(fields[j])
+				}
+
+				structIsArr := false
+				for column, options := range result.Columns {
+					if fields[j] == options.TitleName {
+						if !options.IsStruct {
+							sqlSelect = append(sqlSelect, string(modelName[0])+"_"+column)
+						} else {
+							if !options.IsArray {
+								sqlSelect = append(sqlSelect, "COALESCE("+strings.ToLower(options.TitleName)+"_id, 0) AS "+strings.ToLower(options.TitleName)+"_id")
+							} else {
+								haveArr = true
+								structIsArr = true
+							}
+						}
+					}
+				}
+
+				if isStruct(fieldsFull[j]) {
+					result.MethodsProps[i].NeedLazyLoading = true
+
+					objsForAdd, err := handleNestedObjs(modelsMap, structModel, fieldsFull[j], "", strings.Title(modelName), structIsArr)
+					if err != nil {
+						return err
+					}
+					result.MethodsProps[i].NestedObjs = append(result.MethodsProps[i].NestedObjs, objsForAdd...)
+				}
+			}
+			result.Methods[i] = "list" + strings.Join(fields, "")
+			if !haveID && haveArr {
+				sqlSelect = append(sqlSelect, string(modelName[0])+"_id")
+			}
+			result.MethodsProps[i].CustomListSqlSelect = strings.Join(sqlSelect, ", ")
+			result.MethodsProps[i].IsCustomList = true
+		}
+	}
+	model = &result
+	return nil
+}
+
+func LowerTitle(in string) string {
+	switch len(in) {
+	case 0:
+		return ""
+	case 1:
+		return strings.ToLower(string(in))
+	default:
+		return strings.ToLower(string(in[0])) + string(in[1:])
+	}
 }

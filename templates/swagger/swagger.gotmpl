@@ -9,7 +9,7 @@ produces:
   - application/json
 paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.Methods}}
   /{{$modelName}}/{{$method}}:    
-    {{index $model.HTTPMethods $i}}:
+    {{(index $model.MethodsProps $i).HTTPMethod}}:
       operationId: {{$method}}{{$model.TitleName}}
       parameters:
         - name: body

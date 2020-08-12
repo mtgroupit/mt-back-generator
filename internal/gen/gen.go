@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -42,7 +43,12 @@ var goTmplFuncs = template.FuncMap{
 	"ToLower": func(in string) string {
 		return strings.ToLower(in)
 	},
-	"IsCustomList": parser.IsCustomList,
+	"LowerTitle": func(in string) string {
+		return strings.ToLower(string(in[0])) + string(in[1:])
+	},
+	"IsCustomList": func(method string) bool {
+		return regexp.MustCompile(`^(L|l)ist.+`).Match([]byte(method))
+	},
 	"HaveField": func(method, modelName string) bool {
 		return strings.Contains(method, modelName)
 	},
@@ -59,6 +65,7 @@ func Srv(dir string, cfg models.Config) error {
 	}
 
 	parser.Titleize(&cfg)
+
 	if err := gen("./templates/srv", path.Join(dir, "service"), cfg); err != nil {
 		return err
 	}

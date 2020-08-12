@@ -34,13 +34,33 @@ type Bind struct {
 	IsArray   bool
 }
 
+// NestedObjProps contains properties of nested objects for custom list method
+type NestedObjProps struct {
+	Name            string
+	Type            string
+	FirstLetter     string
+	SqlSelect       string
+	Path            string
+	ParentStruct    string
+	NeedLazyLoading bool
+	IsArray         bool
+}
+
+// MethodProps contains all additional informations for method
+type MethodProps struct {
+	HTTPMethod          string
+	IsCustomList        bool
+	NeedLazyLoading     bool
+	CustomListSqlSelect string
+	NestedObjs          []NestedObjProps
+}
+
 // Model - description one compoment of models
 type Model struct {
-	Description string
-	Columns     map[string]Options
-	Fields      map[string]string
-	Psql        []PsqlParams
-	// HaveReferences  bool
+	Description     string
+	Columns         map[string]Options
+	Fields          map[string]string
+	Psql            []PsqlParams
 	DeepNesting     int
 	HaveLazyLoading bool
 	SqlSelectStr    string
@@ -50,11 +70,9 @@ type Model struct {
 	FirstLetter     string
 	TitleName       string
 
-	Binds               []Bind
-	Methods             []string
-	HTTPMethods         []string
-	SqlSelectListStrs   []string
-	NeedListLazyLoading []bool
+	Binds        []Bind
+	Methods      []string
+	MethodsProps []MethodProps
 }
 
 // Function contain input and output params
