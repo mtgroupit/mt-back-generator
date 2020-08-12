@@ -12,9 +12,8 @@ type App interface {
 	{{if eq $method "Delete"}}{{$method}}{{$modelName}}(id int64) error{{end}}
     {{if eq $method "Edit"}}{{$method}}{{$modelName}}(id int64, m *{{$modelName}}) error{{end}}
 
-    {{if or (eq $method "List") (IsCustomList $method)}}{{$method}}{{$modelName}}(offset, limit int64) ([]*{{$modelName}}, error){{end}}
-    {{if eq $method "Filter"}}{{$method}}{{$modelName}}(filters []*Filter) ([]*{{$modelName}}, error){{end}}
-	{{if  and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (ne $method "Filter")  (not (IsCustomList $method))}}
+    {{if or (eq $method "List") (IsCustomList $method)}}{{$method}}{{$modelName}}(offset, limit int64, filters []*Filter) ([]*{{$modelName}}, error){{end}}
+	{{if  and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
 	{{$method}}{{$modelName}}(m *{{$modelName}}) error{{end}}
 	{{end}}{{end}}
 
@@ -28,7 +27,7 @@ type {{$modelName}} struct { {{range $name, $options := $model.Columns}}
 }
 {{end}}
 
-{{if .HaveFilterMethod}}
+{{if .HaveListMethod}}
 type Filter struct {
 	Key     string
 	Include bool
@@ -59,13 +58,10 @@ func New(a App) App {
 	return a.appl.{{$method}}{{$modelName}}(id, m)
 }{{end}}
 
-{{if or (eq $method "List") (IsCustomList $method)}}func (a *app) {{$method}}{{$modelName}}(offset, limit int64) ([]*{{$modelName}}, error) {
-	return a.appl.{{$method}}{{$modelName}}(offset, limit)
+{{if or (eq $method "List") (IsCustomList $method)}}func (a *app) {{$method}}{{$modelName}}(offset, limit int64, filters []*Filter) ([]*{{$modelName}}, error) {
+	return a.appl.{{$method}}{{$modelName}}(offset, limit, filters)
 }{{end}}
-{{if eq $method "Filter"}}func (a *app) {{$method}}{{$modelName}}(filters []*Filter) ([]*{{$modelName}}, error) {
-	return a.appl.{{$method}}{{$modelName}}(filters)
-}{{end}}
-{{if  and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (ne $method "Filter")  (not (IsCustomList $method))}}
+{{if  and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
 func (a *app) {{$method}}{{$modelName}}(m *{{$modelName}}) error {
 	return a.appl.{{$method}}{{$modelName}}(m)
 }{{end}}{{end}}{{end}}

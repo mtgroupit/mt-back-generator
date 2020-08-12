@@ -29,12 +29,6 @@ var ({{range $modelName, $model := $.Models}}
 	offset int64 = 0
 	limit  int64 = 5
 
-	testList = &models.ListParams{
-		Offset: &offset,
-		Limit:  &limit,
-	}
-	{{end}}
-	{{if .HaveFilterMethod}}
 	testFilters = []*models.FilterParams{
 		&models.FilterParams{
 			Key:     "ID",
@@ -46,6 +40,10 @@ var ({{range $modelName, $model := $.Models}}
 			Include: false,
 			Value:   "2",
 		},
+	}
+	testList = &models.ListParams{
+		Offset: &offset,
+		Limit:  &limit,
 	}
 	{{end}}
 )
@@ -131,7 +129,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 
 	{{if or (eq $method "List") (IsCustomList $method)}}
 	params.Body = test{{$method}}
-	mockApp.EXPECT().{{$method}}{{$modelName}}(*params.Body.Offset, *params.Body.Limit).Return(app{{$modelName}}s(test{{$modelName}}s), nil)
+	mockApp.EXPECT().{{$method}}{{$modelName}}(*params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters)).Return(app{{$modelName}}s(test{{$modelName}}s), nil)
 
 	t.Run("", func(tt *testing.T) {
 		t := check.T(tt)
@@ -139,17 +137,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 		t.Nil(err)
 		t.DeepEqual(list.Payload, test{{$modelName}}s)
 	}){{end}}
-	{{if eq $method "Filter"}}
-	params.Body = test{{$method}}s
-	mockApp.EXPECT().{{$method}}{{$modelName}}(app{{$method}}s(params.Body)).Return(app{{$modelName}}s(test{{$modelName}}s), nil)
-
-	t.Run("", func(tt *testing.T) {
-		t := check.T(tt)
-		list, err := c.Operations.{{$method}}{{$modelName}}(params)
-		t.Nil(err)
-		t.DeepEqual(list.Payload, test{{$modelName}}s)
-	}){{end}}
-	{{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (ne $method "Filter")  (not (IsCustomList $method))}}
+	{{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
 	params.Body = test{{$modelName}}1
 	mockApp.EXPECT().{{$method}}{{$modelName}}(app{{$modelName}}(test{{$modelName}}1)).Return(nil)
 

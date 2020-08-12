@@ -23,8 +23,7 @@ var (
 	{{if .HaveListMethod}}
 	offset int64 = 0
 	limit int64 = 5
-	{{end}}
-	{{if .HaveFilterMethod}}
+
 	filters = []*app.Filter{
 		&app.Filter{
 			Key: "ID",
@@ -58,14 +57,10 @@ func Test{{$method}}{{$modelName}}Smoke(tt *testing.T) {
 	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID, test{{$modelName}}2)){{end}}
 
 	{{if or (eq $method "List") (IsCustomList $method)}}	
-	list, err := testApp.{{$method}}{{$modelName}}(offset, limit)
+	list, err := testApp.{{$method}}{{$modelName}}(offset, limit, []*app.Filter{})
 	t.Nil(err)
 	t.DeepEqual(list, test{{$modelName}}s){{end}}
-	{{if eq $method "Filter"}}	
-	list, err := testApp.{{$method}}{{$modelName}}(filters)
-	t.Nil(err)
-	t.DeepEqual(list, []*app.{{$modelName}}{test{{$modelName}}1}){{end}}
-	{{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (ne $method "Filter")  (not (IsCustomList $method))}}
+	{{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
 	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1)){{end}}
 
 	t.Nil(testApp.truncate())

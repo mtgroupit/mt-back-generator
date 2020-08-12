@@ -109,7 +109,6 @@ type Config struct {
 	Models           map[string]Model
 	Functions        map[string]Function
 	HaveListMethod   bool
-	HaveFilterMethod bool
 	HaveDateTime     bool
 	HaveEmail        bool
 	MaxDeepNesting   int

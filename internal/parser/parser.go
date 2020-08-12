@@ -74,9 +74,6 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 			if method == "list" || IsCustomList(method) {
 				cfg.HaveListMethod = true
 			}
-			if method == "filter" {
-				cfg.HaveFilterMethod = true
-			}
 		}
 		model.MethodsProps = props
 

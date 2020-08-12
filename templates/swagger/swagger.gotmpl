@@ -14,11 +14,8 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
       parameters:
         - name: body
           in: body
-          schema: {{if or (eq $method "list") (eq $method "filter") (IsCustomList $method)}} {{if or (eq $method "list") (IsCustomList $method)}}
+          schema: {{if or (eq $method "list") (IsCustomList $method)}}
             $ref: "#/definitions/listParams" {{else}}
-            type: array
-            items:
-              $ref: "#/definitions/filterParams" {{end}}{{else}}
             $ref: "#/definitions/{{$modelName}}" {{end}}
       responses:        {{if eq $method "delete"}}
         204:
@@ -26,8 +23,8 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
         201:
           description: Created        {{else}}
         200:
-          description: OK        {{end}}{{end}}        {{if or (eq $method "list") (eq $method "filter") (IsCustomList $method) (eq $method "get")}}
-          schema:          {{if or (eq $method "list") (eq $method "filter") (IsCustomList $method)}}
+          description: OK        {{end}}{{end}}        {{if or (eq $method "list") (IsCustomList $method) (eq $method "get")}}
+          schema:          {{if or (eq $method "list") (IsCustomList $method)}}
             type: array
             items:          {{end}}
               $ref: "#/definitions/{{$modelName}}" {{end}}{{end}} {{range $funcName, $func := $.Functions}}
@@ -69,10 +66,14 @@ definitions:  {{range $modelName, $model := $.Models}}
         default: 10
       offset:
         type: integer
-        default: 1  {{end}}  {{if .HaveFilterMethod}}
+        default: 1
+      filters:
+        type: array
+        items:
+          $ref: "#/definitions/filterParams"
   filterParams:
     type: object
-    description: params for filter method
+    description: params for filter list
     properties:
       include:
         type: boolean

@@ -4,7 +4,7 @@ package dal
 import (
 	"context"
 	"database/sql"
-	{{if .HaveFilterMethod}}"strings"
+	{{if .HaveListMethod}}"strings"
 	"strconv"{{end}}
 	"time"
 
@@ -144,7 +144,7 @@ func (a *App) Close() {
 	return nil
 }{{end}}
 
-{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64) ([]*app.{{$modelName}}, error) { 
+{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64, filters []*app.Filter) ([]*app.{{$modelName}}, error) { 
 	ms := []{{$modelName}}{}
 	if err := a.db.Select(&ms, `SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSqlSelect}}{{else}}{{$model.SqlSelectStr}}{{end}} FROM {{$modelName}}s OFFSET $1 LIMIT $2`, offset, limit); err != nil {
 		return nil, err
@@ -159,6 +159,55 @@ func (a *App) Close() {
 			return nil, err
 		}
 	}{{end}}{{end}}
+
+	if len(filters) != 0 {
+		res := []{{$modelName}}{}
+		for _, m := range ms {
+			count := 0
+			for _, f := range filters {
+				switch strings.Title(strings.ToLower(f.Key)) {
+				{{range $column, $options := $model.Columns}}
+				{{if eq $options.TitleName "ID"}}case "Id":
+				value, err := strconv.ParseInt(f.Value, 10, 64)
+				if err != nil {
+					return nil, err
+				}
+				count += filterCount(f.Include, m.ID, value){{else}}
+				{{if eq $options.GoType "bool"}}
+				case "{{$options.TitleName}}":
+					var value bool
+					switch f.Value {
+					case "true":
+						value = true
+					case "false":
+						value = false
+					default:
+						return nil, errors.Errorf(`failed to parse string value of enabled "%v" to bool type`, f.Value)
+					}
+					count += filterCount(f.Include, m.{{$options.TitleName}}, value)
+				{{else}}
+				{{if $options.IsStruct}}case "{{$options.TitleName}}":
+					value, err := strconv.ParseInt(f.Value, 10, 64)
+					if err != nil {
+						return nil, err
+					}{{if $options.IsArray}}
+					for _, {{$column}} := range m.{{$options.TitleName}} {
+						count += filterCount(f.Include, {{$column}}.ID, value)
+					}
+					{{else}}
+					count += filterCount(f.Include, m.{{$options.TitleName}}ID, value){{end}}{{else}}
+				case "{{$options.TitleName}}":
+					count += filterCount(f.Include, m.{{$options.TitleName}}, f.Value)
+				{{end}}{{end}}{{end}}{{end}}
+				}
+			}
+			if count == len(filters) {
+				res = append(res, m)
+			}
+		}
+		ms = res
+	}
+
 	return app{{$modelName}}s(ms), nil
 }{{end}}
 {{if and (IsCustomList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}{{range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
@@ -188,66 +237,7 @@ func (a *App) Close() {
 	return nil
 }{{end}}
 {{end}}{{end}}
-{{if eq $method "Filter"}}func (a *App) {{$method}}{{$modelName}}(filters []*app.Filter) ([]*app.{{$modelName}}, error) { 
-	ms := []{{$modelName}}{}
-	if err := a.db.Select(&ms, `SELECT {{$model.SqlSelectStr}} FROM {{$modelName}}s`); err != nil {
-		return nil, err
-	}
-	{{if $model.HaveLazyLoading}}
-	for i := range ms {
-		if err := ms[i].LazyLoading(a); err != nil {
-			return nil, err
-		}
-	}{{end}}
-
-	res := []{{$modelName}}{}
-	for _, m := range ms {
-		count := 0
-		for _, f := range filters {
-			switch strings.Title(strings.ToLower(f.Key)) {
-			{{range $column, $options := $model.Columns}}
-			{{if eq $options.TitleName "ID"}}case "Id":
-			value, err := strconv.ParseInt(f.Value, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			count += filterCount(f.Include, m.ID, value){{else}}
-			{{if eq $options.GoType "bool"}}
-			case "{{$options.TitleName}}":
-				var value bool
-				switch f.Value {
-				case "true":
-					value = true
-				case "false":
-					value = false
-				default:
-					return nil, errors.Errorf(`failed to parse string value of enabled "%v" to bool type`, f.Value)
-				}
-				count += filterCount(f.Include, m.{{$options.TitleName}}, value)
-			{{else}}
-			{{if $options.IsStruct}}case "{{$options.TitleName}}":
-				value, err := strconv.ParseInt(f.Value, 10, 64)
-				if err != nil {
-					return nil, err
-				}{{if $options.IsArray}}
-				for _, {{$column}} := range m.{{$options.TitleName}} {
-					count += filterCount(f.Include, {{$column}}.ID, value)
-				}
-				{{else}}
-				count += filterCount(f.Include, m.{{$options.TitleName}}ID, value){{end}}{{else}}
-			case "{{$options.TitleName}}":
-				count += filterCount(f.Include, m.{{$options.TitleName}}, f.Value)
-			{{end}}{{end}}{{end}}{{end}}
-			}
-		}
-		if count == len(filters) {
-			res = append(res, m)
-		}
-	}
-
-	return app{{$modelName}}s(res), nil
-}{{end}}
-{{if  and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (ne $method "Filter")  (not (IsCustomList $method))}}
+{{if  and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
 func (a *App) {{$method}}{{$modelName}}(m *app.{{$modelName}}) error {
 	return nil
 }{{end}}
@@ -281,7 +271,7 @@ func (m *{{$modelName}}) LazyLoading(a *App) error { {{range $modelName2, $model
 
 
 
-{{if .HaveFilterMethod}}
+{{if .HaveListMethod}}
 func filterCount(include bool, a, b interface{}) int {
 	if include {
 		if a == b {
