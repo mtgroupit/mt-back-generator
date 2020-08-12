@@ -162,7 +162,7 @@ func (a *App) Close() {
 	return app{{$modelName}}s(ms), nil
 }{{end}}
 {{if and (IsCustomList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}{{range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
-func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}) LazyLoading{{$method}}{{$nestedObj.Path}}(a *App) error { {{$model2 := (index $.Models $nestedObj.Name)}}{{$options := (index $model2.Columns (LowerTitle $nestedObj.Name))}}{{if  $nestedObj.IsArray}}
+{{if $nestedObj.IsFirstForLazyLoading}}func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}) LazyLoading{{$method}}{{$nestedObj.Path}}(a *App) error { {{end}} {{$model2 := (index $.Models $nestedObj.Name)}}{{$options := (index $model2.Columns (LowerTitle $nestedObj.Name))}}{{if  $nestedObj.IsArray}}
 	slice{{$options.TitleName}} := []{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}{{$nestedObj.Type}}{}
 	if err := a.db.Select(&slice{{$options.TitleName}}, `SELECT * FROM {{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}_{{$nestedObj.Name}} WHERE {{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}_id=$1`, m.ID); err != nil {
 		return err
@@ -184,8 +184,9 @@ func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}
 	if err := m.{{$nestedObj.Name}}.LazyLoading{{$method}}{{$nestedObj.Name}}(a); err != nil {
 		return err
 	}{{end}}{{end}}
+	{{if $nestedObj.IsLastForLazyLoading}}
 	return nil
-}
+}{{end}}
 {{end}}{{end}}
 {{if eq $method "Filter"}}func (a *App) {{$method}}{{$modelName}}(filters []*app.Filter) ([]*app.{{$modelName}}, error) { 
 	ms := []{{$modelName}}{}

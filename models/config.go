@@ -36,14 +36,16 @@ type Bind struct {
 
 // NestedObjProps contains properties of nested objects for custom list method
 type NestedObjProps struct {
-	Name            string
-	Type            string
-	FirstLetter     string
-	SqlSelect       string
-	Path            string
-	ParentStruct    string
-	NeedLazyLoading bool
-	IsArray         bool
+	Name                  string
+	Type                  string
+	FirstLetter           string
+	SqlSelect             string
+	Path                  string
+	ParentStruct          string
+	NeedLazyLoading       bool
+	IsArray               bool
+	IsFirstForLazyLoading bool
+	IsLastForLazyLoading  bool
 }
 
 // MethodProps contains all additional informations for method

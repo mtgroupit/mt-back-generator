@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -80,6 +81,7 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 		model.MethodsProps = props
 
 		psql := []models.PsqlParams{}
+		var indexLastNotArr int
 		for column, options := range model.Columns {
 			if options.IsStruct, options.IsArray, options.GoType, err = checkColumn(options.Type, cfg); err != nil {
 				return
@@ -170,8 +172,11 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 			pp.Unique = options.Unique
 
 			psql = append(psql, pp)
+			if !pp.IsArray {
+				indexLastNotArr = len(psql) - 1
+			}
 		}
-		psql[len(psql)-1].Last = true
+		psql[indexLastNotArr].Last = true
 		model.Psql = psql
 
 		var sqlSelect, sqlAdd, sqlEdit, sqlExexParams, countFields []string
@@ -504,6 +509,33 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 			}
 			result.MethodsProps[i].CustomListSqlSelect = strings.Join(sqlSelect, ", ")
 			result.MethodsProps[i].IsCustomList = true
+
+			sort.Slice(result.MethodsProps[i].NestedObjs, func(a, b int) bool {
+				return result.MethodsProps[i].NestedObjs[a].Path < result.MethodsProps[i].NestedObjs[b].Path
+			})
+
+			for j := range result.MethodsProps[i].NestedObjs {
+				switch j {
+				case 0:
+					result.MethodsProps[i].NestedObjs[j].IsFirstForLazyLoading = true
+					if len(result.MethodsProps[i].NestedObjs) == 1 {
+						result.MethodsProps[i].NestedObjs[j].IsLastForLazyLoading = true
+					}
+				case len(result.MethodsProps[i].NestedObjs) - 1:
+					result.MethodsProps[i].NestedObjs[j].IsLastForLazyLoading = true
+					if len(result.MethodsProps[i].NestedObjs) == 2 {
+						if result.MethodsProps[i].NestedObjs[j].Path != result.MethodsProps[i].NestedObjs[j-1].Path {
+							result.MethodsProps[i].NestedObjs[j-1].IsLastForLazyLoading = true
+							result.MethodsProps[i].NestedObjs[j].IsFirstForLazyLoading = true
+						}
+					}
+				default:
+					if result.MethodsProps[i].NestedObjs[j].Path != result.MethodsProps[i].NestedObjs[j-1].Path {
+						result.MethodsProps[i].NestedObjs[j-1].IsLastForLazyLoading = true
+						result.MethodsProps[i].NestedObjs[j].IsFirstForLazyLoading = true
+					}
+				}
+			}
 		}
 	}
 	model = &result
