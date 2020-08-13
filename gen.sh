@@ -18,5 +18,6 @@ echo "Swagger generate  stopped"
 
 echo "Mock generate started"
 cd $TARGET_DIRECTORY/service/internal/app
+export PATH=$PATH:$(go env GOPATH)/bin
 mockgen -source=app.go -destination=testing.generated.go -package=app
 echo "Mock generate stopped"
