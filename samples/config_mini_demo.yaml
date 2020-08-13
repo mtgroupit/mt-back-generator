@@ -38,4 +38,4 @@ models:
     methods: 
       - add
       - list
-      - list(id,name, company)
+      - list(id,name, company(name, location(id, name)))
