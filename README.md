@@ -26,3 +26,4 @@ make
 ```
 make gen [TARGET_DIRECTORY=~/Desktop] [CONFIG=./config.yaml]
 ```
+Open TARGET_DIRECTORY/service.
