@@ -1,0 +1,41 @@
+name: "Snouki"
+description: "demo generated app"
+models:
+  location:
+    description: "location object"
+    columns: 
+      id:
+        type: "uuid"
+      name:
+        type: "string"
+    methods:
+      - add
+  company:
+    description: "company object"
+    columns:
+      id: 
+        type: "uuid"
+      name:
+        type: "string"
+      occupation:
+        type: "string"
+      location:
+        type: "model.location"
+    methods:
+      - add
+      - list
+  employe:
+    description: "employe object"
+    columns:
+      id: 
+        type: "uuid"
+      name:
+        type: "string"
+      department:
+        type: "string"
+      company:
+        type: "model.company"
+    methods: 
+      - add
+      - list
+      - list(id,name, company)
