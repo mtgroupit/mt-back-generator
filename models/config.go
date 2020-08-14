@@ -38,7 +38,6 @@ type Bind struct {
 type NestedObjProps struct {
 	Name                  string
 	Type                  string
-	FirstLetter           string
 	SqlSelect             string
 	Path                  string
 	ParentStruct          string
@@ -69,7 +68,6 @@ type Model struct {
 	SqlAddStr       string
 	SqlEditStr      string
 	SqlExecParams   string
-	FirstLetter     string
 	TitleName       string
 
 	Binds        []Bind

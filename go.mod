@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	9fans.net/go v0.0.2 // indirect
+	github.com/fatih/camelcase v1.0.0
 	github.com/go-openapi/loads v0.19.5
 	github.com/go-openapi/runtime v0.19.19
 	github.com/go-openapi/spec v0.19.8

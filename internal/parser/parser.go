@@ -10,6 +10,7 @@ import (
 
 	"github.com/mtgroupit/mt-back-generator/french-back-template/generator/models"
 
+	"github.com/fatih/camelcase"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -54,8 +55,6 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 	}
 	binds := map[string]models.Bind{}
 	for name, model := range cfg.Models {
-
-		model.FirstLetter = string(name[0])
 		model.TitleName = strings.Title(name)
 
 		var props []models.MethodProps
@@ -102,15 +101,15 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 			if options.IsArray {
 				et := models.ExtraTable{}
 
-				et.Name = name + "_" + column
+				et.Name = NameSQL(name) + "_" + NameSQL(column)
 
 				et.RefTableOne = strings.Title(name)
-				et.RefIDOne = string(name[0]) + "_id"
-				et.FieldIDOne = strings.ToLower(name) + "_id"
+				et.RefIDOne = "id"
+				et.FieldIDOne = NameSQL(name) + "_id"
 
 				et.RefTableTwo = options.GoType
-				et.RefIDTwo = string(strings.ToLower(options.GoType)[0]) + "_id"
-				et.FieldIDTwo = strings.ToLower(column) + "_id"
+				et.RefIDTwo = "id"
+				et.FieldIDTwo = NameSQL(column) + "_id"
 
 				cfg.ExtraTables = append(cfg.ExtraTables, et)
 			}
@@ -124,7 +123,7 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 				options.GoType = "int64"
 
 				pp.Name = "ID"
-				pp.SqlName = string(name[0]) + "_id"
+				pp.SqlName = "id"
 				pp.Type = "int64"
 				pp.TypeSql = "SERIAL"
 			} else {
@@ -150,11 +149,11 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 
 				pp.Name = options.TitleName
 				if pp.IsStruct {
-					pp.SqlName = strings.ToLower(column) + "_id"
-					pp.FK = string(strings.ToLower(options.Type)[0]) + "_id"
+					pp.SqlName = NameSQL(column) + "_id"
+					pp.FK = "id"
 					pp.TypeSql = "integer"
 				} else {
-					pp.SqlName = string(name[0]) + "_" + strings.ToLower(column)
+					pp.SqlName = NameSQL(column)
 					switch options.Type {
 					case "string":
 						pp.TypeSql = "text"
@@ -180,22 +179,22 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 		count := 1
 		for _, options := range model.Columns {
 			if !options.IsStruct {
-				sqlSelect = append(sqlSelect, string(name[0])+"_"+strings.ToLower(options.TitleName))
+				sqlSelect = append(sqlSelect, NameSQL(options.TitleName))
 				if options.TitleName != "ID" {
-					sqlAdd = append(sqlAdd, string(name[0])+"_"+strings.ToLower(options.TitleName))
+					sqlAdd = append(sqlAdd, NameSQL(options.TitleName))
 					sqlExexParams = append(sqlExexParams, "m."+options.TitleName)
 					countFields = append(countFields, fmt.Sprintf("$%d", count))
 					count++
-					sqlEdit = append(sqlEdit, fmt.Sprintf("%s_%s=$%d", string(name[0]), strings.ToLower(options.TitleName), count))
+					sqlEdit = append(sqlEdit, fmt.Sprintf("%s_%s=$%d", string(name[0]), NameSQL(options.TitleName), count))
 				}
 			} else {
 				if !options.IsArray {
-					sqlSelect = append(sqlSelect, "COALESCE("+strings.ToLower(options.TitleName)+"_id, 0) AS "+strings.ToLower(options.TitleName)+"_id")
-					sqlAdd = append(sqlAdd, strings.ToLower(options.TitleName)+"_id")
+					sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(options.TitleName)+"_id, 0) AS "+NameSQL(options.TitleName)+"_id")
+					sqlAdd = append(sqlAdd, NameSQL(options.TitleName)+"_id")
 					sqlExexParams = append(sqlExexParams, "m."+options.TitleName+".ID")
 					countFields = append(countFields, fmt.Sprintf("$%d", count))
 					count++
-					sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", strings.ToLower(options.TitleName), count))
+					sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count))
 				}
 			}
 		}
@@ -303,6 +302,10 @@ func countDeepNesting(model string, cfg models.Config) (int, error) {
 	return deepNesting, nil
 }
 
+func NameSQL(name string) string {
+	return strings.ToLower(strings.Join(camelcase.Split(name), "_"))
+}
+
 // Titleize makes models keys as titles
 func Titleize(cfg *models.Config) {
 	titleModels := make(map[string]models.Model)
@@ -318,6 +321,7 @@ func Titleize(cfg *models.Config) {
 func IsCustomList(method string) bool {
 	return regexp.MustCompile(`^list\(.+\)$`).Match([]byte(method))
 }
+
 func expandStrNestedFields(method string) (string, string) {
 	pattern := regexp.MustCompile(`^[a-zA-Z0-9]+\((?P<value>.+)\)$`)
 	result := []byte{}
@@ -326,6 +330,7 @@ func expandStrNestedFields(method string) (string, string) {
 
 	return regexp.MustCompile("[^a-zA-Z0-9]").Split(method, 2)[0], string(result)
 }
+
 func splitFields(fields string) []string {
 	var result []string
 	for {
@@ -390,7 +395,6 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 			if column == fields[i] {
 				structModel = LowerTitle(options.GoType)
 				obj.Type = strings.Title(modelName)
-				obj.FirstLetter = string(modelName[0])
 				haveFieldInColumns = true
 				break
 			}
@@ -406,10 +410,10 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 		for column, options := range modelsIn[modelName].Columns {
 			if fields[i] == column {
 				if !options.IsStruct {
-					sqlSelect = append(sqlSelect, string(modelName[0])+"_"+column)
+					sqlSelect = append(sqlSelect, NameSQL(column))
 				} else {
 					if !options.IsArray {
-						sqlSelect = append(sqlSelect, "COALESCE("+fields[i]+"_id, 0) AS "+fields[i]+"_id")
+						sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(fields[i])+"_id, 0) AS "+NameSQL(fields[i])+"_id")
 					} else {
 						haveArr = true
 						structIsArr = true
@@ -478,10 +482,10 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 				for column, options := range result.Columns {
 					if fields[j] == options.TitleName {
 						if !options.IsStruct {
-							sqlSelect = append(sqlSelect, string(modelName[0])+"_"+column)
+							sqlSelect = append(sqlSelect, NameSQL(column))
 						} else {
 							if !options.IsArray {
-								sqlSelect = append(sqlSelect, "COALESCE("+strings.ToLower(options.TitleName)+"_id, 0) AS "+strings.ToLower(options.TitleName)+"_id")
+								sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(options.TitleName)+"_id, 0) AS "+NameSQL(options.TitleName)+"_id")
 							} else {
 								haveArr = true
 								structIsArr = true

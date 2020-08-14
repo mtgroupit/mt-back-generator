@@ -1,13 +1,13 @@
 {{$MaxDeepNesting:=.MaxDeepNesting}}-- +goose Up{{range $i := Iterate $MaxDeepNesting}}{{range $modelName, $model := $.Models}}{{if eq $model.DeepNesting $i}}
-CREATE TABLE {{$modelName}}s
+CREATE TABLE {{NameSQL $modelName}}s
 ({{range $j, $psqlParams := $model.Psql}}{{if not $psqlParams.IsArray}}
-    {{$psqlParams.SqlName}} {{$psqlParams.TypeSql}}{{if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}{{if $psqlParams.Unique}} UNIQUE{{end}}{{if $psqlParams.IsStruct}}  REFERENCES {{$psqlParams.Type}}s({{$psqlParams.FK}}){{end}}{{if not $psqlParams.Last}},{{end}}{{end}}{{end}}
+    {{$psqlParams.SqlName}} {{$psqlParams.TypeSql}}{{if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}{{if $psqlParams.Unique}} UNIQUE{{end}}{{if $psqlParams.IsStruct}}  REFERENCES {{NameSQL $psqlParams.Type}}s({{$psqlParams.FK}}){{end}}{{if not $psqlParams.Last}},{{end}}{{end}}{{end}}
 );{{end}}{{end}}{{end}}
 {{range $i, $et := $.ExtraTables}}
 CREATE TABLE {{$et.Name}}
 (
-    {{$et.FieldIDOne}} integer NOT NULL REFERENCES {{$et.RefTableOne}}s({{$et.RefIDOne}}),
-    {{$et.FieldIDTwo}} integer NOT NULL REFERENCES {{$et.RefTableTwo}}s({{$et.RefIDTwo}})
+    {{$et.FieldIDOne}} integer NOT NULL REFERENCES {{NameSQL $et.RefTableOne}}s({{$et.RefIDOne}}),
+    {{$et.FieldIDTwo}} integer NOT NULL REFERENCES {{NameSQL $et.RefTableTwo}}s({{$et.RefIDTwo}})
 );{{end}}
 
 
@@ -15,4 +15,4 @@ CREATE TABLE {{$et.Name}}
 -- +goose Down{{range $i, $et := $.ExtraTables}}
 DROP TABLE {{$et.Name}};{{end}}
 {{range $i := IterateReverse $MaxDeepNesting}}{{range $modelName, $model := $.Models}}{{if eq $model.DeepNesting $i}}
-DROP TABLE {{$modelName}}s;{{end}}{{end}}{{end}}
+DROP TABLE {{NameSQL $modelName}}s;{{end}}{{end}}{{end}}

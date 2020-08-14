@@ -92,7 +92,7 @@ func (a *App) Close() {
 {{range $modelName, $model := $.Models}}{{range $i, $method := $model.Methods}}
 {{if eq $method "Get"}}func (a *App) {{$method}}{{$modelName}}(id int64) (*app.{{$modelName}}, error) { 
 	var m {{$modelName}}
-	if err := a.db.Get(&m, `SELECT {{$model.SqlSelectStr}} FROM {{$modelName}}s WHERE {{$model.FirstLetter}}_id=$1`, id); err != nil {
+	if err := a.db.Get(&m, `SELECT {{$model.SqlSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1`, id); err != nil {
 		return nil, err
 	}{{if $model.HaveLazyLoading}}
 	if err := m.LazyLoading(a); err != nil {
@@ -102,41 +102,41 @@ func (a *App) Close() {
 }{{end}}
 {{if eq $method "Add"}}func (a *App) {{$method}}{{$modelName}}(m *app.{{$modelName}}) error {
 	var {{$modelName}}ID int64
-	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{$modelName}}s{{$model.SqlAddStr}} RETURNING {{$model.FirstLetter}}_id`, {{$model.SqlExecParams}}); err != nil {
+	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{NameSQL $modelName}}s{{$model.SqlAddStr}} RETURNING id`, {{$model.SqlExecParams}}); err != nil {
 		return err
 	}{{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
 	for _, m := range m.{{$options.TitleName}} {
-		if _, err := a.db.Exec(`INSERT INTO {{$modelName}}_{{$column}}({{$modelName}}_id, {{$column}}_id) VALUES ($1, $2)`, {{$modelName}}ID, m.ID); err != nil {
+		if _, err := a.db.Exec(`INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}({{$modelName}}_id, {{NameSQL $column}}_id) VALUES ($1, $2)`, {{$modelName}}ID, m.ID); err != nil {
 			return err
 		}
 	}{{end}}{{end}}{{end}}{{end}}
 	return nil
 }{{end}}
 {{if eq $method "Delete"}}func (a *App) {{$method}}{{$modelName}}(id int64) error { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
-	if _, err := a.db.Exec(`DELETE FROM {{$modelName}}_{{$column}} WHERE {{$modelName}}_id=$1`, id); err != nil {
+	if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{$modelName}}_id=$1`, id); err != nil {
 		return err
 	}{{end}}{{end}}{{end}}{{end}} {{range $_, $bind := $model.Binds}}{{if $bind.IsArray}}
-	if _, err := a.db.Exec(`DELETE FROM {{$bind.ModelName}}_{{$bind.FieldName}} WHERE {{$bind.FieldName}}_id=$1`, id); err != nil {
+	if _, err := a.db.Exec(`DELETE FROM {{NameSQL $bind.ModelName}}_{{NameSQL $bind.FieldName}} WHERE {{$bind.FieldName}}_id=$1`, id); err != nil {
 		return err
 	}{{else}}
-	if _, err := a.db.Exec(`UPDATE {{$bind.ModelName}}s SET {{$bind.FieldName}}_id=NULL WHERE {{$bind.FieldName}}_id=$1`, id); err != nil {
+	if _, err := a.db.Exec(`UPDATE {{NameSQL $bind.ModelName}}s SET {{$bind.FieldName}}_id=NULL WHERE {{$bind.FieldName}}_id=$1`, id); err != nil {
 		return err
 	}{{end}}{{end}}
-	if _, err := a.db.Exec(`DELETE FROM {{$modelName}}s WHERE {{$model.FirstLetter}}_id=$1`, id); err != nil {
+	if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}s WHERE id=$1`, id); err != nil {
 		return err
 	}
 	return nil
 }{{end}}
 {{if eq $method "Edit"}}func (a *App) {{$method}}{{$modelName}}(id int64, m *app.{{$modelName}}) error  {
-	if _, err := a.db.Exec(`UPDATE {{$modelName}}s SET {{$model.SqlEditStr}} WHERE {{$model.FirstLetter}}_id=$1`, id, {{$model.SqlExecParams}}); err != nil {
+	if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{$model.SqlEditStr}} WHERE id=$1`, id, {{$model.SqlExecParams}}); err != nil {
 		return err
 	}{{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
 	if len(m.{{$options.TitleName}}) != 0 {
-		if _, err := a.db.Exec(`DELETE FROM {{$modelName}}_{{$column}} WHERE {{$modelName}}_id=$1`, id); err != nil {
+		if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{$modelName}}_id=$1`, id); err != nil {
 			return err
 		}
 		for _, {{$column}} := range m.{{$options.TitleName}} {
-			if _, err := a.db.Exec(`INSERT INTO {{$modelName}}_{{$column}}({{$modelName}}_id, {{$column}}_id) VALUES ($1, $2)`, id, {{$column}}.ID); err != nil {
+			if _, err := a.db.Exec(`INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}({{$modelName}}_id, {{$column}}_id) VALUES ($1, $2)`, id, {{$column}}.ID); err != nil {
 				return err
 			}
 		}
@@ -146,7 +146,7 @@ func (a *App) Close() {
 
 {{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64, filters []*app.Filter) ([]*app.{{$modelName}}, error) { 
 	ms := []{{$modelName}}{}
-	if err := a.db.Select(&ms, `SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSqlSelect}}{{else}}{{$model.SqlSelectStr}}{{end}} FROM {{$modelName}}s OFFSET $1 LIMIT $2`, offset, limit); err != nil {
+	if err := a.db.Select(&ms, `SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSqlSelect}}{{else}}{{$model.SqlSelectStr}}{{end}} FROM {{NameSQL $modelName}}s OFFSET $1 LIMIT $2`, offset, limit); err != nil {
 		return nil, err
 	}{{if $model.HaveLazyLoading}}{{if  (IsCustomList $method)}}{{if ((index $model.MethodsProps $i).NeedLazyLoading)}}
 	for i := range ms {
@@ -213,12 +213,12 @@ func (a *App) Close() {
 {{if and (IsCustomList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}{{range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
 {{if $nestedObj.IsFirstForLazyLoading}}func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}) LazyLoading{{$method}}{{$nestedObj.Path}}(a *App) error { {{end}} {{$model2 := (index $.Models $nestedObj.Name)}}{{$options := (index $model2.Columns (LowerTitle $nestedObj.Name))}}{{if  $nestedObj.IsArray}}
 	slice{{$options.TitleName}} := []{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}{{$nestedObj.Type}}{}
-	if err := a.db.Select(&slice{{$options.TitleName}}, `SELECT * FROM {{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}_{{$nestedObj.Name}} WHERE {{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}_id=$1`, m.ID); err != nil {
+	if err := a.db.Select(&slice{{$options.TitleName}}, `SELECT * FROM {{if $nestedObj.Path}}{{NameSQL $nestedObj.ParentStruct}}{{else}}{{NameSQL $modelName}}{{end}}_{{NameSQL $nestedObj.Name}} WHERE {{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}_id=$1`, m.ID); err != nil {
 		return err
 	}
 	for _, cd := range slice{{$options.TitleName}} {
 		var elem {{$nestedObj.Type}}
-		if err := a.db.Get(&elem, `SELECT {{$nestedObj.SqlSelect}} FROM {{$nestedObj.Type}}s WHERE {{$nestedObj.FirstLetter}}_id=$1`, cd. {{$nestedObj.Type}}ID); err != nil {
+		if err := a.db.Get(&elem, `SELECT {{$nestedObj.SqlSelect}} FROM {{NameSQL $nestedObj.Type}}s WHERE id=$1`, cd. {{$nestedObj.Type}}ID); err != nil {
 			return err
 		}
 		{{if $nestedObj.NeedLazyLoading}}
@@ -227,7 +227,7 @@ func (a *App) Close() {
 		}{{end}}
 		m.{{$nestedObj.Name}} = append(m.{{$nestedObj.Name}}, elem)
 	}{{else}}
-	if err := a.db.Get(&m.{{$nestedObj.Name}}, `SELECT {{$nestedObj.SqlSelect}} FROM {{$nestedObj.Type}}s WHERE {{$nestedObj.FirstLetter}}_id=$1`, m.{{$nestedObj.Name}}ID); err != nil {
+	if err := a.db.Get(&m.{{$nestedObj.Name}}, `SELECT {{$nestedObj.SqlSelect}} FROM {{NameSQL $nestedObj.Type}}s WHERE id=$1`, m.{{$nestedObj.Name}}ID); err != nil {
 		return err
 	}{{if $nestedObj.NeedLazyLoading}}
 	if err := m.{{$nestedObj.Name}}.LazyLoading{{$method}}{{$nestedObj.Name}}(a); err != nil {
@@ -246,12 +246,12 @@ func (a *App) {{$method}}{{$modelName}}(m *app.{{$modelName}}) error {
 {{range $modelName, $model := $.Models}}{{if $model.HaveLazyLoading}}
 func (m *{{$modelName}}) LazyLoading(a *App) error { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if  $options.IsArray}}
 	slice{{$options.TitleName}} := []{{$modelName}}{{$options.GoType}}{}
-	if err := a.db.Select(&slice{{$options.TitleName}}, `SELECT * FROM {{$modelName}}_{{$options.TitleName}} WHERE {{$modelName}}_id=$1`, m.ID); err != nil {
+	if err := a.db.Select(&slice{{$options.TitleName}}, `SELECT * FROM {{NameSQL $modelName}}_{{NameSQL $options.TitleName}} WHERE {{$modelName}}_id=$1`, m.ID); err != nil {
 		return err
 	}
 	for _, cd := range slice{{$options.TitleName}} {
 		var {{$column}} {{$options.GoType}}
-		if err := a.db.Get(&{{$column}}, `SELECT {{$model2.SqlSelectStr}} FROM {{$options.GoType}}s WHERE {{$model2.FirstLetter}}_id=$1`, cd.{{$options.GoType}}ID); err != nil {
+		if err := a.db.Get(&{{$column}}, `SELECT {{$model2.SqlSelectStr}} FROM {{NameSQL $options.GoType}}s WHERE id=$1`, cd.{{$options.GoType}}ID); err != nil {
 			return err
 		}{{if $model2.HaveLazyLoading}}
 		if err := {{$column}}.LazyLoading(a); err != nil {
@@ -259,7 +259,7 @@ func (m *{{$modelName}}) LazyLoading(a *App) error { {{range $modelName2, $model
 		}{{end}}
 		m.{{$options.TitleName}} = append(m.{{$options.TitleName}}, {{$column}})
 	}{{else}}
-	if err := a.db.Get(&m.{{$options.TitleName}}, `SELECT {{$model2.SqlSelectStr}} FROM {{$modelName2}}s WHERE {{$model2.FirstLetter}}_id=$1`, m.{{$options.TitleName}}ID); err != nil {
+	if err := a.db.Get(&m.{{$options.TitleName}}, `SELECT {{$model2.SqlSelectStr}} FROM {{NameSQL $modelName2}}s WHERE id=$1`, m.{{$options.TitleName}}ID); err != nil {
 		return err
 	}{{if $model2.HaveLazyLoading}}
 	if err := m.{{$options.TitleName}}.LazyLoading(a); err != nil {
@@ -289,7 +289,7 @@ func (a *App) {{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$funct
 	{{range $name, $type := $function.Out}}var {{$name}} {{$type}}
 	{{end}}
 	/* Example:
-	if err := a.db.Get(&key, `SELECT c_key FROM components WHERE title=$1`, serviceName); err != nil {
+	if err := a.db.Get(&key, `SELECT key FROM components WHERE title=$1`, serviceName); err != nil {
 		return "", err
 	}*/
 
