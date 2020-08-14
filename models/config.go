@@ -104,14 +104,14 @@ type ExtraTable struct {
 
 // Config - description service, models and functions from yaml file
 type Config struct {
-	Name             string
-	Description      string
-	Models           map[string]Model
-	Functions        map[string]Function
-	HaveListMethod   bool
-	HaveDateTime     bool
-	HaveEmail        bool
-	MaxDeepNesting   int
+	Name           string
+	Description    string
+	Models         map[string]Model
+	Functions      map[string]Function
+	HaveListMethod bool
+	HaveDateTime   bool
+	HaveEmail      bool
+	MaxDeepNesting int
 
 	ExtraTables []ExtraTable
 }
