@@ -64,6 +64,7 @@ type Model struct {
 	Psql            []PsqlParams
 	DeepNesting     int
 	HaveLazyLoading bool
+	IDIsUUID        bool
 	SqlSelectStr    string
 	SqlAddStr       string
 	SqlEditStr      string
@@ -91,13 +92,17 @@ type Function struct {
 
 // ExtraTable is table for many-to-many realations
 type ExtraTable struct {
-	Name        string
+	Name string
+
 	RefTableOne string
 	RefIDOne    string
 	FieldIDOne  string
+	TypeIDOne   string
+
 	RefTableTwo string
 	RefIDTwo    string
 	FieldIDTwo  string
+	TypeIDTwo   string
 }
 
 // Config - description service, models and functions from yaml file

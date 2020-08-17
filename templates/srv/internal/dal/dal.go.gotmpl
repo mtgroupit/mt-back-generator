@@ -11,6 +11,7 @@ import (
 	"{{.Name}}/internal/app"
 	"{{.Name}}/migration"
 
+	{{$inputed := false}}{{range $modelName, $model := $.Models}}{{if and $model.IDIsUUID (not $inputed)}}"github.com/google/uuid"{{$inputed = true}}{{end}}{{end}}
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"github.com/powerman/pqx"
@@ -34,14 +35,14 @@ type App struct {
 }
 {{range $modelName, $model := $.Models}}
 type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlParams.IsStruct}}
-	{{if not $psqlParams.IsArray}}{{$psqlParams.Name}}ID int64 `db:"{{$psqlParams.SqlName}}"`{{end}}
+	{{if not $psqlParams.IsArray}}{{$psqlParams.Name}}ID {{if eq  $psqlParams.TypeSql "uuid"}}uuid.UUID{{else}}int64{{end}} `db:"{{$psqlParams.SqlName}}"`{{end}}
 	{{$psqlParams.Name}} {{if $psqlParams.IsArray}}[]{{end}}{{$psqlParams.Type}}{{else}}
-	{{$psqlParams.Name}} {{$psqlParams.Type}} `db:"{{$psqlParams.SqlName}}"` {{end}}{{end}}
+	{{$psqlParams.Name}} {{if eq  $psqlParams.TypeSql "uuid"}}uuid.UUID{{else}}{{$psqlParams.Type}}{{end}} `db:"{{$psqlParams.SqlName}}"` {{end}}{{end}}
 } {{end}}
 {{range $i, $et := $.ExtraTables}}
 type {{$et.RefTableOne}}{{$et.RefTableTwo}} struct{
-    {{$et.RefTableOne}}ID int64  `db:"{{$et.FieldIDOne}}"`
-    {{$et.RefTableTwo}}ID int64  `db:"{{$et.FieldIDTwo}}"`
+    {{$et.RefTableOne}}ID {{if eq  $et.TypeIDOne "uuid"}}uuid.UUID{{else}}int64{{end}}  `db:"{{$et.FieldIDOne}}"`
+    {{$et.RefTableTwo}}ID {{if eq  $et.TypeIDTwo "uuid"}}uuid.UUID{{else}}int64{{end}}  `db:"{{$et.FieldIDTwo}}"`
 }
 {{end}}
 
@@ -101,8 +102,8 @@ func (a *App) Close() {
 	return app{{$modelName}}(m), nil
 }{{end}}
 {{if eq $method "Add"}}func (a *App) {{$method}}{{$modelName}}(m *app.{{$modelName}}) error {
-	var {{$modelName}}ID int64
-	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{NameSQL $modelName}}s{{$model.SqlAddStr}} RETURNING id`, {{$model.SqlExecParams}}); err != nil {
+	{{if $model.IDIsUUID}}{{$modelName}}ID := uuid.New(){{else}}var {{$modelName}}ID int64{{end}}
+	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{NameSQL $modelName}}s{{$model.SqlAddStr}} RETURNING id`, {{$model.SqlExecParams}}{{if $model.IDIsUUID}}, {{$modelName}}ID{{end}}); err != nil {
 		return err
 	}{{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
 	for _, m := range m.{{$options.TitleName}} {
@@ -298,7 +299,7 @@ func (a *App) {{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$funct
 {{range $modelName, $model := $.Models}}
 func app{{$modelName}}(m {{$modelName}}) *app.{{$modelName}} {
 	return &app.{{$modelName}}{ {{range $name, $options := $model.Columns}}
-		{{$options.TitleName}}: {{if $options.IsStruct}}app{{$options.GoType}}{{if $options.IsArray}}s{{end}}(m.{{$options.TitleName}}){{else}}m.{{$options.TitleName}}{{end}}, {{end}}
+		{{$options.TitleName}}: {{if $options.IsStruct}}app{{$options.GoType}}{{if $options.IsArray}}s{{end}}(m.{{$options.TitleName}}){{else}}m.{{$options.TitleName}}{{if and $model.IDIsUUID (eq $options.TitleName "ID")}}.String(){{end}}{{end}}, {{end}}
 	}
 }
 

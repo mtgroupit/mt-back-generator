@@ -6,8 +6,8 @@ CREATE TABLE {{NameSQL $modelName}}s
 {{range $i, $et := $.ExtraTables}}
 CREATE TABLE {{$et.Name}}
 (
-    {{$et.FieldIDOne}} integer NOT NULL REFERENCES {{NameSQL $et.RefTableOne}}s({{$et.RefIDOne}}),
-    {{$et.FieldIDTwo}} integer NOT NULL REFERENCES {{NameSQL $et.RefTableTwo}}s({{$et.RefIDTwo}})
+    {{$et.FieldIDOne}} {{$et.TypeIDOne}} NOT NULL REFERENCES {{NameSQL $et.RefTableOne}}s({{$et.RefIDOne}}),
+    {{$et.FieldIDTwo}} {{$et.TypeIDTwo}} NOT NULL REFERENCES {{NameSQL $et.RefTableTwo}}s({{$et.RefIDTwo}})
 );{{end}}
 
 

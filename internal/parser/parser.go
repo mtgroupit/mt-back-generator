@@ -98,6 +98,7 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 					IsArray:   options.IsArray,
 				}
 			}
+
 			if options.IsArray {
 				et := models.ExtraTable{}
 
@@ -106,10 +107,24 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 				et.RefTableOne = strings.Title(name)
 				et.RefIDOne = "id"
 				et.FieldIDOne = NameSQL(name) + "_id"
+				fmt.Println("one", name, cfg.Models[name].Columns["id"].Type)
+				if cfg.Models[name].Columns["id"].Type == "uuid" {
+					et.TypeIDOne = "uuid"
+				} else {
+					et.TypeIDOne = "integer"
+				}
 
 				et.RefTableTwo = options.GoType
 				et.RefIDTwo = "id"
 				et.FieldIDTwo = NameSQL(column) + "_id"
+				_, ok1 := cfg.Models[LowerTitle(options.GoType)]
+				_, ok2 := cfg.Models[LowerTitle(options.GoType)].Columns["id"]
+				fmt.Println("two", LowerTitle(options.GoType), cfg.Models[LowerTitle(options.GoType)].Columns["id"].Type, ok1, ok2)
+				if cfg.Models[LowerTitle(options.GoType)].Columns["id"].Type == "uuid" {
+					et.TypeIDTwo = "uuid"
+				} else {
+					et.TypeIDTwo = "integer"
+				}
 
 				cfg.ExtraTables = append(cfg.ExtraTables, et)
 			}
@@ -118,14 +133,24 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 			pp.IsArray = options.IsArray
 			pp.IsStruct = options.IsStruct
 			if column == "id" {
+				switch options.Type {
+				case "uuid":
+					options.GoType = "string"
+					model.IDIsUUID = true
+
+					pp.Type = "string"
+					pp.TypeSql = "uuid"
+				default:
+					options.Type = "integer"
+					options.GoType = "int64"
+
+					pp.Type = "int64"
+					pp.TypeSql = "SERIAL"
+				}
 				options.TitleName = "ID"
-				options.Type = "integer"
-				options.GoType = "int64"
 
 				pp.Name = "ID"
 				pp.SqlName = "id"
-				pp.Type = "int64"
-				pp.TypeSql = "SERIAL"
 			} else {
 				if column == "url" {
 					options.TitleName = "URL"
@@ -151,7 +176,11 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 				if pp.IsStruct {
 					pp.SqlName = NameSQL(column) + "_id"
 					pp.FK = "id"
-					pp.TypeSql = "integer"
+					if cfg.Models[LowerTitle(options.GoType)].Columns["id"].Type == "uuid" {
+						pp.TypeSql = "uuid"
+					} else {
+						pp.TypeSql = "integer"
+					}
 				} else {
 					pp.SqlName = NameSQL(column)
 					switch options.Type {
@@ -185,11 +214,15 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 					sqlExexParams = append(sqlExexParams, "m."+options.TitleName)
 					countFields = append(countFields, fmt.Sprintf("$%d", count))
 					count++
-					sqlEdit = append(sqlEdit, fmt.Sprintf("%s_%s=$%d", string(name[0]), NameSQL(options.TitleName), count))
+					sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", NameSQL(options.TitleName), count))
 				}
 			} else {
 				if !options.IsArray {
-					sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(options.TitleName)+"_id, 0) AS "+NameSQL(options.TitleName)+"_id")
+					if cfg.Models[LowerTitle(options.GoType)].Columns["id"].Type == "uuid" {
+						sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(options.TitleName)+"_id, '00000000-0000-0000-0000-000000000000') AS "+NameSQL(options.TitleName)+"_id")
+					} else {
+						sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(options.TitleName)+"_id, 0) AS "+NameSQL(options.TitleName)+"_id")
+					}
 					sqlAdd = append(sqlAdd, NameSQL(options.TitleName)+"_id")
 					sqlExexParams = append(sqlExexParams, "m."+options.TitleName+".ID")
 					countFields = append(countFields, fmt.Sprintf("$%d", count))
@@ -199,6 +232,10 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 			}
 		}
 		model.SqlSelectStr = strings.Join(sqlSelect, ", ")
+		if model.IDIsUUID{
+			sqlAdd = append(sqlAdd, "id")
+			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
+		}
 		model.SqlAddStr = fmt.Sprintf("(%s) VALUES (%s)", strings.Join(sqlAdd, ", "), strings.Join(countFields, ", "))
 		model.SqlEditStr = strings.Join(sqlEdit, ", ")
 		model.SqlExecParams = strings.Join(sqlExexParams, ", ")
@@ -369,6 +406,7 @@ func splitFields(fields string) []string {
 	}
 	return result
 }
+
 func trimFieldsSuffix(fields []string) (out []string) {
 	for i := range fields {
 		out = append(out, regexp.MustCompile("[^a-zA-Z0-9]").Split(fields[i], 2)[0])
@@ -413,7 +451,11 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 					sqlSelect = append(sqlSelect, NameSQL(column))
 				} else {
 					if !options.IsArray {
-						sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(fields[i])+"_id, 0) AS "+NameSQL(fields[i])+"_id")
+						if modelsIn[LowerTitle(options.GoType)].Columns["id"].Type == "uuid" {
+							sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(fields[i])+"_id, '00000000-0000-0000-0000-000000000000') AS "+NameSQL(fields[i])+"_id")
+						} else {
+							sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(fields[i])+"_id, 0) AS "+NameSQL(fields[i])+"_id")
+						}
 					} else {
 						haveArr = true
 						structIsArr = true
@@ -433,7 +475,7 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 
 	}
 	if !haveID && haveArr {
-		sqlSelect = append(sqlSelect, string(modelName[0])+"_id")
+		sqlSelect = append(sqlSelect, "id")
 	}
 	obj.SqlSelect = strings.Join(sqlSelect, ", ")
 	obj.Path = nesting
@@ -485,7 +527,11 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 							sqlSelect = append(sqlSelect, NameSQL(column))
 						} else {
 							if !options.IsArray {
-								sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(options.TitleName)+"_id, 0) AS "+NameSQL(options.TitleName)+"_id")
+								if modelsMap[LowerTitle(options.GoType)].Columns["id"].Type == "uuid" {
+									sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(options.TitleName)+"_id, '00000000-0000-0000-0000-000000000000') AS "+NameSQL(options.TitleName)+"_id")
+								} else {
+									sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(options.TitleName)+"_id, 0) AS "+NameSQL(options.TitleName)+"_id")
+								}
 							} else {
 								haveArr = true
 								structIsArr = true
@@ -506,7 +552,7 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 			}
 			result.Methods[i] = "list" + strings.Join(fields, "")
 			if !haveID && haveArr {
-				sqlSelect = append(sqlSelect, string(modelName[0])+"_id")
+				sqlSelect = append(sqlSelect, "id")
 			}
 			result.MethodsProps[i].CustomListSqlSelect = strings.Join(sqlSelect, ", ")
 			result.MethodsProps[i].IsCustomList = true

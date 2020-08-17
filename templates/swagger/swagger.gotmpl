@@ -53,7 +53,7 @@ definitions:  {{range $modelName, $model := $.Models}}
       {{$name}}:
         $ref: "#/definitions/{{$options.Type}}"{{end}} {{else}}
       {{$name}}:
-        type: {{$options.Type}} {{if $options.Format}}
+        type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}} {{if $options.Format}}
         format: {{$options.Format}}{{end}}{{if .Length}}
         maxLength: {{.Length}}{{end}}{{if .Default}}
         default: {{.Default}}{{end}}{{end}}{{end}}{{end}} {{if .HaveListMethod}}
