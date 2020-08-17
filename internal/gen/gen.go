@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -44,7 +45,7 @@ var goTmplFuncs = template.FuncMap{
 		return strings.ToLower(in)
 	},
 	"LowerTitle": parser.LowerTitle,
-	"NameSQL": parser.NameSQL,
+	"NameSQL":    parser.NameSQL,
 	"IsCustomList": func(method string) bool {
 		return regexp.MustCompile(`^(L|l)ist.+`).Match([]byte(method))
 	},
@@ -72,14 +73,8 @@ func Srv(dir string, cfg models.Config) error {
 	return nil
 }
 
-// gen generate "name".go file in "dirTarget" directory
-func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
-	tmp, err := template.New(name).Funcs(goTmplFuncs).ParseFiles(path.Clean(path.Join(dirTMPL, name)))
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Create(path.Clean(path.Join(dirTarget, name[:len(name)-len(".gotmpl")])))
+func createFile(name, dirTMPL, dirTarget string, cfg models.Config, tmp *template.Template) error {
+	f, err := os.Create(path.Clean(path.Join(dirTarget, name)))
 	if err != nil {
 		return err
 	}
@@ -89,7 +84,47 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 		return err
 	}
 
-	log.Printf("%s created", path.Clean(path.Join(dirTarget, name[:len(name)-len(".gotmpl")])))
+	log.Printf("%s created", path.Clean(path.Join(dirTarget, name)))
+	return nil
+}
+
+// exec generate "name".go file or "model name".go files (if dirTMPL is range_models.go.gotmpl) in "dirTarget" directory
+func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
+	tmp, err := template.New(name).Funcs(goTmplFuncs).ParseFiles(path.Clean(path.Join(dirTMPL, name)))
+	if err != nil {
+		return err
+	}
+
+	if strings.HasPrefix(name, "range_models") {
+		switch {
+		case strings.Contains(name, ".go."):
+			for modelName := range cfg.Models {
+				fileName := parser.NameSQL(modelName) + ".go"
+				cfg.CurModel = modelName
+				if err := createFile(fileName, dirTMPL, dirTarget, cfg, tmp); err != nil {
+					return err
+				}
+			}
+		case strings.Contains(name, ".sql."):
+			counter := 0
+			for i := 0; i <= cfg.MaxDeepNesting; i++ {
+				for modelName, model := range cfg.Models {
+					if model.DeepNesting == i {
+						counter++
+						fileName := fmt.Sprintf("%05d_%s.sql", counter, parser.NameSQL(modelName))
+						cfg.CurModel = modelName
+						if err := createFile(fileName, dirTMPL, dirTarget, cfg, tmp); err != nil {
+							return err
+						}
+					}
+				}
+			}
+		}
+	} else {
+		if err := createFile(name[:len(name)-len(".gotmpl")], dirTMPL, dirTarget, cfg, tmp); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

@@ -5,7 +5,6 @@ package app
 
 // App provides application features service.
 type App interface {
-
     {{range $modelName, $model := $.Models}}{{range $i, $method := $model.Methods}}
 	{{if eq $method "Get"}}{{$method}}{{$modelName}}(id int64) (*{{$modelName}}, error){{end}}
     {{if eq $method "Add"}}{{$method}}{{$modelName}}(m *{{$modelName}}) error{{end}}
@@ -21,12 +20,6 @@ type App interface {
 	{{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$function.InStrType}}, error)
     {{end}}{{end}}
 }
-{{range $modelName, $model := $.Models}}
-type {{$modelName}} struct { {{range $name, $options := $model.Columns}}
-	{{$options.TitleName}} {{if $options.IsArray}}[]{{end}}{{if $options.IsStruct}}*{{end}}{{$options.GoType}} {{end}}
-}
-{{end}}
-
 {{if .HaveListMethod}}
 type Filter struct {
 	Key     string
@@ -34,7 +27,6 @@ type Filter struct {
 	Value   string
 }
 {{end}}
-
 type app struct {
 	appl App
 }
@@ -44,29 +36,3 @@ func New(a App) App {
 		appl: a,
 	}
 }
-{{range $modelName, $model := $.Models}}{{range $i, $method := $model.Methods}}
-{{if eq $method "Get"}}func (a *app) {{$method}}{{$modelName}}(id int64) (*{{$modelName}}, error) {
-	return a.appl.{{$method}}{{$modelName}}(id)
-}{{end}}
-{{if eq $method "Add"}}func (a *app) {{$method}}{{$modelName}}(m *{{$modelName}}) error {
-	return a.appl.{{$method}}{{$modelName}}(m)
-}{{end}}
-{{if eq $method "Delete"}}func (a *app) {{$method}}{{$modelName}}(id int64) error {
-	return a.appl.{{$method}}{{$modelName}}(id)
-}{{end}}
-{{if eq $method "Edit"}}func (a *app) {{$method}}{{$modelName}}(id int64, m *{{$modelName}}) error {
-	return a.appl.{{$method}}{{$modelName}}(id, m)
-}{{end}}
-
-{{if or (eq $method "List") (IsCustomList $method)}}func (a *app) {{$method}}{{$modelName}}(offset, limit int64, filters []*Filter) ([]*{{$modelName}}, error) {
-	return a.appl.{{$method}}{{$modelName}}(offset, limit, filters)
-}{{end}}
-{{if  and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
-func (a *app) {{$method}}{{$modelName}}(m *{{$modelName}}) error {
-	return a.appl.{{$method}}{{$modelName}}(m)
-}{{end}}{{end}}{{end}}
-
-{{range $modelName, $model := $.Models}}{{range $functionName, $function := $.Functions}}
-func (a *app) {{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$function.OutStrType}}, error) {
-	return a.appl.{{$functionName}}{{$modelName}}({{$function.InStr}})
-}{{end}}{{end}}

@@ -65,6 +65,8 @@ type Model struct {
 	DeepNesting     int
 	HaveLazyLoading bool
 	IDIsUUID        bool
+	HaveEmail       bool
+	HaveListMethod  bool
 	SqlSelectStr    string
 	SqlAddStr       string
 	SqlEditStr      string
@@ -113,8 +115,10 @@ type Config struct {
 	Functions      map[string]Function
 	HaveListMethod bool
 	HaveDateTime   bool
-	HaveEmail      bool
 	MaxDeepNesting int
 
 	ExtraTables []ExtraTable
+
+	// CurModel - field for define need model for template
+	CurModel string
 }

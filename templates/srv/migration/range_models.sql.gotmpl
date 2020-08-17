@@ -1,18 +1,17 @@
-{{$MaxDeepNesting:=.MaxDeepNesting}}-- +goose Up{{range $i := Iterate $MaxDeepNesting}}{{range $modelName, $model := $.Models}}{{if eq $model.DeepNesting $i}}
+-- +goose Up {{$modelName := .CurModel}} {{$model := (index $.Models $modelName)}}
 CREATE TABLE {{NameSQL $modelName}}s
 ({{range $j, $psqlParams := $model.Psql}}{{if not $psqlParams.IsArray}}
     {{$psqlParams.SqlName}} {{$psqlParams.TypeSql}}{{if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}{{if $psqlParams.Unique}} UNIQUE{{end}}{{if $psqlParams.IsStruct}}  REFERENCES {{NameSQL $psqlParams.Type}}s({{$psqlParams.FK}}){{end}}{{if not $psqlParams.Last}},{{end}}{{end}}{{end}}
-);{{end}}{{end}}{{end}}
-{{range $i, $et := $.ExtraTables}}
+);
+{{range $i, $et := $.ExtraTables}}{{if eq $et.RefTableOne $modelName}}
 CREATE TABLE {{$et.Name}}
 (
     {{$et.FieldIDOne}} {{$et.TypeIDOne}} NOT NULL REFERENCES {{NameSQL $et.RefTableOne}}s({{$et.RefIDOne}}),
     {{$et.FieldIDTwo}} {{$et.TypeIDTwo}} NOT NULL REFERENCES {{NameSQL $et.RefTableTwo}}s({{$et.RefIDTwo}})
-);{{end}}
+);{{end}}{{end}}
 
 
 
--- +goose Down{{range $i, $et := $.ExtraTables}}
-DROP TABLE {{$et.Name}};{{end}}
-{{range $i := IterateReverse $MaxDeepNesting}}{{range $modelName, $model := $.Models}}{{if eq $model.DeepNesting $i}}
-DROP TABLE {{NameSQL $modelName}}s;{{end}}{{end}}{{end}}
+-- +goose Down{{range $i, $et := $.ExtraTables}}{{if eq $et.RefTableOne $modelName}}
+DROP TABLE {{$et.Name}};{{end}}{{end}}
+DROP TABLE {{NameSQL $modelName}}s;

@@ -72,6 +72,7 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 
 			if method == "list" || IsCustomList(method) {
 				cfg.HaveListMethod = true
+				model.HaveListMethod = true
 			}
 		}
 		model.MethodsProps = props
@@ -87,7 +88,7 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 				cfg.HaveDateTime = true
 			}
 			if options.Format == "email" {
-				cfg.HaveEmail = true
+				model.HaveEmail = true
 			}
 
 			if options.IsStruct {
