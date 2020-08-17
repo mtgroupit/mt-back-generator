@@ -4,8 +4,8 @@ import (
 	"flag"
 	"log"
 
-	"github.com/mtgroupit/mt-back-generator/french-back-template/generator/internal/gen"
-	"github.com/mtgroupit/mt-back-generator/french-back-template/generator/internal/parser"
+	"github.com/mtgroupit/mt-back-generator/internal/gen"
+	"github.com/mtgroupit/mt-back-generator/internal/parser"
 )
 
 var (

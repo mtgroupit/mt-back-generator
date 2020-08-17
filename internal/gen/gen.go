@@ -10,9 +10,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/mtgroupit/mt-back-generator/french-back-template/generator/internal/parser"
+	"github.com/mtgroupit/mt-back-generator/internal/parser"
 
-	"github.com/mtgroupit/mt-back-generator/french-back-template/generator/models"
+	"github.com/mtgroupit/mt-back-generator/models"
 )
 
 var goTmplFuncs = template.FuncMap{

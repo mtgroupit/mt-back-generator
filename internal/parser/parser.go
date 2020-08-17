@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mtgroupit/mt-back-generator/french-back-template/generator/models"
+	"github.com/mtgroupit/mt-back-generator/models"
 
 	"github.com/fatih/camelcase"
 	"github.com/pkg/errors"
