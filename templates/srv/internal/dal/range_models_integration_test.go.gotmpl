@@ -1,0 +1,37 @@
+// +build integration {{$modelName := .CurModel}} {{$model := (index $.Models $modelName)}}
+
+package dal
+
+import (
+	"testing"
+
+	"github.com/powerman/check"
+)
+
+{{range $i, $method := $model.Methods}}
+func Test{{$method}}{{$modelName}}Smoke(tt *testing.T) {
+	t := check.T(tt)
+
+	addTestData(t)
+
+	{{if eq $method "Get"}}
+	getted, err := testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID)
+	t.Nil(err)
+	t.DeepEqual(getted, test{{$modelName}}1){{end}}
+	{{if eq $method "Add"}}{{end}}
+	{{if eq $method "Delete"}}
+	addTestData(t)
+	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID)){{end}}
+	{{if eq $method "Edit"}}
+	addTestData(t)
+	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID, test{{$modelName}}2)){{end}}
+
+	{{if or (eq $method "List") (IsCustomList $method)}}	
+	list, err := testApp.{{$method}}{{$modelName}}(offset, limit, []*app.Filter{})
+	t.Nil(err)
+	t.DeepEqual(list, test{{$modelName}}s){{end}}
+	{{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
+	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1)){{end}}
+
+	t.Nil(testApp.truncate())
+}{{end}}

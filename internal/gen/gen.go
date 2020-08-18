@@ -99,7 +99,15 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 		switch {
 		case strings.Contains(name, ".go."):
 			for modelName := range cfg.Models {
-				fileName := parser.NameSQL(modelName) + ".go"
+				var fileName string
+				switch {
+				case strings.Contains(name, "_integration_test."):
+					fileName = parser.NameSQL(modelName) + "_integration_test.go"
+				case strings.Contains(name, "_test."):
+					fileName = parser.NameSQL(modelName) + "_test.go"
+				default:
+					fileName = parser.NameSQL(modelName) + ".go"
+				}
 				cfg.CurModel = modelName
 				if err := createFile(fileName, dirTMPL, dirTarget, cfg, tmp); err != nil {
 					return err
