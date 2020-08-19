@@ -2,9 +2,6 @@
 package dal
 
 import (
-	{{if $model.HaveListMethod}}"strings"
-	"strconv"{{end}}
-
 	"{{.Name}}/internal/app"
 
 	{{if $model.IDIsUUID}}"github.com/google/uuid"{{else}}{{$inputed := false}}{{range $name, $options := $model.Columns}}{{$model2 := (index $.Models $options.GoType)}}{{if and $model2.IDIsUUID (not $inputed) (not $options.IsArray)}}"github.com/google/uuid"{{$inputed = true}}{{end}}{{end}}{{end}}
@@ -75,9 +72,46 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 
 {{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64, filters []*app.Filter) ([]*app.{{$modelName}}, error) { 
 	ms := []{{$modelName}}{}
-	if err := a.db.Select(&ms, `SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSqlSelect}}{{else}}{{$model.SqlSelectStr}}{{end}} FROM {{NameSQL $modelName}}s OFFSET $1 LIMIT $2`, offset, limit); err != nil {
+
+	mapQuery := map[string]interface{}{ {{if IsCustomList $method}}{{range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
+		"{{$column}}": nil,
+		"not_{{$column}}": nil,{{end}}{{else}}{{range $column, $options := $model.Columns}}{{if not $options.IsArray}}
+		"{{$column}}": nil,
+		"not_{{$column}}": nil,{{end}}{{end}}{{end}}
+		"offset": offset,
+		"limit": limit,
+	}
+	{{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}
+	for _, filter := range filters {
+		switch filter.Key { {{if IsCustomList $method}}{{range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
+		case "{{$column}}":
+			if filter.Include {
+				mapQuery["{{$column}}"] = filter.Value
+			} else {
+				mapQuery["not_{{$column}}"] = filter.Value
+			}{{end}}{{else}}{{range $column, $options := $model.Columns}}{{if not $options.IsArray}}
+		case "{{$column}}":
+			if filter.Include {
+				mapQuery["{{$column}}"] = filter.Value
+			} else {
+				mapQuery["not_{{$column}}"] = filter.Value
+			}{{end}}{{end}}{{end}}
+		default:
+			continue
+		}
+	}{{end}}
+	
+	rows, err := a.db.NamedQuery(`SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSqlSelect}}{{else}}{{$model.SqlSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSqlWhereProps}}{{else}}{{$model.SqlWhereParams}}{{end}} OFFSET :offset LIMIT :limit`, mapQuery)
+	if err != nil {
 		return nil, err
-	}{{if $model.HaveLazyLoading}}{{if  (IsCustomList $method)}}{{if ((index $model.MethodsProps $i).NeedLazyLoading)}}
+	}
+	for rows.Next() {
+		var m Demand
+		err = rows.StructScan(&m)
+		ms = append(ms, m)
+	}
+	
+	{{if $model.HaveLazyLoading}}{{if  (IsCustomList $method)}}{{if ((index $model.MethodsProps $i).NeedLazyLoading)}}
 	for i := range ms {
 		if err := ms[i].LazyLoading{{$method}}(a); err != nil {
 			return nil, err
@@ -88,54 +122,6 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 			return nil, err
 		}
 	}{{end}}{{end}}
-
-	if len(filters) != 0 {
-		res := []{{$modelName}}{}
-		for _, m := range ms {
-			count := 0
-			for _, f := range filters {
-				switch strings.Title(strings.ToLower(f.Key)) {
-				{{range $column, $options := $model.Columns}}
-				{{if eq $options.TitleName "ID"}}case "Id":
-				value, err := strconv.ParseInt(f.Value, 10, 64)
-				if err != nil {
-					return nil, err
-				}
-				count += filterCount(f.Include, m.ID, value){{else}}
-				{{if eq $options.GoType "bool"}}
-				case "{{$options.TitleName}}":
-					var value bool
-					switch f.Value {
-					case "true":
-						value = true
-					case "false":
-						value = false
-					default:
-						return nil, errors.Errorf(`failed to parse string value of enabled "%v" to bool type`, f.Value)
-					}
-					count += filterCount(f.Include, m.{{$options.TitleName}}, value)
-				{{else}}
-				{{if $options.IsStruct}}case "{{$options.TitleName}}":
-					value, err := strconv.ParseInt(f.Value, 10, 64)
-					if err != nil {
-						return nil, err
-					}{{if $options.IsArray}}
-					for _, {{$column}} := range m.{{$options.TitleName}} {
-						count += filterCount(f.Include, {{$column}}.ID, value)
-					}
-					{{else}}
-					count += filterCount(f.Include, m.{{$options.TitleName}}ID, value){{end}}{{else}}
-				case "{{$options.TitleName}}":
-					count += filterCount(f.Include, m.{{$options.TitleName}}, f.Value)
-				{{end}}{{end}}{{end}}{{end}}
-				}
-			}
-			if count == len(filters) {
-				res = append(res, m)
-			}
-		}
-		ms = res
-	}
 
 	return app{{$modelName}}s(ms), nil
 }{{end}}

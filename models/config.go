@@ -49,11 +49,13 @@ type NestedObjProps struct {
 
 // MethodProps contains all additional informations for method
 type MethodProps struct {
-	HTTPMethod          string
-	IsCustomList        bool
-	NeedLazyLoading     bool
-	CustomListSqlSelect string
-	NestedObjs          []NestedObjProps
+	HTTPMethod              string
+	IsCustomList            bool
+	NeedLazyLoading         bool
+	CustomListSqlSelect     string
+	CustomListSqlWhereProps string
+	FilteredFields          []string
+	NestedObjs              []NestedObjProps
 }
 
 // Model - description one compoment of models
@@ -68,6 +70,7 @@ type Model struct {
 	HaveEmail       bool
 	HaveListMethod  bool
 	SqlSelectStr    string
+	SqlWhereParams  string
 	SqlAddStr       string
 	SqlEditStr      string
 	SqlExecParams   string

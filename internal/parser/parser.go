@@ -205,11 +205,12 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 		psql[indexLastNotArr].Last = true
 		model.Psql = psql
 
-		var sqlSelect, sqlAdd, sqlEdit, sqlExexParams, countFields []string
+		var sqlSelect, sqlWhereParams, sqlAdd, sqlEdit, sqlExexParams, countFields []string
 		count := 1
-		for _, options := range model.Columns {
+		for column, options := range model.Columns {
 			if !options.IsStruct {
 				sqlSelect = append(sqlSelect, NameSQL(options.TitleName))
+				sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName), column, "not_"+column, "not_"+column, NameSQL(options.TitleName), "not_"+column))
 				if options.TitleName != "ID" {
 					sqlAdd = append(sqlAdd, NameSQL(options.TitleName))
 					sqlExexParams = append(sqlExexParams, "m."+options.TitleName)
@@ -224,6 +225,7 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 					} else {
 						sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(options.TitleName)+"_id, 0) AS "+NameSQL(options.TitleName)+"_id")
 					}
+					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
 					sqlAdd = append(sqlAdd, NameSQL(options.TitleName)+"_id")
 					sqlExexParams = append(sqlExexParams, "m."+options.TitleName+".ID")
 					countFields = append(countFields, fmt.Sprintf("$%d", count))
@@ -233,7 +235,8 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 			}
 		}
 		model.SqlSelectStr = strings.Join(sqlSelect, ", ")
-		if model.IDIsUUID{
+		model.SqlWhereParams = strings.Join(sqlWhereParams, " AND ")
+		if model.IDIsUUID {
 			sqlAdd = append(sqlAdd, "id")
 			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
 		}
@@ -361,12 +364,12 @@ func IsCustomList(method string) bool {
 }
 
 func expandStrNestedFields(method string) (string, string) {
-	pattern := regexp.MustCompile(`^[a-zA-Z0-9]+\((?P<value>.+)\)$`)
+	pattern := regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\((?P<value>.+)\)$`)
 	result := []byte{}
 	template := "$value"
 	result = pattern.ExpandString(result, template, method, pattern.FindSubmatchIndex([]byte(method)))
 
-	return regexp.MustCompile("[^a-zA-Z0-9]").Split(method, 2)[0], string(result)
+	return strings.TrimSuffix(regexp.MustCompile("[^a-zA-Z0-9*]").Split(method, 2)[0], "*"), string(result)
 }
 
 func splitFields(fields string) []string {
@@ -375,7 +378,7 @@ func splitFields(fields string) []string {
 		fields = strings.Trim(fields, ", ")
 		if strings.Index(fields, ",") >= 0 {
 			if strings.Index(fields, ",") < strings.Index(fields, "(") || strings.Index(fields, "(") == -1 {
-				substrs := regexp.MustCompile("[^a-zA-Z0-9]+").Split(fields, 2)
+				substrs := regexp.MustCompile("[^a-zA-Z0-9*]+").Split(fields, 2)
 				result = append(result, substrs[0])
 				fields = substrs[1]
 			} else {
@@ -410,12 +413,12 @@ func splitFields(fields string) []string {
 
 func trimFieldsSuffix(fields []string) (out []string) {
 	for i := range fields {
-		out = append(out, regexp.MustCompile("[^a-zA-Z0-9]").Split(fields[i], 2)[0])
+		out = append(out, regexp.MustCompile("[^a-zA-Z0-9*]").Split(fields[i], 2)[0])
 	}
 	return
 }
 func isStruct(method string) bool {
-	return regexp.MustCompile(`^[a-zA-Z0-9]+\(.+\)$`).Match([]byte(method))
+	return regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\(.+\)$`).Match([]byte(method))
 }
 func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting, parent string, isArray bool) ([]models.NestedObjProps, error) {
 	objs := []models.NestedObjProps{}
@@ -495,13 +498,19 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 	result := *model
 	for i, method := range result.Methods {
 		if IsCustomList(method) {
-			var sqlSelect []string
+			var sqlSelect, sqlWhereParams, filtredFields []string
 			_, fieldsStr := expandStrNestedFields(method)
 			fieldsFull := splitFields(fieldsStr)
 			fields := trimFieldsSuffix(fieldsFull)
 			haveID := false
 			haveArr := false
 			for j := range fields {
+				var needFilter bool
+				if strings.HasSuffix(fields[j], "*") {
+					needFilter = true
+					fields[j] = strings.TrimSuffix(fields[j], "*")
+					filtredFields = append(filtredFields, fields[j])
+				}
 				var haveFieldInColumns bool
 				var structModel string
 				for column, options := range result.Columns {
@@ -526,12 +535,18 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 					if fields[j] == options.TitleName {
 						if !options.IsStruct {
 							sqlSelect = append(sqlSelect, NameSQL(column))
+							if needFilter {
+								sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName), column, "not_"+column, "not_"+column, NameSQL(options.TitleName), "not_"+column))
+							}
 						} else {
 							if !options.IsArray {
 								if modelsMap[LowerTitle(options.GoType)].Columns["id"].Type == "uuid" {
 									sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(options.TitleName)+"_id, '00000000-0000-0000-0000-000000000000') AS "+NameSQL(options.TitleName)+"_id")
 								} else {
 									sqlSelect = append(sqlSelect, "COALESCE("+NameSQL(options.TitleName)+"_id, 0) AS "+NameSQL(options.TitleName)+"_id")
+								}
+								if needFilter {
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
 								}
 							} else {
 								haveArr = true
@@ -556,6 +571,8 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 				sqlSelect = append(sqlSelect, "id")
 			}
 			result.MethodsProps[i].CustomListSqlSelect = strings.Join(sqlSelect, ", ")
+			result.MethodsProps[i].CustomListSqlWhereProps = strings.Join(sqlWhereParams, " AND ")
+			result.MethodsProps[i].FilteredFields = filtredFields
 			result.MethodsProps[i].IsCustomList = true
 
 			sort.Slice(result.MethodsProps[i].NestedObjs, func(a, b int) bool {
