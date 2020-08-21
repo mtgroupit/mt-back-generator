@@ -28,7 +28,12 @@ func (a *app) {{$method}}{{$modelName}}(m *{{$modelName}}) error {
 	return a.appl.{{$method}}{{$modelName}}(m)
 }{{end}}{{end}}
 
+func (a *app) {{$modelName}}AccessManager(m *AccessManager) error {
+	return a.appl.{{$modelName}}AccessManager(m)
+}
+
 {{range $functionName, $function := $.Functions}}
 func (a *app) {{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$function.OutStrType}}, error) {
 	return a.appl.{{$functionName}}{{$modelName}}({{$function.InStr}})
 }{{end}}
+

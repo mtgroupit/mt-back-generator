@@ -27,7 +27,18 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
           schema:          {{if or (eq $method "list") (IsCustomList $method)}}
             type: array
             items:          {{end}}
-              $ref: "#/definitions/{{$modelName}}" {{end}}{{end}} {{range $funcName, $func := $.Functions}}
+              $ref: "#/definitions/{{$modelName}}" {{end}}{{end}}
+  /{{$modelName}}/accessManager:    
+    post:
+      operationId: {{$modelName}}AccessManager
+      parameters:
+        - name: body
+          in: body
+          schema: 
+            $ref: "#/definitions/accessManager" 
+      responses:        
+        200:
+          description: OK    {{range $funcName, $func := $.Functions}}
   /{{$modelName}}/{{$funcName}}:
     post:
       operationId: {{$modelName}}{{$funcName}}
@@ -56,7 +67,25 @@ definitions:  {{range $modelName, $model := $.Models}}
         type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}} {{if $options.Format}}
         format: {{$options.Format}}{{end}}{{if .Length}}
         maxLength: {{.Length}}{{end}}{{if .Default}}
-        default: {{.Default}}{{end}}{{end}}{{end}}{{end}} {{if .HaveListMethod}}
+        default: {{.Default}}{{end}}{{end}}{{end}}{{end}} 
+  accessManager:
+    type: object
+    description: params for set access
+    properties:
+      user:
+        type: string
+      group:
+        type: string
+      read:
+        type: boolean 
+      write:
+        type: boolean 
+      delete:
+        type: boolean 
+      add:
+        type: boolean 
+      accessManager:
+        type: boolean {{if .HaveListMethod}}
   listParams:
     type: object
     description: params for list method

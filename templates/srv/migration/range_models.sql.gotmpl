@@ -3,6 +3,16 @@ CREATE TABLE {{NameSQL $modelName}}s
 ({{range $j, $psqlParams := $model.Psql}}{{if not $psqlParams.IsArray}}
     {{$psqlParams.SqlName}} {{$psqlParams.TypeSql}}{{if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}{{if $psqlParams.Unique}} UNIQUE{{end}}{{if $psqlParams.IsStruct}}  REFERENCES {{NameSQL $psqlParams.Type}}s({{$psqlParams.FK}}){{end}}{{if not $psqlParams.Last}},{{end}}{{end}}{{end}}
 );
+CREATE TABLE {{NameSQL $modelName}}s_access 
+(
+    user_name text,
+    group_name text,
+    read_access boolean,
+    write_access boolean,
+    delete_access boolean,
+    add_access boolean, 
+    access_manager boolean
+);
 {{range $i, $et := $.ExtraTables}}{{if eq $et.RefTableOne $modelName}}
 CREATE TABLE {{$et.Name}}
 (
@@ -15,3 +25,4 @@ CREATE TABLE {{$et.Name}}
 -- +goose Down{{range $i, $et := $.ExtraTables}}{{if eq $et.RefTableOne $modelName}}
 DROP TABLE {{$et.Name}};{{end}}{{end}}
 DROP TABLE {{NameSQL $modelName}}s;
+DROP TABLE {{NameSQL $modelName}}s_access;

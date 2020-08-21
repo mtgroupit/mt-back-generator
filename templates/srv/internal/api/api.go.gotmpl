@@ -46,7 +46,9 @@ func NewServer(appl app.App, cfg Config) (*restapi.Server, error) {
 	api.Logger = structlog.New(structlog.KeyUnit, "swagger").Printf
 
     {{range $modelName, $model := $.Models}}{{range $i, $method := $model.Methods}}
-	api.{{$method}}{{$model.TitleName}}Handler = operations.{{$method}}{{$model.TitleName}}HandlerFunc(svc.{{$method}}{{$modelName}}) {{end}}{{end}}
+	api.{{$method}}{{$model.TitleName}}Handler = operations.{{$method}}{{$model.TitleName}}HandlerFunc(svc.{{$method}}{{$modelName}}) {{end}}
+	api.{{$model.TitleName}}AccessManagerHandler = operations.{{$model.TitleName}}AccessManagerHandlerFunc(svc.{{$model.TitleName}}AccessManager)
+	{{end}}
     {{range $modelName, $model := $.Models}}{{range $function, $_ := $.Functions}}
 	api.{{$modelName}}{{$function}}Handler = operations.{{$modelName}}{{$function}}HandlerFunc(svc.{{$function}}{{$modelName}}) {{end}}{{end}}
 
@@ -55,6 +57,18 @@ func NewServer(appl app.App, cfg Config) (*restapi.Server, error) {
 	server.Port = cfg.Port
 
 	return server, nil
+}
+
+func appAccessManager(am *models.AccessManager) *app.AccessManager {
+	return &app.AccessManager{
+		User: am.User,
+		Group: am.Group,
+		Read: am.Read,
+		Write: am.Write,
+		Delete: am.Delete,
+		Add: am.Add,
+		AccessManager: am.AccessManager,
+	}
 }
 {{if .HaveListMethod}}
 func appFilters(apiFP []*models.FilterParams) []*app.Filter {

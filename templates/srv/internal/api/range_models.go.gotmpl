@@ -53,6 +53,15 @@ func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$mo
 	return operations.New{{$method}}{{$model.TitleName}}OK(){{end}}
 }
 {{end}}
+func (svc *service) {{$modelName}}AccessManager(params operations.{{$modelName}}AccessManagerParams) middleware.Responder {
+	err := svc.app.{{$modelName}}AccessManager(appAccessManager(params.Body))
+	if err != nil {
+		log.Err("{{$modelName}}AccessManager error", err)
+	} else {
+		log.Info("{{$modelName}}AccessManager ok")
+	}
+	return operations.New{{$modelName}}AccessManagerOK()
+}
 {{range $functionName, $function := $.Functions}}
 func (svc *service) {{$functionName}}{{$modelName}}(params operations.{{$modelName}}{{$functionName}}Params) middleware.Responder {
 	{{$function.OutStr}}, err := svc.app.{{$functionName}}{{$modelName}}({{$function.InStrParams}})
