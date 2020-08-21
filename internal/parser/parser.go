@@ -227,7 +227,7 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 					}
 					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
 					sqlAdd = append(sqlAdd, NameSQL(options.TitleName)+"_id")
-					sqlExexParams = append(sqlExexParams, "m."+options.TitleName+".ID")
+					sqlExexParams = append(sqlExexParams, column+"ID")
 					countFields = append(countFields, fmt.Sprintf("$%d", count))
 					count++
 					sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count))

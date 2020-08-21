@@ -20,7 +20,7 @@ func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$mo
 	} else {
 		log.Info("{{$method}}{{$modelName}} ok", "id", params.Body.ID)
 	}
-	return operations.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(*c)){{end}}
+	return operations.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c)){{end}}
 	{{if eq $method "Add"}}err := svc.app.{{$method}}{{$modelName}}(app{{$modelName}}(params.Body{{if $model.HaveLazyLoading}}, true{{end}}))
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
@@ -79,21 +79,27 @@ func (svc *service) {{$functionName}}{{$modelName}}(params operations.{{$modelNa
 }
 {{end}}
 
-func api{{$modelName}}(a app.{{$modelName}}) *models.{{$modelName}} {
+func api{{$modelName}}(a *app.{{$modelName}}) *models.{{$modelName}} {
+	if a == nil {
+		return nil
+	}
 	return &models.{{$modelName}}{ {{range $name, $options := $model.Columns}}
-		{{$options.TitleName}}: {{if $options.IsStruct}}api{{$options.GoType}}{{if $options.IsArray}}s({{else}}(*{{end}}a.{{$options.TitleName}}){{else}}{{if eq $options.Format "date-time"}}toDateTime(a.{{$options.TitleName}}){{else}}{{if eq $options.Format "email"}}strfmt.Email(a.{{$options.TitleName}}){{else}}a.{{$options.TitleName}}{{end}}{{end}}{{end}},{{end}}
+		{{$options.TitleName}}: {{if $options.IsStruct}}api{{$options.GoType}}{{if $options.IsArray}}s({{else}}({{end}}a.{{$options.TitleName}}){{else}}{{if eq $options.Format "date-time"}}toDateTime(a.{{$options.TitleName}}){{else}}{{if eq $options.Format "email"}}strfmt.Email(a.{{$options.TitleName}}){{else}}a.{{$options.TitleName}}{{end}}{{end}}{{end}},{{end}}
 	}
 }
 
 func api{{$modelName}}s(apps []*app.{{$modelName}}) []*models.{{$modelName}} {
 	apis := []*models.{{$modelName}}{}
 	for i := range apps {
-		apis = append(apis, api{{$modelName}}(*apps[i]))
+		apis = append(apis, api{{$modelName}}(apps[i]))
 	}
 	return apis
 }
 
 func app{{$modelName}}(a *models.{{$modelName}}{{if $model.HaveLazyLoading}}, withStructs bool{{end}}) *app.{{$modelName}} {
+	if a == nil {
+		return nil
+	}
 	{{LowerTitle $modelName}} := &app.{{$modelName}}{}
 	{{if $model.HaveLazyLoading}}
 	if withStructs { {{range $name, $options := $model.Columns}}{{if $options.IsStruct}}
