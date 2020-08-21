@@ -16,7 +16,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 }
 
 {{range $i, $method := $model.Methods}}
-{{if eq $method "Get"}}func (a *App) {{$method}}{{$modelName}}(id int64) (*app.{{$modelName}}, error) { 
+{{if eq $method "Get"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) (*app.{{$modelName}}, error) { 
 	var m {{$modelName}}
 	if err := a.db.Get(&m, `SELECT {{$model.SqlSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1`, id); err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	}{{end}}{{end}}{{end}}{{end}}
 	return nil
 }{{end}}
-{{if eq $method "Delete"}}func (a *App) {{$method}}{{$modelName}}(id int64) error { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
+{{if eq $method "Delete"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) error { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
 	if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{$modelName}}_id=$1`, id); err != nil {
 		return err
 	}{{end}}{{end}}{{end}}{{end}} {{range $_, $bind := $model.Binds}}{{if $bind.IsArray}}
@@ -53,7 +53,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	}
 	return nil
 }{{end}}
-{{if eq $method "Edit"}}func (a *App) {{$method}}{{$modelName}}(id int64, m *app.{{$modelName}}) error  {
+{{if eq $method "Edit"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, m *app.{{$modelName}}) error  {
 	if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{$model.SqlEditStr}} WHERE id=$1`, id, {{$model.SqlExecParams}}); err != nil {
 		return err
 	}{{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}

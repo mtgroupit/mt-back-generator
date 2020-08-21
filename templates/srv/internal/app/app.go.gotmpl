@@ -6,10 +6,10 @@ package app
 // App provides application features service.
 type App interface {
     {{range $modelName, $model := $.Models}}{{range $i, $method := $model.Methods}}
-	{{if eq $method "Get"}}{{$method}}{{$modelName}}(id int64) (*{{$modelName}}, error){{end}}
+	{{if eq $method "Get"}}{{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) (*{{$modelName}}, error){{end}}
     {{if eq $method "Add"}}{{$method}}{{$modelName}}(m *{{$modelName}}) error{{end}}
-	{{if eq $method "Delete"}}{{$method}}{{$modelName}}(id int64) error{{end}}
-    {{if eq $method "Edit"}}{{$method}}{{$modelName}}(id int64, m *{{$modelName}}) error{{end}}
+	{{if eq $method "Delete"}}{{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) error{{end}}
+    {{if eq $method "Edit"}}{{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, m *{{$modelName}}) error{{end}}
 
     {{if or (eq $method "List") (IsCustomList $method)}}{{$method}}{{$modelName}}(offset, limit int64, filters []*Filter) ([]*{{$modelName}}, error){{end}}
 	{{if  and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
