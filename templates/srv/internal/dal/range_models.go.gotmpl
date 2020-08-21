@@ -106,7 +106,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		return nil, err
 	}
 	for rows.Next() {
-		var m Demand
+		var m {{$modelName}}
 		err = rows.StructScan(&m)
 		ms = append(ms, m)
 	}
