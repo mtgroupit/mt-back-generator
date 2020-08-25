@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"testing"
 
-	"Snouki/internal/api/restapi/models"
-	"Snouki/internal/app"
-	"Snouki/internal/def"
+	"{{.Name}}/internal/api/restapi/models"
+	"{{.Name}}/internal/app"
+	"{{.Name}}/internal/def"
 
-	{{if .HaveDateTime}}"github.com/go-openapi/strfmt"{{end}}
+	{{$strfmtOn := false}}
+	{{if .HaveDateTime}}"github.com/go-openapi/strfmt"{{$strfmtOn = true}}{{end}}
+	{{if not $strfmtOn}}{{range $modelName, $model := $.Models}}{{if and (not $strfmtOn) ($model.HaveEmail)}}"github.com/go-openapi/strfmt"{{$strfmtOn = true}}{{end}}{{end}}{{end}}
 	"github.com/golang/mock/gomock"
 	"github.com/powerman/check"
 	"github.com/powerman/gotest/testinit"

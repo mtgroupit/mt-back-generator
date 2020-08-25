@@ -7,13 +7,13 @@ import (
 	"net"
 	"strconv"
 
-	"Snouki/internal/api/restapi/client"
+	"{{.Name}}/internal/api/restapi/client"
 
 	"github.com/powerman/gotest/testinit"
 	"github.com/powerman/pqx"
 	"github.com/powerman/structlog"
 
-	"Snouki/internal/def"
+	"{{.Name}}/internal/def"
 )
 
 func init() { testinit.Setup(2, setupIntegration) }
