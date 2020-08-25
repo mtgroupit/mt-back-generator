@@ -15,44 +15,34 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func readYAMLConfig(file string, cfg *models.Config) error {
+// ReadYAMLCfg create models.Config from configFile
+func ReadYAMLCfg(file string) (*models.Config, error) {
+	cfg := models.Config{}
 	yamlFile, err := ioutil.ReadFile(file)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = yaml.Unmarshal(yamlFile, cfg)
-	if err != nil {
-		return err
+	if err = yaml.Unmarshal(yamlFile, &cfg); err != nil {
+		return nil, err
 	}
-	return nil
+
+	return &cfg, nil
 }
 
-// Cfg create models.Config from configFile
-func Cfg(configFile string) (cfg models.Config, err error) {
-	if err = readYAMLConfig(configFile, &cfg); err != nil {
-		return
-	}
+// HandleCfg handles models.Config for fill config fields for templates
+func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
+	cfg = inCfg
 
 	cfg.Description = strconv.Quote(cfg.Description)
 
-	reg, err := regexp.Compile("[^a-zA-Z0-9]+")
+	cfg.Name = regexp.MustCompile("[^a-zA-Z0-9]+").ReplaceAllString(cfg.Name, "")
+
+	err = setDeepNesting(cfg)
 	if err != nil {
 		return
 	}
-	cfg.Name = reg.ReplaceAllString(cfg.Name, "")
 
-	for name, model := range cfg.Models {
-		model.DeepNesting, err = countDeepNesting(name, cfg)
-		if err != nil {
-			return
-		}
-		if model.DeepNesting > cfg.MaxDeepNesting {
-			cfg.MaxDeepNesting = model.DeepNesting
-		}
-
-		cfg.Models[name] = model
-	}
 	binds := map[string]models.Bind{}
 	for name, model := range cfg.Models {
 		model.TitleName = strings.Title(name)
@@ -108,7 +98,6 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 				et.RefTableOne = strings.Title(name)
 				et.RefIDOne = "id"
 				et.FieldIDOne = NameSQL(name) + "_id"
-				fmt.Println("one", name, cfg.Models[name].Columns["id"].Type)
 				if cfg.Models[name].Columns["id"].Type == "uuid" {
 					et.TypeIDOne = "uuid"
 				} else {
@@ -118,9 +107,6 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 				et.RefTableTwo = options.GoType
 				et.RefIDTwo = "id"
 				et.FieldIDTwo = NameSQL(column) + "_id"
-				_, ok1 := cfg.Models[LowerTitle(options.GoType)]
-				_, ok2 := cfg.Models[LowerTitle(options.GoType)].Columns["id"]
-				fmt.Println("two", LowerTitle(options.GoType), cfg.Models[LowerTitle(options.GoType)].Columns["id"].Type, ok1, ok2)
 				if cfg.Models[LowerTitle(options.GoType)].Columns["id"].Type == "uuid" {
 					et.TypeIDTwo = "uuid"
 				} else {
@@ -142,8 +128,8 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 					pp.Type = "string"
 					pp.TypeSql = "uuid"
 				default:
+					options.GoType = options.Type
 					options.Type = "integer"
-					options.GoType = "int64"
 
 					pp.Type = "int64"
 					pp.TypeSql = "SERIAL"
@@ -299,26 +285,27 @@ func Cfg(configFile string) (cfg models.Config, err error) {
 		cfg.Functions[funcName] = newFunc
 	}
 
+	titleize(cfg)
+
 	return
 }
 
-func checkColumn(columnType string, cfg models.Config) (bool, bool, string, error) {
-	switch {
-	case strings.HasPrefix(columnType, "model."):
-		if _, ok := cfg.Models[columnType[6:]]; !ok {
-			return false, false, "", errors.Errorf(`config not contain "%s" field`, columnType[6:])
+func setDeepNesting(cfg *models.Config) (err error) {
+	for name, model := range cfg.Models {
+		model.DeepNesting, err = countDeepNesting(name, cfg)
+		if err != nil {
+			return
 		}
-		return true, false, strings.Title(columnType[6:]), nil
-	case strings.HasPrefix(columnType, "[]model."):
-		if _, ok := cfg.Models[columnType[8:]]; !ok {
-			return false, false, "", errors.Errorf(`config not contain "%s" field`, columnType[8:])
+		if model.DeepNesting > cfg.MaxDeepNesting {
+			cfg.MaxDeepNesting = model.DeepNesting
 		}
-		return true, true, strings.Title(columnType[8:]), nil
+
+		cfg.Models[name] = model
 	}
-	return false, false, "", nil
+	return
 }
 
-func countDeepNesting(model string, cfg models.Config) (int, error) {
+func countDeepNesting(model string, cfg *models.Config) (int, error) {
 	var err error
 	deepNesting := 0
 	for _, options := range cfg.Models[model].Columns {
@@ -343,12 +330,28 @@ func countDeepNesting(model string, cfg models.Config) (int, error) {
 	return deepNesting, nil
 }
 
+func checkColumn(columnType string, cfg *models.Config) (bool, bool, string, error) {
+	switch {
+	case strings.HasPrefix(columnType, "model."):
+		if _, ok := cfg.Models[columnType[6:]]; !ok {
+			return false, false, "", errors.Errorf(`config not contain "%s" field`, columnType[6:])
+		}
+		return true, false, strings.Title(columnType[6:]), nil
+	case strings.HasPrefix(columnType, "[]model."):
+		if _, ok := cfg.Models[columnType[8:]]; !ok {
+			return false, false, "", errors.Errorf(`config not contain "%s" field`, columnType[8:])
+		}
+		return true, true, strings.Title(columnType[8:]), nil
+	}
+	return false, false, "", nil
+}
+
+// NameSQL converts name to "snake_case" format
 func NameSQL(name string) string {
 	return strings.ToLower(strings.Join(camelcase.Split(name), "_"))
 }
 
-// Titleize makes models keys as titles
-func Titleize(cfg *models.Config) {
+func titleize(cfg *models.Config) {
 	titleModels := make(map[string]models.Model)
 	for modelName, model := range cfg.Models {
 		for i := range cfg.Models[modelName].Methods {
@@ -359,6 +362,7 @@ func Titleize(cfg *models.Config) {
 	cfg.Models = titleModels
 }
 
+// IsCustomList define method is custom list or not
 func IsCustomList(method string) bool {
 	return regexp.MustCompile(`^list\(.+\)$`).Match([]byte(method))
 }
@@ -579,34 +583,32 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 				return result.MethodsProps[i].NestedObjs[a].Path < result.MethodsProps[i].NestedObjs[b].Path
 			})
 
+			fmt.Printf("%+v\n\n", result.MethodsProps[i].NestedObjs)
+
 			for j := range result.MethodsProps[i].NestedObjs {
-				switch j {
-				case 0:
+				if j == 0 {
 					result.MethodsProps[i].NestedObjs[j].IsFirstForLazyLoading = true
 					if len(result.MethodsProps[i].NestedObjs) == 1 {
 						result.MethodsProps[i].NestedObjs[j].IsLastForLazyLoading = true
 					}
-				case len(result.MethodsProps[i].NestedObjs) - 1:
-					result.MethodsProps[i].NestedObjs[j].IsLastForLazyLoading = true
-					if len(result.MethodsProps[i].NestedObjs) == 2 {
-						if result.MethodsProps[i].NestedObjs[j].Path != result.MethodsProps[i].NestedObjs[j-1].Path {
-							result.MethodsProps[i].NestedObjs[j-1].IsLastForLazyLoading = true
-							result.MethodsProps[i].NestedObjs[j].IsFirstForLazyLoading = true
-						}
+				} else {
+					if j == len(result.MethodsProps[i].NestedObjs)-1 {
+						result.MethodsProps[i].NestedObjs[j].IsLastForLazyLoading = true
 					}
-				default:
 					if result.MethodsProps[i].NestedObjs[j].Path != result.MethodsProps[i].NestedObjs[j-1].Path {
 						result.MethodsProps[i].NestedObjs[j-1].IsLastForLazyLoading = true
 						result.MethodsProps[i].NestedObjs[j].IsFirstForLazyLoading = true
 					}
 				}
 			}
+			fmt.Printf("%+v\n\n", result.MethodsProps[i].NestedObjs)
 		}
 	}
 	model = &result
 	return nil
 }
 
+// LowerTitle cancels strings.Title
 func LowerTitle(in string) string {
 	switch len(in) {
 	case 0:

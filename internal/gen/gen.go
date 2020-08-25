@@ -19,19 +19,11 @@ import (
 var goTmplFuncs = template.FuncMap{
 	"Iterate": func(count int) []int {
 		var i int
-		var Items []int
+		var items []int
 		for i = 0; i <= count; i++ {
-			Items = append(Items, i)
+			items = append(items, i)
 		}
-		return Items
-	},
-	"IterateReverse": func(count int) []int {
-		var i int
-		var Items []int
-		for i = count; i >= 0; i-- {
-			Items = append(Items, i)
-		}
-		return Items
+		return items
 	},
 	"TruncateParams": func(in interface{}) string {
 		var keys []string
@@ -55,18 +47,12 @@ var goTmplFuncs = template.FuncMap{
 }
 
 // Srv - generate dir with service
-func Srv(dir string, cfg models.Config) error {
-	if err := treeDirs(dir, "service"); err != nil {
+func Srv(dir string, cfg *models.Config) error {
+	if err := buildTreeDirs(dir, "service"); err != nil {
 		return err
 	}
 
-	if err := swagger(path.Join(dir, "service"), cfg); err != nil {
-		return err
-	}
-
-	parser.Titleize(&cfg)
-
-	if err := gen("./templates/srv", path.Join(dir, "service"), cfg); err != nil {
+	if err := gen("./templates/srv", path.Join(dir, "service"), *cfg); err != nil {
 		return err
 	}
 
@@ -88,7 +74,7 @@ func createFile(name, dirTMPL, dirTarget string, cfg models.Config, tmp *templat
 	return nil
 }
 
-// exec generate "name".go file or "model name".go files (if dirTMPL is range_models.go.gotmpl) in "dirTarget" directory
+// exec generate "name" template  in "dirTarget" directory
 func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 	tmp, err := template.New(name).Funcs(goTmplFuncs).ParseFiles(path.Clean(path.Join(dirTMPL, name)))
 	if err != nil {
@@ -97,23 +83,7 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 
 	if strings.HasPrefix(name, "range_models") {
 		switch {
-		case strings.Contains(name, ".go."):
-			for modelName := range cfg.Models {
-				var fileName string
-				switch {
-				case strings.Contains(name, "_integration_test."):
-					fileName = parser.NameSQL(modelName) + "_integration_test.go"
-				case strings.Contains(name, "_test."):
-					fileName = parser.NameSQL(modelName) + "_test.go"
-				default:
-					fileName = parser.NameSQL(modelName) + ".go"
-				}
-				cfg.CurModel = modelName
-				if err := createFile(fileName, dirTMPL, dirTarget, cfg, tmp); err != nil {
-					return err
-				}
-			}
-		case strings.Contains(name, ".sql."):
+		case strings.HasSuffix(name, ".sql.gotmpl"):
 			counter := 0
 			for i := 0; i <= cfg.MaxDeepNesting; i++ {
 				for modelName, model := range cfg.Models {
@@ -127,6 +97,14 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 					}
 				}
 			}
+		default:
+			for modelName := range cfg.Models {
+				fileName := parser.NameSQL(modelName) + name[len("range_models"):len(name)-len(".gotmpl")]
+				cfg.CurModel = modelName
+				if err := createFile(fileName, dirTMPL, dirTarget, cfg, tmp); err != nil {
+					return err
+				}
+			}
 		}
 	} else {
 		if err := createFile(name[:len(name)-len(".gotmpl")], dirTMPL, dirTarget, cfg, tmp); err != nil {
@@ -136,6 +114,7 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 	return nil
 }
 
+// gen recursively browses folder with templates and run exec function for them
 func gen(dirTMPL, dirTarget string, cfg models.Config) error {
 	files, err := ioutil.ReadDir(dirTMPL)
 	if err != nil {
@@ -156,27 +135,7 @@ func gen(dirTMPL, dirTarget string, cfg models.Config) error {
 	return nil
 }
 
-// swagger generate swagger.yaml file in dir directory
-func swagger(dir string, cfg models.Config) error {
-	tmp, err := template.New("swagger.gotmpl").Funcs(goTmplFuncs).ParseFiles("./templates/swagger/swagger.gotmpl")
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Create(path.Clean(path.Join(dir, "swagger.yaml")))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if err = tmp.Execute(f, cfg); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func treeDirs(p, srvName string) error {
+func buildTreeDirs(p, srvName string) error {
 	if err := ensureDir(p, srvName); err != nil {
 		return err
 	}

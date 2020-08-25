@@ -8,29 +8,29 @@ consumes:
 produces:
   - application/json
 paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.Methods}}
-  /{{$modelName}}/{{$method}}:    
+  /{{LowerTitle $modelName}}/{{LowerTitle $method}}:    
     {{(index $model.MethodsProps $i).HTTPMethod}}:
-      operationId: {{$method}}{{$model.TitleName}}
+      operationId: {{LowerTitle $method}}{{$model.TitleName}}
       parameters:
         - name: body
           in: body
-          schema: {{if or (eq $method "list") (IsCustomList $method)}}
+          schema: {{if or (eq $method "List") (IsCustomList $method)}}
             $ref: "#/definitions/listParams" {{else}}
-            $ref: "#/definitions/{{$modelName}}" {{end}}
-      responses:        {{if eq $method "delete"}}
+            $ref: "#/definitions/{{LowerTitle $modelName}}" {{end}}
+      responses:        {{if eq $method "Delete"}}
         204:
-          description: Deleted        {{else}}{{if eq $method "add"}}
+          description: Deleted        {{else}}{{if eq $method "Add"}}
         201:
           description: Created        {{else}}
         200:
-          description: OK        {{end}}{{end}}        {{if or (eq $method "list") (IsCustomList $method) (eq $method "get")}}
-          schema:          {{if or (eq $method "list") (IsCustomList $method)}}
+          description: OK        {{end}}{{end}}        {{if or (eq $method "List") (IsCustomList $method) (eq $method "Get")}}
+          schema:          {{if or (eq $method "List") (IsCustomList $method)}}
             type: array
             items:          {{end}}
-              $ref: "#/definitions/{{$modelName}}" {{end}}{{end}}
-  /{{$modelName}}/accessManager:    
+              $ref: "#/definitions/{{LowerTitle $modelName}}" {{end}}{{end}}
+  /{{LowerTitle $modelName}}/accessManager:    
     post:
-      operationId: {{$modelName}}AccessManager
+      operationId: {{LowerTitle $modelName}}AccessManager
       parameters:
         - name: body
           in: body
@@ -39,9 +39,9 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
       responses:        
         200:
           description: OK    {{range $funcName, $func := $.Functions}}
-  /{{$modelName}}/{{$funcName}}:
+  /{{LowerTitle $modelName}}/{{$funcName}}:
     post:
-      operationId: {{$modelName}}{{$funcName}}
+      operationId: {{LowerTitle $modelName}}{{$funcName}}
       parameters:
         - name: body
           in: body
@@ -53,7 +53,7 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
           schema:             
             $ref: "#/definitions/{{$funcName}}Params" {{end}}{{end}}
 definitions:  {{range $modelName, $model := $.Models}}  
-  {{$modelName}}:
+  {{LowerTitle $modelName}}:
     type: object
     description: {{.Description}}
     properties:      {{range $name, $options := $model.Columns}} {{if $options.IsStruct}}{{if $options.IsArray}}  

@@ -1,6 +1,6 @@
 package models
 
-// Options contain properties for column
+// Options contain properties of column
 type Options struct {
 	TitleName string
 	Type      string
@@ -27,7 +27,7 @@ type PsqlParams struct {
 	Last     bool
 }
 
-//Bind binds tables for deleting
+//Bind binds tables for build delete method
 type Bind struct {
 	ModelName string
 	FieldName string
@@ -122,6 +122,6 @@ type Config struct {
 
 	ExtraTables []ExtraTable
 
-	// CurModel - field for define need model for template
+	// CurModel - field for define needed model for template
 	CurModel string
 }

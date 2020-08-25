@@ -14,14 +14,16 @@ var (
 )
 
 func init() {
-	flag.StringVar(&dir, "dir", "./", "dir for generated servicce")
+	flag.StringVar(&dir, "dir", "./", "dir for generated service")
 	flag.StringVar(&config, "config", "./config.yaml", "config file")
 }
 
 func main() {
 	flag.Parse()
 
-	cfg, err := parser.Cfg(config)
+	cfg, err := parser.ReadYAMLCfg(config)
+
+	cfg, err = parser.HandleCfg(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
