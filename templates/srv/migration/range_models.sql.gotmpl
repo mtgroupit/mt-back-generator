@@ -1,7 +1,7 @@
 -- +goose Up {{$modelName := .CurModel}} {{$model := (index $.Models $modelName)}}
 CREATE TABLE {{NameSQL $modelName}}s
 ({{range $j, $psqlParams := $model.Psql}}{{if not $psqlParams.IsArray}}
-    {{$psqlParams.SqlName}} {{$psqlParams.TypeSql}}{{if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}{{if $psqlParams.Unique}} UNIQUE{{end}}{{if $psqlParams.IsStruct}}  REFERENCES {{NameSQL $psqlParams.Type}}s({{$psqlParams.FK}}){{end}}{{if not $psqlParams.Last}},{{end}}{{end}}{{end}}
+    {{$psqlParams.SQLName}} {{$psqlParams.TypeSQL}}{{if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}{{if $psqlParams.Unique}} UNIQUE{{end}}{{if $psqlParams.IsStruct}}  REFERENCES {{NameSQL $psqlParams.Type}}s({{$psqlParams.FK}}){{end}}{{if not $psqlParams.Last}},{{end}}{{end}}{{end}}
 );
 CREATE TABLE {{NameSQL $modelName}}s_access 
 (

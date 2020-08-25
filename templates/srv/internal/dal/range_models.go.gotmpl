@@ -10,15 +10,15 @@ import (
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
 
 type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlParams.IsStruct}}
-	{{if not $psqlParams.IsArray}}{{$psqlParams.Name}}ID {{if eq  $psqlParams.TypeSql "uuid"}}uuid.UUID{{else}}int64{{end}} `db:"{{$psqlParams.SqlName}}"`{{end}}
+	{{if not $psqlParams.IsArray}}{{$psqlParams.Name}}ID {{if eq  $psqlParams.TypeSQL "uuid"}}uuid.UUID{{else}}int64{{end}} `db:"{{$psqlParams.SQLName}}"`{{end}}
 	{{$psqlParams.Name}} {{if $psqlParams.IsArray}}[]{{end}}{{$psqlParams.Type}}{{else}}
-	{{$psqlParams.Name}} {{if eq  $psqlParams.TypeSql "uuid"}}uuid.UUID{{else}}{{$psqlParams.Type}}{{end}} `db:"{{$psqlParams.SqlName}}"` {{end}}{{end}}
+	{{$psqlParams.Name}} {{if eq  $psqlParams.TypeSQL "uuid"}}uuid.UUID{{else}}{{$psqlParams.Type}}{{end}} `db:"{{$psqlParams.SQLName}}"` {{end}}{{end}}
 }
 
 {{range $i, $method := $model.Methods}}
 {{if eq $method "Get"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) (*app.{{$modelName}}, error) { 
 	var m {{$modelName}}
-	if err := a.db.Get(&m, `SELECT {{$model.SqlSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1`, id); err != nil {
+	if err := a.db.Get(&m, `SELECT {{$model.SQLSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1`, id); err != nil {
 		return nil, err
 	}{{if $model.HaveLazyLoading}}
 	if err := m.LazyLoading(a); err != nil {
@@ -32,7 +32,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	if m.{{$options.TitleName}} != nil {
 		{{$column}}ID = m.{{$options.TitleName}}.ID
 	}{{end}}{{end}}
-	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{NameSQL $modelName}}s{{$model.SqlAddStr}} RETURNING id`, {{$model.SqlExecParams}}{{if $model.IDIsUUID}}, {{$modelName}}ID{{end}}); err != nil {
+	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{NameSQL $modelName}}s{{$model.SQLAddStr}} RETURNING id`, {{$model.SQLExecParams}}{{if $model.IDIsUUID}}, {{$modelName}}ID{{end}}); err != nil {
 		return err
 	}{{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
 	for _, m := range m.{{$options.TitleName}} {
@@ -62,7 +62,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	if m.{{$options.TitleName}} != nil {
 		{{$column}}ID = m.{{$options.TitleName}}.ID
 	}{{end}}{{end}}
-	if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{$model.SqlEditStr}} WHERE id=$1`, id, {{$model.SqlExecParams}}); err != nil {
+	if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{$model.SQLEditStr}} WHERE id=$1`, id, {{$model.SQLExecParams}}); err != nil {
 		return err
 	}{{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
 	if len(m.{{$options.TitleName}}) != 0 {
@@ -109,7 +109,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		}
 	}{{end}}
 	
-	rows, err := a.db.NamedQuery(`SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSqlSelect}}{{else}}{{$model.SqlSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSqlWhereProps}}{{else}}{{$model.SqlWhereParams}}{{end}} OFFSET :offset LIMIT :limit`, mapQuery)
+	rows, err := a.db.NamedQuery(`SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} OFFSET :offset LIMIT :limit`, mapQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	}
 	for _, cd := range slice{{$options.TitleName}} {
 		var elem {{$nestedObj.Type}}
-		if err = a.db.Get(&elem, `SELECT {{$nestedObj.SqlSelect}} FROM {{NameSQL $nestedObj.Type}}s WHERE id=$1`, cd. {{$nestedObj.Type}}ID); err != nil {
+		if err = a.db.Get(&elem, `SELECT {{$nestedObj.SQLSelect}} FROM {{NameSQL $nestedObj.Type}}s WHERE id=$1`, cd. {{$nestedObj.Type}}ID); err != nil {
 			return
 		}
 		{{if $nestedObj.NeedLazyLoading}}
@@ -152,7 +152,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		}{{end}}
 		m.{{$nestedObj.Name}} = append(m.{{$nestedObj.Name}}, elem)
 	}{{else}}
-	if err = a.db.Get(&m.{{$nestedObj.Name}}, `SELECT {{$nestedObj.SqlSelect}} FROM {{NameSQL $nestedObj.Type}}s WHERE id=$1`, m.{{$nestedObj.Name}}ID); err != nil && err.Error() != "sql: no rows in result set" {
+	if err = a.db.Get(&m.{{$nestedObj.Name}}, `SELECT {{$nestedObj.SQLSelect}} FROM {{NameSQL $nestedObj.Type}}s WHERE id=$1`, m.{{$nestedObj.Name}}ID); err != nil && err.Error() != "sql: no rows in result set" {
 		return
 	}{{if $nestedObj.NeedLazyLoading}}
 	if err == nil {
@@ -178,7 +178,7 @@ func (m *{{$modelName}}) LazyLoading(a *App) (err error) { {{range $modelName2, 
 	}
 	for _, cd := range slice{{$options.TitleName}} {
 		var {{$column}} {{$options.GoType}}
-		if err = a.db.Get(&{{$column}}, `SELECT {{$model2.SqlSelectStr}} FROM {{NameSQL $options.GoType}}s WHERE id=$1`, cd.{{$options.GoType}}ID); err != nil {
+		if err = a.db.Get(&{{$column}}, `SELECT {{$model2.SQLSelectStr}} FROM {{NameSQL $options.GoType}}s WHERE id=$1`, cd.{{$options.GoType}}ID); err != nil {
 			return
 		}{{if $model2.HaveLazyLoading}}
 		if err == nil {
@@ -188,7 +188,7 @@ func (m *{{$modelName}}) LazyLoading(a *App) (err error) { {{range $modelName2, 
 		}{{end}}
 		m.{{$options.TitleName}} = append(m.{{$options.TitleName}}, {{$column}})
 	}{{else}}
-	if err = a.db.Get(&m.{{$options.TitleName}}, `SELECT {{$model2.SqlSelectStr}} FROM {{NameSQL $modelName2}}s WHERE id=$1`, m.{{$options.TitleName}}ID); err != nil && err.Error() != "sql: no rows in result set" {
+	if err = a.db.Get(&m.{{$options.TitleName}}, `SELECT {{$model2.SQLSelectStr}} FROM {{NameSQL $modelName2}}s WHERE id=$1`, m.{{$options.TitleName}}ID); err != nil && err.Error() != "sql: no rows in result set" {
 		return
 	}{{if $model2.HaveLazyLoading}}
 	if err == nil {

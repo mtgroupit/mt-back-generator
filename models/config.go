@@ -17,10 +17,10 @@ type Options struct {
 // PsqlParams - contain properties for postgres generate
 type PsqlParams struct {
 	Name     string
-	SqlName  string
+	SQLName  string
 	Unique   bool
 	Type     string
-	TypeSql  string
+	TypeSQL  string
 	IsArray  bool
 	IsStruct bool
 	FK       string
@@ -38,7 +38,7 @@ type Bind struct {
 type NestedObjProps struct {
 	Name                  string
 	Type                  string
-	SqlSelect             string
+	SQLSelect             string
 	Path                  string
 	ParentStruct          string
 	NeedLazyLoading       bool
@@ -47,18 +47,18 @@ type NestedObjProps struct {
 	IsLastForLazyLoading  bool
 }
 
-// MethodProps contains all additional informations for method
+// MethodProps contains all additional information for method
 type MethodProps struct {
 	HTTPMethod              string
 	IsCustomList            bool
 	NeedLazyLoading         bool
-	CustomListSqlSelect     string
-	CustomListSqlWhereProps string
+	CustomListSQLSelect     string
+	CustomListSQLWhereProps string
 	FilteredFields          []string
 	NestedObjs              []NestedObjProps
 }
 
-// Model - description one compoment of models
+// Model - description one component of models
 type Model struct {
 	Description     string
 	Columns         map[string]Options
@@ -69,11 +69,11 @@ type Model struct {
 	IDIsUUID        bool
 	HaveEmail       bool
 	HaveListMethod  bool
-	SqlSelectStr    string
-	SqlWhereParams  string
-	SqlAddStr       string
-	SqlEditStr      string
-	SqlExecParams   string
+	SQLSelectStr    string
+	SQLWhereParams  string
+	SQLAddStr       string
+	SQLEditStr      string
+	SQLExecParams   string
 	TitleName       string
 
 	Binds        []Bind
@@ -95,7 +95,7 @@ type Function struct {
 	HaveOut     bool
 }
 
-// ExtraTable is table for many-to-many realations
+// ExtraTable is table for many-to-many relations
 type ExtraTable struct {
 	Name string
 
