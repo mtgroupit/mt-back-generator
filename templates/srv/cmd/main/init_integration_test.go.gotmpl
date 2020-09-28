@@ -7,13 +7,13 @@ import (
 	"net"
 	"strconv"
 
-	"{{.Name}}/internal/api/restapi/client"
+	"{{.Module}}/internal/api/restapi/client"
 
 	"github.com/powerman/gotest/testinit"
 	"github.com/powerman/pqx"
 	"github.com/powerman/structlog"
 
-	"{{.Name}}/internal/def"
+	"{{.Module}}/internal/def"
 )
 
 func init() { testinit.Setup(2, setupIntegration) }

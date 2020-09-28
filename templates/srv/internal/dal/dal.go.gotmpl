@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"time"
 
-	"{{.Name}}/migration"
+	"{{.Module}}/migration"
 
 	{{$inputed := false}}{{range $modelName, $model := $.Models}}{{if and $model.IDIsUUID (not $inputed)}}"github.com/google/uuid"{{$inputed = true}}{{end}}{{end}}
 	"github.com/jmoiron/sqlx"

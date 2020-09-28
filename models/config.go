@@ -113,6 +113,7 @@ type ExtraTable struct {
 // Config - description service, models and functions from yaml file
 type Config struct {
 	Name           string
+	Module         string
 	Description    string
 	Models         map[string]Model
 	Functions      map[string]Function

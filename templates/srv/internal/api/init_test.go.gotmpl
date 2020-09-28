@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"{{.Name}}/internal/api/restapi/models"
-	"{{.Name}}/internal/app"
-	"{{.Name}}/internal/def"
+	"{{.Module}}/internal/api/restapi/models"
+	"{{.Module}}/internal/app"
+	"{{.Module}}/internal/def"
 
 	{{$strfmtOn := false}}
 	{{if .HaveDateTime}}"github.com/go-openapi/strfmt"{{$strfmtOn = true}}{{end}}

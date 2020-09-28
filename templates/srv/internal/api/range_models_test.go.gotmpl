@@ -3,8 +3,8 @@ package api  {{$modelName := .CurModel}} {{$model := (index $.Models $modelName)
 import (
 	"testing"
 
-	"{{.Name}}/internal/api/restapi/client"
-	"{{.Name}}/internal/api/restapi/client/operations"
+	"{{.Module}}/internal/api/restapi/client"
+	"{{.Module}}/internal/api/restapi/client/operations"
 
 	"github.com/powerman/check"
 )

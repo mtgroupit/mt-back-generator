@@ -2,10 +2,10 @@
 package api
 
 import (
-	"{{.Name}}/internal/api/restapi/models"
-	"{{.Name}}/internal/api/restapi/restapi"
-	"{{.Name}}/internal/api/restapi/restapi/operations"
-	"{{.Name}}/internal/app"
+	"{{.Module}}/internal/api/restapi/models"
+	"{{.Module}}/internal/api/restapi/restapi"
+	"{{.Module}}/internal/api/restapi/restapi/operations"
+	"{{.Module}}/internal/app"
 
 	{{if .HaveDateTime}}"github.com/go-openapi/strfmt"{{end}}
 	"github.com/go-openapi/loads"
