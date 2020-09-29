@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"{{.Module}}/internal/dal"
 	"{{.Module}}/internal/def"
 
+	extauthapi "{{.AuthSrv}}"
 	"github.com/powerman/pqx"
 	"github.com/powerman/structlog"
 )
@@ -31,6 +33,7 @@ var (
 		gooseDir string
 		db       pqx.Config
 		api      api.Config
+		extauthEndpoint string
 	}
 )
 
@@ -47,6 +50,10 @@ func init() {
 	flag.StringVar(&cfg.api.Host, "api.host", def.APIHost, "serve API on `host`")
 	flag.IntVar(&cfg.api.Port, "api.port", def.APIPort, "serve API on `port` (>0)")
 	flag.StringVar(&cfg.api.BasePath, "api.basepath", def.APIBasePath, "serve API on `path`")
+	flag.StringVar(&cfg.api.TLSCert, "api.tls.crt", def.APITLSCert, "serve Swagger API using TLS cert")
+	flag.StringVar(&cfg.api.TLSCertKey, "api.tls.key", def.APITLSKey, "serve Swagger API using TLS key")
+
+	flag.StringVar(&cfg.extauthEndpoint, "extauth.endpoint", def.ExtauthEndpoint, "extauth service `endpoint`")
 }
 
 func main() {
@@ -62,28 +69,34 @@ func main() {
 	}
 }
 
-func connect() (app.App, error) {
+func connect() (app.App, *extauthapi.Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), connectTimeout)
 	defer cancel()
 
+	extAuthSvc, err := extauthapi.NewClient(cfg.extauthEndpoint, &tls.Config{InsecureSkipVerify: true}, false)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	a, err := dal.New(ctx, cfg.db, cfg.gooseDir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return app.New(a), nil
+	
+	return app.New(a), extAuthSvc, nil
 }
 
 func runServe(errc chan<- error) {
 	log.Info("server started")
 	defer log.Info("server finished")
 
-	appl, err := connect()
+	appl, extAuthSvc, err := connect()
 	if err != nil {
 		errc <- err
 		return
 	}
 
-	srv, err := api.NewServer(appl, cfg.api)
+	srv, err := api.NewServer(appl, extAuthSvc, cfg.api)
 	if err != nil {
 		errc <- err
 		return

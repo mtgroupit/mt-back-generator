@@ -7,6 +7,23 @@ consumes:
   - application/json
 produces:
   - application/json
+schemes:
+  - https
+securityDefinitions:
+  cookieKey:
+    description: Session token inside cookie.
+    type: apiKey
+    in: header
+    name: Cookie
+  csrfToken:
+    description: Token for CSRF protection (tied to session token).
+    type: apiKey
+    in: header
+    name: X-CSRFTokenBound
+security:
+  - cookieKey: []
+  - cookieKey: []
+    csrfToken: []
 paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.Methods}}
   /{{LowerTitle $modelName}}/{{LowerTitle $method}}:    
     {{(index $model.MethodsProps $i).HTTPMethod}}:

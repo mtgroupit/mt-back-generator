@@ -1,0 +1,176 @@
+package api
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/base64"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+
+	extauthapi "{{.AuthSrv}}"
+	"github.com/powerman/structlog"
+)
+
+const (
+	cookieSession   = extauthapi.SessionCookieName
+	cookieCSRFToken = extauthapi.CSRFTokenCookieName
+	headerCSRFToken = extauthapi.CSRFTokenHeaderName
+)
+
+// Errors.
+var (
+	ErrInvalidCSRFToken = errors.New("invalid CSRF token")
+)
+
+type contextKeyCSRF int
+
+const (
+	contextKeyCSRFToken contextKeyCSRF = iota + 1
+)
+
+// CSRFToken describes CSRF token bound to user's session.
+//
+// Token size is set to sha256.Size to make it easier to bound CSRF token to
+// session (using XOR sha256(session)).
+type CSRFToken struct {
+	token       [sha256.Size]byte
+	sessionHash [sha256.Size]byte
+	w           http.ResponseWriter
+	r           *http.Request
+}
+
+// MakeCSRFToken returns CSRFToken stored in secure cookie.
+func MakeCSRFToken(w http.ResponseWriter, r *http.Request) *CSRFToken {
+	t := &CSRFToken{
+		w: w,
+		r: r,
+	}
+	c, err := r.Cookie(cookieCSRFToken)
+	if err == nil {
+		err = t.decode(c.Value)
+		if err != nil {
+			log := structlog.FromContext(t.r.Context(), nil)
+			log.Warn(err)
+		}
+	}
+	if err != nil {
+		t.generate()
+		c = &http.Cookie{
+			Name:     cookieCSRFToken,
+			Value:    t.encode(),
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
+			Path:     "/",
+		}
+		t.w.Header().Add("Set-Cookie", c.String())
+	}
+	return t
+}
+
+func (t *CSRFToken) generate() {
+	_, err := io.ReadFull(rand.Reader, t.token[:])
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (t *CSRFToken) decode(encoded string) error {
+	buf, err := base64.RawURLEncoding.DecodeString(encoded)
+	if err != nil {
+		return fmt.Errorf("decode base64: %w", err)
+	}
+	if len(buf) != len(t.token) {
+		return ErrInvalidCSRFToken
+	}
+	copy(t.token[:], buf)
+	return nil
+}
+
+func (t *CSRFToken) encode() string {
+	return base64.RawURLEncoding.EncodeToString(t.token[:])
+}
+
+// SetHeader sets X-CSRFTokenBound: header useful for SPA apps.
+func (t *CSRFToken) SetHeader(session string) {
+	t.sessionHash = sha256.Sum256([]byte(session))
+
+	var tokenBound [len(t.token)]byte
+	for i := 0; i < len(tokenBound); i++ {
+		tokenBound[i] = t.token[i] ^ t.sessionHash[i]
+	}
+
+	t.w.Header().Set(headerCSRFToken, base64.RawURLEncoding.EncodeToString(tokenBound[:]))
+}
+
+// Match compares CSRFToken with one received in X-CSRFTokenBound: header.
+func (t *CSRFToken) Match() bool {
+	encoded := t.r.Header.Get(headerCSRFToken)
+
+	tokenBound, err := base64.RawURLEncoding.DecodeString(encoded)
+	if err != nil || len(tokenBound) != len(t.token) {
+		return false
+	}
+
+	var token [len(t.token)]byte
+	for i := 0; i < len(token); i++ {
+		token[i] = tokenBound[i] ^ t.sessionHash[i]
+	}
+
+	return subtle.ConstantTimeCompare(token[:], t.token[:]) == 1
+}
+
+// ForbidCSRF middleware adds CSRFToken to request context - you must
+// include it in HTML response as <input type=hidden>, header or <meta>.
+// It may call r.ParseMultipartForm if it wasn't called yet.
+// It returns 403 when detect CSRF attack.
+func makeForbidCSRF(isSafe func(*http.Request) bool) middlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Vary", "Cookie")
+
+			// Protect against extra cookies which may be set by
+			// untrusted subdomain (known as Triple Submit Cookie).
+			var csrfTokenCookies, sessionCookies int
+			for _, c := range r.Cookies() {
+				switch c.Name {
+				case cookieCSRFToken:
+					csrfTokenCookies++
+				case cookieSession:
+					sessionCookies++
+				}
+			}
+			if csrfTokenCookies > 1 || sessionCookies > 1 {
+				// middlewareError(w, r, http.StatusForbidden, "odd cookies")
+				return
+			}
+
+			// Double Submit Cookie is safe only with HTTPS, and we
+			// must use only HTTPS, but r.Scheme may (incorrectly)
+			// be "http" on backend service, so don't check it.
+
+			// Ensure we have a CSRFToken.
+			csrfToken := MakeCSRFToken(w, r)
+			r = r.WithContext(context.WithValue(r.Context(), contextKeyCSRFToken, csrfToken))
+
+			// Bind CSRFToken to current session, if any.
+			c, err := r.Cookie(cookieSession)
+			if err != nil {
+				c = &http.Cookie{}
+			}
+			csrfToken.SetHeader(c.Value)
+
+			// Protect against CSRF.
+			// if !(isSafe(r) || csrfToken.Match()) {
+			// 	middlewareError(w, r, http.StatusForbidden, "invalid CSRF token")
+			// 	return
+			// }
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}

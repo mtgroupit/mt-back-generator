@@ -1,0 +1,97 @@
+package api
+
+import (
+	"net"
+	"net/http"
+	"strings"
+
+	"{{.Module}}/internal/def"
+
+	"github.com/felixge/httpsnoop"
+	"github.com/powerman/structlog"
+)
+
+type middlewareFunc func(http.Handler) http.Handler
+
+// Provide a logger configured using request's context.
+//
+// Usually it should be first middleware.
+func makeLogger(basePath string) middlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log := structlog.New(
+				def.LogRemote, r.RemoteAddr,
+				def.LogHTTPStatus, "",
+				def.LogHTTPMethod, r.Method,
+				def.LogFunc, strings.TrimPrefix(r.URL.Path, basePath),
+			)
+			r = r.WithContext(structlog.NewContext(r.Context(), log))
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// go-swagger responders panic on error while writing response to client,
+// this shouldn't result in crash - unlike a real, reasonable panic.
+//
+// Usually it should be second middleware (after logger).
+func recovery(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			const code = http.StatusInternalServerError
+			switch err := recover(); err := err.(type) {
+			default:
+				log := structlog.FromContext(r.Context(), nil)
+				log.PrintErr("panic", def.LogHTTPStatus, code, "err", err, structlog.KeyStack, structlog.Auto)
+				w.WriteHeader(code)
+			case nil:
+			case net.Error:
+				log := structlog.FromContext(r.Context(), nil)
+				log.PrintErr("recovered", def.LogHTTPStatus, code, "err", err)
+				w.WriteHeader(code)
+			}
+		}()
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func makeAccessLog(basePath string) middlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			m := httpsnoop.CaptureMetrics(next, w, r)
+
+			log := structlog.FromContext(r.Context(), nil)
+			if m.Code < 500 {
+				log.Info("handled", def.LogHTTPStatus, m.Code)
+			} else {
+				log.PrintErr("failed to handle", def.LogHTTPStatus, m.Code)
+			}
+		})
+	}
+}
+
+// func middlewareError(w http.ResponseWriter, r *http.Request, code int, msg string) {
+// 	log := structlog.FromContext(r.Context(), nil)
+// 	log.Info("middleware error", def.LogHTTPStatus, code, "err", msg)
+
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.WriteHeader(code)
+// 	err := json.NewEncoder(w).Encode(&models.Error{
+// 		Code:    swag.Int32(int32(code)),
+// 		Message: swag.String(msg),
+// 	})
+// 	if err != nil {
+// 		log.Warn("failed to respond with HTTP error", "err", err)
+// 	}
+// }
+
+func noCache(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Expires", "0")
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Pragma", "no-cache")
+		next.ServeHTTP(w, r)
+	})
+}

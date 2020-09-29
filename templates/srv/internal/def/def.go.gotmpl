@@ -17,22 +17,40 @@ import (
 
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
 
+// Log field names.
+const (
+	LogHost       = "host"
+	LogPort       = "port"
+	LogAddr       = "addr"
+	LogRemote     = "remote" // aligned IPv4:Port "   192.168.0.42:1234 "
+	LogFunc       = "func"   // RPC method name, REST resource path
+	LogHTTPMethod = "httpMethod"
+	LogHTTPStatus = "httpStatus"
+	LogGRPCCode   = "grpcCode"
+	LogUser       = "userID"
+	LogEvent      = "ev"
+	LogEventID    = "evID"
+)
+
 var (
 	log = structlog.New()
 
 	oapiHost, oapiPort, oapiBasePath = swaggerEndpoint()
 
-	TestTimeFactor = floatGetenv("GO_TEST_TIME_FACTOR", 1.0)
-	TestSecond     = time.Duration(float64(time.Second) * TestTimeFactor)
-	DBHost      = os.Getenv("MSRV_DB_HOST")
-	DBPort      = intGetenv("MSRV_DB_PORT", 5432)
-	DBUser      = os.Getenv("MSRV_DB_USER")
-	DBPass      = os.Getenv("MSRV_DB_PASS")
-	DBName      = os.Getenv("MSRV_DB_NAME")
-	GooseDir    = "migration"
-	APIHost     = strGetenv("MSRV_HOST", oapiHost)
-	APIPort     = intGetenv("MSRV_PORT", oapiPort)
-	APIBasePath = strGetenv("MSRV_BASEPATH", oapiBasePath)
+	TestTimeFactor  = floatGetenv("GO_TEST_TIME_FACTOR", 1.0)
+	TestSecond      = time.Duration(float64(time.Second) * TestTimeFactor)
+	DBHost          = os.Getenv("MSRV_DB_HOST")
+	DBPort          = intGetenv("MSRV_DB_PORT", 5432)
+	DBUser          = os.Getenv("MSRV_DB_USER")
+	DBPass          = os.Getenv("MSRV_DB_PASS")
+	DBName          = os.Getenv("MSRV_DB_NAME")
+	GooseDir        = "migration"
+	APIHost         = strGetenv("MSRV_HOST", oapiHost)
+	APIPort         = intGetenv("MSRV_PORT", oapiPort)
+	APIBasePath     = strGetenv("MSRV_BASEPATH", oapiBasePath)
+	APITLSCert      = strGetenv("MSRV_TLS_CRT", "/ssl/site.crt")
+	APITLSKey       = strGetenv("MSRV_TLS_KEY", "/ssl/site.key")
+	ExtauthEndpoint = os.Getenv("MSRV_EXTAUTH_ENDPOINT")
 )
 
 func intGetenv(name string, def int) int {

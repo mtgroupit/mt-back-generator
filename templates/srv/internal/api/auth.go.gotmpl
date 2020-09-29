@@ -1,0 +1,39 @@
+package api
+
+import (
+	"context"
+	"time"
+
+	extauthapi "{{.AuthSrv}}"
+	oapierrors "github.com/go-openapi/errors"
+	"github.com/powerman/structlog"
+)
+
+const authTimeout = 250 * time.Millisecond
+
+var log = structlog.New()
+
+// AuthSvc is an interface for authentication service.
+type AuthSvc interface {
+	GetUserProfile(ctx Ctx, cookie string) (*extauthapi.Profile, error)
+}
+
+func (svc *service) checkerAuth(rawCookies string) (interface{}, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), authTimeout)
+	defer cancel()
+
+	profile, err := svc.extAuth.GetUserProfile(ctx, rawCookies)
+	switch {
+	case err != nil:
+		return nil, log.Err("failed to GetUserProfile", "err", err)
+	case !profile.Authn:
+		return nil, oapierrors.Unauthenticated("invalid credentials")
+	default:
+		return profile, nil
+	}
+}
+
+// Should always return same error as cookieKeyAuth.
+func (svc *service) csrfTokenAuth(rawCookies string) (interface{}, error) {
+	return nil, oapierrors.Unauthenticated("invalid credentials")
+}

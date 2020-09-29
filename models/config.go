@@ -114,6 +114,7 @@ type ExtraTable struct {
 type Config struct {
 	Name           string
 	Module         string
+	AuthSrv        string `yaml:"auth-srv"`
 	Description    string
 	Models         map[string]Model
 	Functions      map[string]Function

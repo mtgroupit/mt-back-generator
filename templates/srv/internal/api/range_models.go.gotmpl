@@ -13,7 +13,7 @@ import (
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
 
 {{range $i, $method := $model.Methods}}
-func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$model.TitleName}}Params) middleware.Responder {
+func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
 	{{if eq $method "Get"}}c, err := svc.app.{{$method}}{{$modelName}}(params.Body.ID)
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
@@ -53,7 +53,7 @@ func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$mo
 	return operations.New{{$method}}{{$model.TitleName}}OK(){{end}}
 }
 {{end}}
-func (svc *service) {{$modelName}}AccessManager(params operations.{{$modelName}}AccessManagerParams) middleware.Responder {
+func (svc *service) {{$modelName}}AccessManager(params operations.{{$modelName}}AccessManagerParams, profile interface{}) middleware.Responder {
 	err := svc.app.{{$modelName}}AccessManager(appAccessManager(params.Body))
 	if err != nil {
 		log.Err("{{$modelName}}AccessManager error", err)
@@ -63,7 +63,7 @@ func (svc *service) {{$modelName}}AccessManager(params operations.{{$modelName}}
 	return operations.New{{$modelName}}AccessManagerOK()
 }
 {{range $functionName, $function := $.Functions}}
-func (svc *service) {{$functionName}}{{$modelName}}(params operations.{{$modelName}}{{$functionName}}Params) middleware.Responder {
+func (svc *service) {{$functionName}}{{$modelName}}(params operations.{{$modelName}}{{$functionName}}Params, profile interface{}) middleware.Responder {
 	{{$function.OutStr}}, err := svc.app.{{$functionName}}{{$modelName}}({{$function.InStrParams}})
 	if err != nil {
 		log.Err("{{$functionName}}{{$modelName}} error", err)
