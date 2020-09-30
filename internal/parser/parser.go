@@ -312,7 +312,7 @@ func countDeepNesting(model string, cfg *models.Config) (int, error) {
 		if options.IsStruct, options.IsArray, options.GoType, err = checkColumn(options.Type, cfg); err != nil {
 			return 0, err
 		}
-		if options.IsStruct && !options.IsArray {
+		if options.IsStruct {
 			columnDeepNesting := 1
 			optTypeDeepNesting, err := countDeepNesting(options.Type[6:], cfg)
 			if err != nil {
