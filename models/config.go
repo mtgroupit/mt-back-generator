@@ -60,21 +60,22 @@ type MethodProps struct {
 
 // Model - description one component of models
 type Model struct {
-	Description     string
-	Columns         map[string]Options
-	Fields          map[string]string
-	Psql            []PsqlParams
-	DeepNesting     int
-	HaveLazyLoading bool
-	IDIsUUID        bool
-	HaveEmail       bool
-	HaveListMethod  bool
-	SQLSelectStr    string
-	SQLWhereParams  string
-	SQLAddStr       string
-	SQLEditStr      string
-	SQLExecParams   string
-	TitleName       string
+	Description        string
+	DetailedPagination bool `yaml:"detailed-pagination"`
+	Columns            map[string]Options
+	Fields             map[string]string
+	Psql               []PsqlParams
+	DeepNesting        int
+	HaveLazyLoading    bool
+	IDIsUUID           bool
+	HaveEmail          bool
+	HaveListMethod     bool
+	SQLSelectStr       string
+	SQLWhereParams     string
+	SQLAddStr          string
+	SQLEditStr         string
+	SQLExecParams      string
+	TitleName          string
 
 	Binds        []Bind
 	Methods      []string

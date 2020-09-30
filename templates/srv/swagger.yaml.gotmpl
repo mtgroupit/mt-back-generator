@@ -41,10 +41,18 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
           description: Created        {{else}}
         200:
           description: OK        {{end}}{{end}}        {{if or (eq $method "List") (IsCustomList $method) (eq $method "Get")}}
-          schema:          {{if or (eq $method "List") (IsCustomList $method)}}
-            type: array
-            items:          {{end}}
-              $ref: "#/definitions/{{LowerTitle $modelName}}" {{end}}{{end}}
+          schema:          
+            {{if or (eq $method "List") (IsCustomList $method)}}{{if $model.DetailedPagination}}type: object
+            properties:
+              count:
+                type: integer
+                format: int32
+              items:
+                type: array
+                items:       
+                  {{else}}type: array
+            items:
+                  {{end}}{{end}}$ref: "#/definitions/{{LowerTitle $modelName}}" {{end}}{{end}}
   /{{LowerTitle $modelName}}/accessManager:    
     post:
       operationId: {{LowerTitle $modelName}}AccessManager

@@ -42,13 +42,16 @@ func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$mo
 		log.Info("{{$method}}{{$modelName}} ok", "id", params.Body.ID)
 	}
 	return operations.New{{$method}}{{$model.TitleName}}OK(){{end}}
-	{{if  or (eq $method "List") (IsCustomList $method)}}c, err := svc.app.{{$method}}{{$modelName}}(*params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters))
+	{{if  or (eq $method "List") (IsCustomList $method)}}c,{{if $model.DetailedPagination}} count,{{end}} err := svc.app.{{$method}}{{$modelName}}(*params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters))
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {
 		log.Info("{{$method}}{{$modelName}} ok")
 	}
-	return operations.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}s(c)){{end}}
+	return operations.New{{$method}}{{$model.TitleName}}OK().WithPayload({{if $model.DetailedPagination}}&operations.List{{$modelName}}OKBody{
+		Items: api{{$modelName}}s(c),
+		Count: int32(count),
+	}{{else}}api{{$modelName}}s(c){{end}}){{end}}
 	{{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
 	return operations.New{{$method}}{{$model.TitleName}}OK(){{end}}
 }
