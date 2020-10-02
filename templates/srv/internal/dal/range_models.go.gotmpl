@@ -78,8 +78,23 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	return nil
 }{{end}}
 
-{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64, filters []*app.Filter) ([]*app.{{$modelName}},{{if $model.DetailedPagination}} int,{{end}} error) { 
+{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64, filters []*app.Filter, sortBy string, orderByASC bool) ([]*app.{{$modelName}},{{if $model.DetailedPagination}} int,{{end}} error) { 
 	ms := []{{$modelName}}{}
+
+	var orderQuery string
+	switch sortBy { {{range $column, $options := $model.Columns}}{{if $options.SortOn}}
+	case "{{$column}}":
+		orderQuery = "ORDER BY " + sortBy{{end}}{{end}}
+	}
+	if orderQuery != "" {
+		var orderBy string
+		if orderByASC {
+			orderBy = "ASC"
+		} else {
+			orderBy = "DESC"
+		}
+		orderQuery += " " + orderBy
+	}
 
 	mapQuery := map[string]interface{}{ {{if IsCustomList $method}}{{range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
 		"{{$column}}": nil,
@@ -118,7 +133,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		err = rows.Scan(&count)
 	}
 	{{end}}
-	rows, err {{if not $model.DetailedPagination}}:{{end}}= a.db.NamedQuery(`SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} OFFSET :offset LIMIT :limit`, mapQuery)
+	rows, err {{if not $model.DetailedPagination}}:{{end}}= a.db.NamedQuery(`SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} ` + orderQuery + ` OFFSET :offset LIMIT :limit`, mapQuery)
 	if err != nil {
 		return nil,{{if $model.DetailedPagination}} -1,{{end}} err
 	}

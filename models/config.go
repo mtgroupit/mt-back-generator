@@ -6,6 +6,7 @@ type Options struct {
 	Type      string
 	GoType    string
 	Format    string
+	SortOn    bool  `yaml:"sort-on"`
 	IsStruct  bool
 	IsArray   bool
 	Pk        string

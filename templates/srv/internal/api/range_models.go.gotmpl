@@ -42,7 +42,7 @@ func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$mo
 		log.Info("{{$method}}{{$modelName}} ok", "id", params.Body.ID)
 	}
 	return operations.New{{$method}}{{$model.TitleName}}OK(){{end}}
-	{{if  or (eq $method "List") (IsCustomList $method)}}c,{{if $model.DetailedPagination}} count,{{end}} err := svc.app.{{$method}}{{$modelName}}(*params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters))
+	{{if  or (eq $method "List") (IsCustomList $method)}}c,{{if $model.DetailedPagination}} count,{{end}} err := svc.app.{{$method}}{{$modelName}}(*params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters), params.Body.SortBy, params.Body.OrderByASC)
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {

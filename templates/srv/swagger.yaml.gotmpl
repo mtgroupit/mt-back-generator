@@ -125,6 +125,10 @@ definitions:  {{range $modelName, $model := $.Models}}
         type: array
         items:
           $ref: "#/definitions/filterParams"
+      sortBy:
+        type: string
+      orderByASC:
+        type: boolean
   filterParams:
     type: object
     description: params for filter list
