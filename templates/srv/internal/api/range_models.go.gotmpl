@@ -12,7 +12,7 @@ import (
 
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
 
-{{range $i, $method := $model.Methods}}
+{{range $i, $method := $model.Methods}}{{if not (IsCustomMethod $method)}}
 func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
 	{{if eq $method "Get"}}c, err := svc.app.{{$method}}{{$modelName}}(params.Body.ID)
 	if err != nil {
@@ -52,10 +52,8 @@ func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$mo
 		Items: api{{$modelName}}s(c),
 		Count: int32(count),
 	}{{else}}api{{$modelName}}s(c){{end}}){{end}}
-	{{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
-	return operations.New{{$method}}{{$model.TitleName}}OK(){{end}}
 }
-{{end}}
+{{end}}{{end}}
 func (svc *service) {{$modelName}}AccessManager(params operations.{{$modelName}}AccessManagerParams, profile interface{}) middleware.Responder {
 	err := svc.app.{{$modelName}}AccessManager(appAccessManager(params.Body))
 	if err != nil {

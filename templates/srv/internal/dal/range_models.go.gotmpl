@@ -15,7 +15,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	{{$psqlParams.Name}} {{if eq  $psqlParams.TypeSQL "uuid"}}uuid.UUID{{else}}{{$psqlParams.Type}}{{end}} `db:"{{$psqlParams.SQLName}}"` {{end}}{{end}}
 }
 
-{{range $i, $method := $model.Methods}}
+{{range $i, $method := $model.Methods}}{{if not (IsCustomMethod $method)}}
 {{if eq $method "Get"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) (*app.{{$modelName}}, error) { 
 	var m {{$modelName}}
 	if err := a.db.Get(&m, `SELECT {{$model.SQLSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1`, id); err != nil {
@@ -173,11 +173,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	return nil
 }{{end}}
 {{end}}{{end}}
-{{if  and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
-func (a *App) {{$method}}{{$modelName}}(m *app.{{$modelName}}) error {
-	return nil
-}{{end}}
-{{end}}
+{{end}}{{end}}
 
 {{if $model.HaveLazyLoading}}
 func (m *{{$modelName}}) LazyLoading(a *App) (err error) { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if  $options.IsArray}}

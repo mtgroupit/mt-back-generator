@@ -30,6 +30,11 @@ var log = structlog.New()
 type App struct {
 	db *sqlxx.DB
 }
+{{if .HaveCustomMethod}}
+type Customs struct {
+	db *sqlxx.DB
+}
+{{end}}
 {{range $i, $et := $.ExtraTables}}
 type {{$et.RefTableOne}}{{$et.RefTableTwo}} struct{
     {{$et.RefTableOne}}ID {{if eq  $et.TypeIDOne "uuid"}}uuid.UUID{{else}}int64{{end}}  `db:"{{$et.FieldIDOne}}"`
@@ -67,14 +72,16 @@ func connect(ctx context.Context, cfg pqx.Config, migrationDir string) (*sqlxx.D
 	return sqlxx.NewDB(sqlx.NewDb(db, "postgres")), nil
 }
 
-func New(ctx context.Context, dbCfg pqx.Config, migrationDir string) (*App, error) {
+func New(ctx context.Context, dbCfg pqx.Config, migrationDir string) (*App, {{if .HaveCustomMethod}}*Customs, {{end}}error) {
 	db, err := connect(ctx, dbCfg, migrationDir)
 	if err != nil {
-		return nil, err
+		return nil,{{if .HaveCustomMethod}} nil, {{end}} err
 	}
 	return &App{
 		db: db,
-	}, nil
+	},{{if .HaveCustomMethod}} &Customs{
+		db: db,
+	}, {{end}} nil
 }
 
 func (a *App) Close() {

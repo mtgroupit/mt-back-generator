@@ -70,6 +70,7 @@ type Model struct {
 	IDIsUUID           bool
 	HaveEmail          bool
 	HaveListMethod     bool
+	HaveCustomMethod   bool
 	SQLSelectStr       string
 	SQLWhereParams     string
 	SQLAddStr          string
@@ -113,15 +114,16 @@ type ExtraTable struct {
 
 // Config - description service, models and functions from yaml file
 type Config struct {
-	Name           string
-	Module         string
-	AuthSrv        string `yaml:"auth-srv"`
-	Description    string
-	Models         map[string]Model
-	Functions      map[string]Function
-	HaveListMethod bool
-	HaveDateTime   bool
-	MaxDeepNesting int
+	Name             string
+	Module           string
+	AuthSrv          string `yaml:"auth-srv"`
+	Description      string
+	Models           map[string]Model
+	Functions        map[string]Function
+	HaveListMethod   bool
+	HaveCustomMethod bool
+	HaveDateTime     bool
+	MaxDeepNesting   int
 
 	ExtraTables []ExtraTable
 

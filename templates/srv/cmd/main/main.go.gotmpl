@@ -78,12 +78,12 @@ func connect() (app.App, *extauthapi.Client, error) {
 		return nil, nil, err
 	}
 
-	a, err := dal.New(ctx, cfg.db, cfg.gooseDir)
+	a,{{if .HaveCustomMethod}} c,{{end}} err := dal.New(ctx, cfg.db, cfg.gooseDir)
 	if err != nil {
 		return nil, nil, err
 	}
 	
-	return app.New(a), extAuthSvc, nil
+	return app.New(a{{if .HaveCustomMethod}}, c{{end}}), extAuthSvc, nil
 }
 
 func runServe(errc chan<- error) {

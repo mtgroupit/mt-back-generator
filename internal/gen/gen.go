@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -44,6 +45,7 @@ var goTmplFuncs = template.FuncMap{
 	"HaveField": func(method, modelName string) bool {
 		return strings.Contains(method, modelName)
 	},
+	"IsCustomMethod": parser.IsCustomMethod,
 }
 
 // Srv - generate dir with service
@@ -98,17 +100,77 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 				}
 			}
 		default:
-			for modelName := range cfg.Models {
+			for modelName, model := range cfg.Models {
+				if !model.HaveCustomMethod && strings.HasSuffix(name, "custom.go.gotmpl") {
+					continue
+				}
 				fileName := parser.NameSQL(modelName) + name[len("range_models"):len(name)-len(".gotmpl")]
-				cfg.CurModel = modelName
-				if err := createFile(fileName, dirTMPL, dirTarget, cfg, tmp); err != nil {
-					return err
+				if strings.HasSuffix(name, "custom.go.gotmpl") && checkExistenseFile(path.Join(dirTarget, fileName)) {
+					file, err := ioutil.ReadFile(path.Join(dirTarget, fileName))
+					if err != nil {
+						return err
+					}
+					for _, method := range model.Methods {
+						if parser.IsCustomMethod(method) && !regexp.MustCompile(`func \(.+\) `+method+modelName).Match(file) {
+							var pattern string
+							switch {
+							case strings.HasSuffix(dirTMPL, "api"):
+								pattern = apiPattern
+							case strings.HasSuffix(dirTMPL, "app"):
+								pattern = appPattern
+							case strings.HasSuffix(dirTMPL, "dal"):
+								pattern = dalPattern
+							}
+							t := template.Must(template.New("func").Parse(pattern))
+							var buf bytes.Buffer
+							if err := t.Execute(&buf, struct {
+								Method    string
+								ModelName string
+							}{
+								method,
+								modelName,
+							}); err != nil {
+								return err
+							}
+							file = append(file, buf.Bytes()...)
+							if err := ioutil.WriteFile(path.Join(dirTarget, fileName), file, 0644); err != nil {
+								return nil
+							}
+						}
+					}
+
+				} else {
+					cfg.CurModel = modelName
+					if err := createFile(fileName, dirTMPL, dirTarget, cfg, tmp); err != nil {
+						return err
+					}
 				}
 			}
 		}
 	} else {
-		if err := createFile(name[:len(name)-len(".gotmpl")], dirTMPL, dirTarget, cfg, tmp); err != nil {
-			return err
+		if !cfg.HaveCustomMethod && strings.HasSuffix(name, "custom.go.gotmpl") {
+			return nil
+		}
+		fileName := name[:len(name)-len(".gotmpl")]
+		if strings.HasSuffix(name, "custom.go.gotmpl") && checkExistenseFile(path.Join(dirTarget, fileName)) {
+			file, err := ioutil.ReadFile(path.Join(dirTarget, fileName))
+			if err != nil {
+				return err
+			}
+			for modelName, model := range cfg.Models {
+				for _, method := range model.Methods {
+					if parser.IsCustomMethod(method) && !regexp.MustCompile(`\s`+method+modelName).Match(file) {
+						file = []byte(regexp.MustCompile(`(?s)\n}\n`).ReplaceAllString(string(file), "\n\t"+method+modelName+`(m *`+modelName+") error\n}\n"))
+					}
+				}
+			}
+			if err := ioutil.WriteFile(path.Join(dirTarget, fileName), file, 0644); err != nil {
+				return nil
+			}
+		} else {
+			if err := createFile(fileName, dirTMPL, dirTarget, cfg, tmp); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -170,12 +232,31 @@ func buildTreeDirs(p, srvName string) error {
 }
 
 func ensureDir(p, dirName string) error {
-
 	err := os.Mkdir(path.Clean(path.Join(p, dirName)), 0777)
-
 	if err == nil || os.IsExist(err) {
 		return nil
-	} else {
-		return err
 	}
+	return err
 }
+
+func checkExistenseFile(file string) bool {
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
+const (
+	apiPattern = `
+func (svc *service) {{.Method}}{{.ModelName}}(params operations.{{.Method}}{{.ModelName}}Params, profile interface{}) middleware.Responder {
+	return operations.New{{.Method}}{{.ModelName}}OK()
+}`
+	appPattern = `
+func (a *app) {{.Method}}{{.ModelName}}(m *{{.ModelName}}) error {
+	return a.cust.{{.Method}}{{.ModelName}}(m)
+}`
+	dalPattern = `
+func (a *Customs) {{.Method}}{{.ModelName}}(m *app.{{.ModelName}}) error {
+	return nil
+}`
+)

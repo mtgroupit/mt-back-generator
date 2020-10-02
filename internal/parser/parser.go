@@ -64,6 +64,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				cfg.HaveListMethod = true
 				model.HaveListMethod = true
 			}
+			if IsCustomMethod(method) {
+				cfg.HaveCustomMethod = true
+				model.HaveCustomMethod = true
+			}
 		}
 		model.MethodsProps = props
 
@@ -615,4 +619,13 @@ func LowerTitle(in string) string {
 	default:
 		return strings.ToLower(string(in[0])) + string(in[1:])
 	}
+}
+
+// IsCustomMethod define method is custom list or not
+func IsCustomMethod(method string) bool {
+	method = strings.ToLower(method)
+	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || IsCustomList(method) {
+		return false
+	}
+	return true
 }

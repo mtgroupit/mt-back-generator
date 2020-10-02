@@ -10,11 +10,7 @@ type App interface {
     {{if eq $method "Add"}}{{$method}}{{$modelName}}(m *{{$modelName}}) error{{end}}
 	{{if eq $method "Delete"}}{{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) error{{end}}
     {{if eq $method "Edit"}}{{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, m *{{$modelName}}) error{{end}}
-
-    {{if or (eq $method "List") (IsCustomList $method)}}{{$method}}{{$modelName}}(offset, limit int64, filters []*Filter) ([]*{{$modelName}},{{if $model.DetailedPagination}}int, {{end}} error){{end}}
-	{{if  and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
-	{{$method}}{{$modelName}}(m *{{$modelName}}) error{{end}}
-	{{end}}
+    {{if or (eq $method "List") (IsCustomList $method)}}{{$method}}{{$modelName}}(offset, limit int64, filters []*Filter) ([]*{{$modelName}},{{if $model.DetailedPagination}}int, {{end}} error){{end}}{{end}}
 	{{$modelName}}AccessManager(m *AccessManager) error{{end}}
 
     {{range $modelName, $model := $.Models}}{{range $functionName, $function := $.Functions}}
@@ -39,11 +35,13 @@ type Filter struct {
 }
 {{end}}
 type app struct {
-	appl App
+	appl App{{if .HaveCustomMethod}}
+	cust Customs{{end}}
 }
 
-func New(a App) App {
+func New(a App{{if .HaveCustomMethod}},c Customs{{end}}) App {
 	return &app{
-		appl: a,
+		appl: a,{{if .HaveCustomMethod}}
+		cust: c,{{end}}
 	}
 }
