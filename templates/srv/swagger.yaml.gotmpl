@@ -27,13 +27,13 @@ security:
 paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.Methods}}
   /{{LowerTitle $modelName}}/{{LowerTitle $method}}:    
     {{(index $model.MethodsProps $i).HTTPMethod}}:
-      operationId: {{LowerTitle $method}}{{$model.TitleName}}
+      operationId: {{LowerTitle $method}}{{$model.TitleName}} {{if not (and (or (eq $method "Get") (eq $method "Delete")) ($model.IDFromProfile))}}
       parameters:
         - name: body
           in: body
           schema: {{if or (eq $method "List") (IsCustomList $method)}}
             $ref: "#/definitions/listParams" {{else}}
-            $ref: "#/definitions/{{LowerTitle $modelName}}" {{end}}
+            $ref: "#/definitions/{{LowerTitle $modelName}}" {{end}}{{end}} 
       responses:        {{if eq $method "Delete"}}
         204:
           description: Deleted        {{else}}{{if eq $method "Add"}}
@@ -120,7 +120,7 @@ definitions:  {{range $modelName, $model := $.Models}}
         default: 10
       offset:
         type: integer
-        default: 1
+        default: 0
       filters:
         type: array
         items:

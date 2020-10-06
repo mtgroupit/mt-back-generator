@@ -6,6 +6,7 @@ import (
 	"{{.Module}}/internal/api/restapi/restapi/operations"
 	"{{.Module}}/internal/app"
 
+	{{if $model.IDFromProfile}}extauthapi "{{.AuthSrv}}"{{end}}
 	{{if $model.HaveEmail}}"github.com/go-openapi/strfmt"{{end}}
 	"github.com/go-openapi/runtime/middleware" 
 )
@@ -14,35 +15,39 @@ import (
 
 {{range $i, $method := $model.Methods}}{{if not (IsCustomMethod $method)}}
 func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
-	{{if eq $method "Get"}}c, err := svc.app.{{$method}}{{$modelName}}(params.Body.ID)
+	{{if eq $method "Get"}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
+	{{end}}c, err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {
-		log.Info("{{$method}}{{$modelName}} ok", "id", params.Body.ID)
+		log.Info("{{$method}}{{$modelName}} ok", "id", {{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
 	}
 	return operations.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c)){{end}}
-	{{if eq $method "Add"}}err := svc.app.{{$method}}{{$modelName}}(app{{$modelName}}(params.Body{{if $model.HaveLazyLoading}}, true{{end}}))
+	{{if eq $method "Add"}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
+	{{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(), {{end}}app{{$modelName}}(params.Body{{if $model.HaveLazyLoading}}, true{{end}}))
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {
 		log.Info("{{$method}}{{$modelName}} ok")
 	}
 	return operations.New{{$method}}{{$model.TitleName}}Created(){{end}}
-	{{if eq $method "Delete"}}err := svc.app.{{$method}}{{$modelName}}(params.Body.ID)
+	{{if eq $method "Delete"}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
+	{{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {
-		log.Info("{{$method}}{{$modelName}} ok", "id", params.Body.ID)
+		log.Info("{{$method}}{{$modelName}} ok", "id", {{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
 	}
 	return operations.New{{$method}}{{$model.TitleName}}NoContent(){{end}}
-	{{if eq $method "Edit"}}err := svc.app.{{$method}}{{$modelName}}(params.Body.ID, app{{$modelName}}(params.Body{{if $model.HaveLazyLoading}}, true{{end}}))
+	{{if eq $method "Edit"}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
+	{{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}, app{{$modelName}}(params.Body{{if $model.HaveLazyLoading}}, true{{end}}))
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {
 		log.Info("{{$method}}{{$modelName}} ok", "id", params.Body.ID)
 	}
 	return operations.New{{$method}}{{$model.TitleName}}OK(){{end}}
-	{{if  or (eq $method "List") (IsCustomList $method)}}c,{{if $model.DetailedPagination}} count,{{end}} err := svc.app.{{$method}}{{$modelName}}(*params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters), params.Body.SortBy, params.Body.OrderByASC)
+	{{if  or (eq $method "List") (IsCustomList $method)}}c,{{if $model.DetailedPagination}} count,{{end}} err := svc.app.{{$method}}{{$modelName}}(params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters), params.Body.SortBy, params.Body.OrderByASC)
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {

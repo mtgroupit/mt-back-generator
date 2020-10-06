@@ -6,7 +6,7 @@ type Options struct {
 	Type      string
 	GoType    string
 	Format    string
-	SortOn    bool  `yaml:"sort-on"`
+	SortOn    bool `yaml:"sort-on"`
 	IsStruct  bool
 	IsArray   bool
 	Pk        string
@@ -67,6 +67,7 @@ type Model struct {
 	Fields             map[string]string
 	Psql               []PsqlParams
 	DeepNesting        int
+	IDFromProfile      bool `yaml:"id-from-profile"`
 	HaveLazyLoading    bool
 	IDIsUUID           bool
 	HaveEmail          bool

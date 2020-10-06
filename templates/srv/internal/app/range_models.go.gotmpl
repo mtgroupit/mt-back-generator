@@ -10,8 +10,8 @@ type {{$modelName}} struct { {{range $name, $options := $model.Columns}}
 {{if eq $method "Get"}}func (a *app) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) (*{{$modelName}}, error) {
 	return a.appl.{{$method}}{{$modelName}}(id)
 }{{end}}
-{{if eq $method "Add"}}func (a *app) {{$method}}{{$modelName}}(m *{{$modelName}}) error {
-	return a.appl.{{$method}}{{$modelName}}(m)
+{{if eq $method "Add"}}func (a *app) {{$method}}{{$modelName}}({{if $model.IDFromProfile}}profID string, {{end}}m *{{$modelName}}) error {
+	return a.appl.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}profID, {{end}}m)
 }{{end}}
 {{if eq $method "Delete"}}func (a *app) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) error {
 	return a.appl.{{$method}}{{$modelName}}(id)

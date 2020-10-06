@@ -26,8 +26,8 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	}{{end}}
 	return app{{$modelName}}(m), nil
 }{{end}}
-{{if eq $method "Add"}}func (a *App) {{$method}}{{$modelName}}(m *app.{{$modelName}}) error {
-	{{if $model.IDIsUUID}}{{$modelName}}ID := uuid.New(){{else}}var {{$modelName}}ID int64{{end}}	{{range $column, $options := $model.Columns}}{{if and $options.IsStruct (not $options.IsArray)}}
+{{if eq $method "Add"}}func (a *App) {{$method}}{{$modelName}}({{if $model.IDFromProfile}}profileID string, {{end}}m *app.{{$modelName}}) error {
+	{{if $model.IDIsUUID}}{{$modelName}}ID := {{if $model.IDFromProfile}}profileID{{else}}uuid.New(){{end}}{{else}}var {{$modelName}}ID int64{{end}}	{{range $column, $options := $model.Columns}}{{if and $options.IsStruct (not $options.IsArray)}}
 	var {{$column}}ID interface{}
 	if m.{{$options.TitleName}} != nil {
 		{{$column}}ID = m.{{$options.TitleName}}.ID
