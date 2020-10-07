@@ -130,6 +130,7 @@ type Config struct {
 
 	ExtraTables []ExtraTable
 
+	Tags map[string]struct{}
 	// CurModel - field for define needed model for template
 	CurModel string
 }

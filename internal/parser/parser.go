@@ -38,6 +38,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 	cfg.Name = regexp.MustCompile("[^a-zA-Z0-9]+").ReplaceAllString(cfg.Name, "")
 
+	cfg.Tags = make(map[string]struct{})
+
 	err = setDeepNesting(cfg)
 	if err != nil {
 		return
@@ -48,6 +50,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		model.TitleName = strings.Title(name)
 
 		for i := range model.Tags {
+			cfg.Tags[strings.ToLower(model.Tags[i])] = struct{}{}
 			model.Tags[i] = strings.Title(model.Tags[i])
 		}
 
