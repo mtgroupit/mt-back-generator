@@ -1,5 +1,7 @@
-name: "Snouki"
+name: "Demo"
+module: "Demo"
 description: "demo generated app"
+auth-srv: "github.com/Lisss13/french-back-template/auth-service/mtmb-extauthapi"
 models:
   location:
     description: "location object"
@@ -12,20 +14,29 @@ models:
       - add
   company:
     description: "company object"
+    detailed-pagination: true
+    id-from-profile: true
     columns:
       id: 
         type: "uuid"
       name:
         type: "string"
+        sort-on: true
       occupation:
         type: "string"
+        sort-on: true
       location:
         type: "model.location"
     methods:
+      - get
       - add
+      - delete
+      - edit
       - list
   employe:
     description: "employe object"
+    tags:
+      - Employe
     columns:
       id: 
         type: "uuid"
@@ -39,3 +50,4 @@ models:
       - add
       - list
       - list(id,name, company(name, location(id, name)))
+      - custom
