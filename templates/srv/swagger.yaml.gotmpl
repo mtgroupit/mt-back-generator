@@ -33,9 +33,13 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
       parameters:
         - name: body
           in: body
-          schema: {{if or (eq $method "List") (IsCustomList $method)}}
+          schema: {{if or (eq $method "Get") (eq $method "Delete")}}
+            type: object
+            properties:
+              id:
+                type: {{if $model.IDIsUUID}}string{{else}}{{(index $model.Columns "id").Type}}{{end}}{{else}}{{if or (eq $method "List") (IsCustomList $method)}}
             $ref: "#/definitions/listParams" {{else}}
-            $ref: "#/definitions/{{LowerTitle $modelName}}" {{end}}{{end}} 
+            $ref: "#/definitions/{{LowerTitle $modelName}}" {{end}}{{end}}{{end}} 
       responses:        {{if eq $method "Delete"}}
         204:
           description: Deleted        {{else}}{{if eq $method "Add"}}
@@ -84,7 +88,7 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
 definitions:  {{range $modelName, $model := $.Models}}  
   {{LowerTitle $modelName}}:
     type: object
-    description: {{.Description}}
+    description: "{{.Description}}"
     properties:      {{range $name, $options := $model.Columns}} {{if $options.IsStruct}}{{if $options.IsArray}}  
       {{$name}}:
         type: array
