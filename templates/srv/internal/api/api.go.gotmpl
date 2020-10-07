@@ -9,6 +9,8 @@ import (
 	"{{.Module}}/internal/api/restapi/models"
 	"{{.Module}}/internal/api/restapi/restapi"
 	"{{.Module}}/internal/api/restapi/restapi/operations"
+	{{$module := .Module}}{{range $modelName, $model := $.Models}}{{if $model.Tags}}"{{$module}}/internal/api/restapi/restapi/operations/{{LowerTitle (index $model.Tags 0)}}"
+	{{end}}{{end}}
 	"{{.Module}}/internal/app"
 
 	"github.com/go-openapi/loads"
@@ -63,8 +65,8 @@ func NewServer(appl app.App, extAuth AuthSvc, cfg Config) (*restapi.Server, erro
 	api.CsrfTokenAuth = svc.csrfTokenAuth
 
     {{range $modelName, $model := $.Models}}{{range $i, $method := $model.Methods}}
-	api.{{$method}}{{$model.TitleName}}Handler = operations.{{$method}}{{$model.TitleName}}HandlerFunc(svc.{{$method}}{{$modelName}}) {{end}}
-	api.{{$model.TitleName}}AccessManagerHandler = operations.{{$model.TitleName}}AccessManagerHandlerFunc(svc.{{$model.TitleName}}AccessManager)
+	api.{{if $model.Tags}}{{(index $model.Tags 0)}}{{end}}{{$method}}{{$model.TitleName}}Handler = {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}HandlerFunc(svc.{{$method}}{{$modelName}}) {{end}}
+	api.{{if $model.Tags}}{{(index $model.Tags 0)}}{{end}}{{$model.TitleName}}AccessManagerHandler = {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$model.TitleName}}AccessManagerHandlerFunc(svc.{{$model.TitleName}}AccessManager)
 	{{end}}
     {{range $modelName, $model := $.Models}}{{range $function, $_ := $.Functions}}
 	api.{{$modelName}}{{$function}}Handler = operations.{{$modelName}}{{$function}}HandlerFunc(svc.{{$function}}{{$modelName}}) {{end}}{{end}}

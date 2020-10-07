@@ -26,7 +26,9 @@ security:
     csrfToken: []
 paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.Methods}}
   /{{LowerTitle $modelName}}/{{LowerTitle $method}}:    
-    {{(index $model.MethodsProps $i).HTTPMethod}}:
+    {{(index $model.MethodsProps $i).HTTPMethod}}: {{if $model.Tags}}
+      tags:{{range $_, $tag := $model.Tags}}
+        - {{$tag}}{{end}}{{end}}
       operationId: {{LowerTitle $method}}{{$model.TitleName}} {{if not (and (or (eq $method "Get") (eq $method "Delete")) ($model.IDFromProfile))}}
       parameters:
         - name: body
@@ -54,7 +56,9 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
             items:
                   {{end}}{{end}}$ref: "#/definitions/{{LowerTitle $modelName}}" {{end}}{{end}}
   /{{LowerTitle $modelName}}/accessManager:    
-    post:
+    post:{{if $model.Tags}}
+      tags:{{range $_, $tag := $model.Tags}}
+        - {{$tag}}{{end}}{{end}}
       operationId: {{LowerTitle $modelName}}AccessManager
       parameters:
         - name: body

@@ -63,11 +63,12 @@ type MethodProps struct {
 type Model struct {
 	Description        string
 	DetailedPagination bool `yaml:"detailed-pagination"`
+	IDFromProfile      bool `yaml:"id-from-profile"`
+	Tags               []string
 	Columns            map[string]Options
 	Fields             map[string]string
 	Psql               []PsqlParams
 	DeepNesting        int
-	IDFromProfile      bool `yaml:"id-from-profile"`
 	HaveLazyLoading    bool
 	IDIsUUID           bool
 	HaveEmail          bool

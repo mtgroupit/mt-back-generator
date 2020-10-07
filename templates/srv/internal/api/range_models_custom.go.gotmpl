@@ -2,13 +2,13 @@
 package api
 
 import (
-	"{{.Module}}/internal/api/restapi/restapi/operations"
+	"{{.Module}}/internal/api/restapi/restapi/operations{{if $model.Tags}}/{{LowerTitle (index $model.Tags 0)}}{{end}}"
 
 	"github.com/go-openapi/runtime/middleware" 
 )
 
 {{range $i, $method := $model.Methods}}{{if (IsCustomMethod $method)}}
-func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
-	return operations.New{{$method}}{{$model.TitleName}}OK()
+func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
+	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK()
 }
 {{end}}{{end}}

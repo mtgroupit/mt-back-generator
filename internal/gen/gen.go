@@ -45,7 +45,7 @@ var goTmplFuncs = template.FuncMap{
 	"HaveField": func(method, modelName string) bool {
 		return strings.Contains(method, modelName)
 	},
-	"IsCustomMethod": parser.IsCustomMethod,
+	"IsCustomMethod": isCustomMethod,
 }
 
 // Srv - generate dir with service
@@ -111,7 +111,7 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 						return err
 					}
 					for _, method := range model.Methods {
-						if parser.IsCustomMethod(method) && !regexp.MustCompile(`func \(.+\) `+method+modelName).Match(file) {
+						if isCustomMethod(method) && !regexp.MustCompile(`func \(.+\) `+method+modelName).Match(file) {
 							var pattern string
 							switch {
 							case strings.HasSuffix(dirTMPL, "api"):
@@ -159,7 +159,7 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 			}
 			for modelName, model := range cfg.Models {
 				for _, method := range model.Methods {
-					if parser.IsCustomMethod(method) && !regexp.MustCompile(`\s`+method+modelName).Match(file) {
+					if isCustomMethod(method) && !regexp.MustCompile(`\s`+method+modelName).Match(file) {
 						file = []byte(regexp.MustCompile(`(?s)\n}\n`).ReplaceAllString(string(file), "\n\t"+method+modelName+`(m *`+modelName+") error\n}\n"))
 					}
 				}
@@ -245,6 +245,14 @@ func checkExistenseFile(file string) bool {
 	}
 	return true
 }
+
+func isCustomMethod(method string) bool {
+		method = strings.ToLower(method)
+		if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || strings.HasPrefix(method, "list") {
+			return false
+		}
+		return true
+	}
 
 const (
 	apiPattern = `

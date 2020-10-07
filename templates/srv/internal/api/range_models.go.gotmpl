@@ -3,7 +3,7 @@ package api
 
 import (
 	"{{.Module}}/internal/api/restapi/models"
-	"{{.Module}}/internal/api/restapi/restapi/operations"
+	"{{.Module}}/internal/api/restapi/restapi/operations{{if $model.Tags}}/{{LowerTitle (index $model.Tags 0)}}{{end}}"
 	"{{.Module}}/internal/app"
 
 	{{if $model.IDFromProfile}}extauthapi "{{.AuthSrv}}"{{end}}
@@ -14,7 +14,7 @@ import (
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
 
 {{range $i, $method := $model.Methods}}{{if not (IsCustomMethod $method)}}
-func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
+func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
 	{{if eq $method "Get"}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
 	{{end}}c, err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
 	if err != nil {
@@ -22,7 +22,7 @@ func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$mo
 	} else {
 		log.Info("{{$method}}{{$modelName}} ok", "id", {{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
 	}
-	return operations.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c)){{end}}
+	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c)){{end}}
 	{{if eq $method "Add"}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
 	{{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(), {{end}}app{{$modelName}}(params.Body{{if $model.HaveLazyLoading}}, true{{end}}))
 	if err != nil {
@@ -30,7 +30,7 @@ func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$mo
 	} else {
 		log.Info("{{$method}}{{$modelName}} ok")
 	}
-	return operations.New{{$method}}{{$model.TitleName}}Created(){{end}}
+	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}Created(){{end}}
 	{{if eq $method "Delete"}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
 	{{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
 	if err != nil {
@@ -38,7 +38,7 @@ func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$mo
 	} else {
 		log.Info("{{$method}}{{$modelName}} ok", "id", {{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
 	}
-	return operations.New{{$method}}{{$model.TitleName}}NoContent(){{end}}
+	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}NoContent(){{end}}
 	{{if eq $method "Edit"}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
 	{{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}, app{{$modelName}}(params.Body{{if $model.HaveLazyLoading}}, true{{end}}))
 	if err != nil {
@@ -46,37 +46,37 @@ func (svc *service) {{$method}}{{$modelName}}(params operations.{{$method}}{{$mo
 	} else {
 		log.Info("{{$method}}{{$modelName}} ok", "id", params.Body.ID)
 	}
-	return operations.New{{$method}}{{$model.TitleName}}OK(){{end}}
+	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK(){{end}}
 	{{if  or (eq $method "List") (IsCustomList $method)}}c,{{if $model.DetailedPagination}} count,{{end}} err := svc.app.{{$method}}{{$modelName}}(params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters), params.Body.SortBy, params.Body.OrderByASC)
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {
 		log.Info("{{$method}}{{$modelName}} ok")
 	}
-	return operations.New{{$method}}{{$model.TitleName}}OK().WithPayload({{if $model.DetailedPagination}}&operations.List{{$modelName}}OKBody{
+	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload({{if $model.DetailedPagination}}&{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.List{{$modelName}}OKBody{
 		Items: api{{$modelName}}s(c),
 		Count: int32(count),
 	}{{else}}api{{$modelName}}s(c){{end}}){{end}}
 }
 {{end}}{{end}}
-func (svc *service) {{$modelName}}AccessManager(params operations.{{$modelName}}AccessManagerParams, profile interface{}) middleware.Responder {
+func (svc *service) {{$modelName}}AccessManager(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$modelName}}AccessManagerParams, profile interface{}) middleware.Responder {
 	err := svc.app.{{$modelName}}AccessManager(appAccessManager(params.Body))
 	if err != nil {
 		log.Err("{{$modelName}}AccessManager error", err)
 	} else {
 		log.Info("{{$modelName}}AccessManager ok")
 	}
-	return operations.New{{$modelName}}AccessManagerOK()
+	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$modelName}}AccessManagerOK()
 }
 {{range $functionName, $function := $.Functions}}
-func (svc *service) {{$functionName}}{{$modelName}}(params operations.{{$modelName}}{{$functionName}}Params, profile interface{}) middleware.Responder {
+func (svc *service) {{$functionName}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$modelName}}{{$functionName}}Params, profile interface{}) middleware.Responder {
 	{{$function.OutStr}}, err := svc.app.{{$functionName}}{{$modelName}}({{$function.InStrParams}})
 	if err != nil {
 		log.Err("{{$functionName}}{{$modelName}} error", err)
 	} else {
 		log.Info("{{$functionName}}{{$modelName}} ok")
 	}
-	return operations.New{{$modelName}}{{$functionName}}OK(){{if $function.HaveOut}}.WithPayload(&models.{{$functionName}}Params{
+	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$modelName}}{{$functionName}}OK(){{if $function.HaveOut}}.WithPayload(&models.{{$functionName}}Params{
 		{{range $name, $_ := $function.In}}
 		{{$name}}: params.Body.{{$name}},{{end}}
 		{{range $name, $_ := $function.Out}}

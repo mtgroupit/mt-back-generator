@@ -47,6 +47,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	for name, model := range cfg.Models {
 		model.TitleName = strings.Title(name)
 
+		for i := range model.Tags {
+			model.Tags[i] = strings.Title(model.Tags[i])
+		}
+
 		var props []models.MethodProps
 		for _, method := range model.Methods {
 			var prop models.MethodProps
@@ -64,7 +68,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				cfg.HaveListMethod = true
 				model.HaveListMethod = true
 			}
-			if IsCustomMethod(method) {
+			if isCustomMethod(method) {
 				cfg.HaveCustomMethod = true
 				model.HaveCustomMethod = true
 			}
@@ -621,8 +625,7 @@ func LowerTitle(in string) string {
 	}
 }
 
-// IsCustomMethod define method is custom list or not
-func IsCustomMethod(method string) bool {
+func isCustomMethod(method string) bool {
 	method = strings.ToLower(method)
 	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || IsCustomList(method) {
 		return false
