@@ -16,6 +16,7 @@ models:
     description: "company object"
     detailed-pagination: true
     id-from-profile: true
+    return-when-edit: true
     columns:
       id: 
         type: "uuid"
@@ -48,6 +49,7 @@ models:
         type: "model.company"
     methods: 
       - add
+      - edit
       - list
       - list(id,name, company(name, location(id, name)))
       - custom

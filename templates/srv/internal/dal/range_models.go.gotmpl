@@ -57,25 +57,32 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	}
 	return nil
 }{{end}}
-{{if eq $method "Edit"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, m *app.{{$modelName}}) error  { {{range $column, $options := $model.Columns}}{{if and $options.IsStruct (not $options.IsArray)}}
+{{if eq $method "Edit"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  { {{range $column, $options := $model.Columns}}{{if and $options.IsStruct (not $options.IsArray)}}
 	var {{$column}}ID interface{}
 	if m.{{$options.TitleName}} != nil {
 		{{$column}}ID = m.{{$options.TitleName}}.ID
 	}{{end}}{{end}}
 	if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{$model.SQLEditStr}} WHERE id=$1`, id, {{$model.SQLExecParams}}); err != nil {
-		return err
+		return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 	}{{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
 	if len(m.{{$options.TitleName}}) != 0 {
 		if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1`, id); err != nil {
-			return err
+			return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 		}
 		for _, {{$column}} := range m.{{$options.TitleName}} {
 			if _, err := a.db.Exec(`INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}({{NameSQL $modelName}}_id, {{NameSQL $column}}_id) VALUES ($1, $2)`, id, {{$column}}.ID); err != nil {
-				return err
+				return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 			}
 		}
 	}{{end}}{{end}}{{end}}{{end}}
-	return nil
+	{{if $model.ReturnWhenEdit}}var edited {{$modelName}}
+	if err := a.db.Get(&edited, `SELECT {{$model.SQLSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1`, id); err != nil {
+		return nil, err
+	}{{if $model.HaveLazyLoading}}
+	if err := edited.LazyLoading(a); err != nil {
+		return nil, err
+	}{{end}}{{end}}
+	return {{if $model.ReturnWhenEdit}}app{{$modelName}}(edited), {{end}}nil
 }{{end}}
 
 {{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64, filters []*app.Filter, sortBy string, orderByASC bool) ([]*app.{{$modelName}},{{if $model.DetailedPagination}} int,{{end}} error) { 

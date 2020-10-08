@@ -64,6 +64,7 @@ type Model struct {
 	Description        string
 	DetailedPagination bool `yaml:"detailed-pagination"`
 	IDFromProfile      bool `yaml:"id-from-profile"`
+	ReturnWhenEdit     bool `yaml:"return-when-edit"`
 	Tags               []string
 	Columns            map[string]Options
 	Fields             map[string]string

@@ -16,7 +16,7 @@ type {{$modelName}} struct { {{range $name, $options := $model.Columns}}
 {{if eq $method "Delete"}}func (a *app) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) error {
 	return a.appl.{{$method}}{{$modelName}}(id)
 }{{end}}
-{{if eq $method "Edit"}}func (a *app) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, m *{{$modelName}}) error {
+{{if eq $method "Edit"}}func (a *app) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}} {
 	return a.appl.{{$method}}{{$modelName}}(id, m)
 }{{end}}
 {{if or (eq $method "List") (IsCustomList $method)}}func (a *app) {{$method}}{{$modelName}}(offset, limit int64, filters []*Filter, sortBy string, orderByASC bool) ([]*{{$modelName}},{{if $model.DetailedPagination}}int, {{end}} error) {
