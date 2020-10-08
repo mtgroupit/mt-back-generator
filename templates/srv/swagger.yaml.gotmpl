@@ -44,7 +44,12 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
         204:
           description: Deleted        {{else}}{{if eq $method "Add"}}
         201:
-          description: Created        {{else}}
+          description: Created 
+          schema:
+            type: object
+            properties:
+              id:
+                type: {{if $model.IDIsUUID}}string{{else}}{{(index $model.Columns "id").Type}}{{end}}       {{else}}
         200:
           description: OK        {{end}}{{end}}        {{if or (eq $method "List") (IsCustomList $method) (eq $method "Get")}}
           schema:          

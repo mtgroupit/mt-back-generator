@@ -7,7 +7,7 @@ package app
 type App interface {
     {{range $modelName, $model := $.Models}}{{range $i, $method := $model.Methods}}
 	{{if eq $method "Get"}}{{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) (*{{$modelName}}, error){{end}}
-    {{if eq $method "Add"}}{{$method}}{{$modelName}}({{if $model.IDFromProfile}}profID string, {{end}}m *{{$modelName}}) error{{end}}
+    {{if eq $method "Add"}}{{$method}}{{$modelName}}({{if $model.IDFromProfile}}profID string, {{end}}m *{{$modelName}}) ({{if $model.IDIsUUID}}string{{else}}int64{{end}}, error){{end}}
 	{{if eq $method "Delete"}}{{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) error{{end}}
     {{if eq $method "Edit"}}{{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, m *{{$modelName}}) error{{end}}
     {{if or (eq $method "List") (IsCustomList $method)}}{{$method}}{{$modelName}}(offset, limit int64, filters []*Filter, sortBy string, orderByASC bool) ([]*{{$modelName}},{{if $model.DetailedPagination}}int, {{end}} error){{end}}{{end}}
