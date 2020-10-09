@@ -51,7 +51,7 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
               id:
                 type: {{if $model.IDIsUUID}}string{{else}}{{(index $model.Columns "id").Type}}{{end}}       {{else}}
         200:
-          description: OK        {{end}}{{end}}        {{if or (eq $method "List") (IsCustomList $method) (eq $method "Get") (and (eq $method "Edit") $model.ReturnWhenEdit)}}
+          description: OK        {{end}}{{end}}        {{if or (eq $method "List") (IsCustomList $method) (eq $method "Get") (and (or (eq $method "Edit") (IsCustomEdit $method)) $model.ReturnWhenEdit)}}
           schema:          
             {{if or (eq $method "List") (IsCustomList $method)}}{{if $model.DetailedPagination}}type: object
             properties:

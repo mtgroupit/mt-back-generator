@@ -57,17 +57,16 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		var props []models.MethodProps
 		for _, method := range model.Methods {
 			var prop models.MethodProps
-			switch method {
-			case "edit":
-				prop.HTTPMethod = "put"
-			case "delete":
+			if method == "delete" {
 				prop.HTTPMethod = "delete"
-			default:
+			} else if method == "edit" || isCustomEdit(method) {
+				prop.HTTPMethod = "put"
+			} else {
 				prop.HTTPMethod = "post"
 			}
 			props = append(props, prop)
 
-			if method == "list" || IsCustomList(method) {
+			if method == "list" || isCustomList(method) {
 				cfg.HaveListMethod = true
 				model.HaveListMethod = true
 			}
@@ -255,6 +254,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			return
 		}
 
+		if err = handleCustomEdits(cfg.Models, &model, name); err != nil {
+			return
+		}
+
 		cfg.Models[name] = model
 	}
 
@@ -373,9 +376,12 @@ func titleize(cfg *models.Config) {
 	cfg.Models = titleModels
 }
 
-// IsCustomList define method is custom list or not
-func IsCustomList(method string) bool {
+func isCustomList(method string) bool {
 	return regexp.MustCompile(`^list\(.+\)$`).Match([]byte(method))
+}
+
+func isCustomEdit(method string) bool {
+	return regexp.MustCompile(`^edit\(.+\)$`).Match([]byte(method))
 }
 
 func expandStrNestedFields(method string) (string, string) {
@@ -432,9 +438,11 @@ func trimFieldsSuffix(fields []string) (out []string) {
 	}
 	return
 }
+
 func isStruct(method string) bool {
 	return regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\(.+\)$`).Match([]byte(method))
 }
+
 func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting, parent string, isArray bool) ([]models.NestedObjProps, error) {
 	objs := []models.NestedObjProps{}
 	obj := models.NestedObjProps{}
@@ -509,10 +517,11 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 	}
 	return result, nil
 }
+
 func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
 	result := *model
 	for i, method := range result.Methods {
-		if IsCustomList(method) {
+		if isCustomList(method) {
 			var SQLSelect, sqlWhereParams, filtredFields []string
 			_, fieldsStr := expandStrNestedFields(method)
 			fieldsFull := splitFields(fieldsStr)
@@ -616,6 +625,55 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 	return nil
 }
 
+func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
+	result := *model
+	for i, method := range result.Methods {
+		if isCustomEdit(method) {
+			var sqlEdit, sqlExexParams, editableFields []string
+			count := 1
+			_, fieldsStr := expandStrNestedFields(method)
+			fields := splitFields(fieldsStr)
+			for j := range fields {
+				var haveFieldInColumns bool
+				for column := range result.Columns {
+					if column == fields[j] {
+						haveFieldInColumns = true
+					}
+				}
+				if !haveFieldInColumns {
+					return errors.Errorf(`model "%s" not contain "%s" column for method "%s"`, modelName, fields[j], method)
+				}
+
+				editableFields = append(editableFields, fields[j])
+
+				fields[j] = strings.Title(fields[j])
+
+				for column, options := range result.Columns {
+					if fields[j] == options.TitleName {
+						if !options.IsStruct {
+							sqlExexParams = append(sqlExexParams, "m."+options.TitleName)
+							count++
+							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", NameSQL(options.TitleName), count))
+						} else {
+							if !options.IsArray {
+								sqlExexParams = append(sqlExexParams, column+"ID")
+								count++
+								sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count))
+							}
+						}
+					}
+				}
+			}
+			result.Methods[i] = "edit" + strings.Join(fields, "")
+			result.MethodsProps[i].CustomSQLEditStr = strings.Join(sqlEdit, ", ")
+			result.MethodsProps[i].CustomSQLExecParams = strings.Join(sqlExexParams, ", ")
+			result.MethodsProps[i].EditableFields = editableFields
+		}
+	}
+	model = &result
+	return nil
+}
+
 // LowerTitle cancels strings.Title
 func LowerTitle(in string) string {
 	switch len(in) {
@@ -630,7 +688,7 @@ func LowerTitle(in string) string {
 
 func isCustomMethod(method string) bool {
 	method = strings.ToLower(method)
-	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || IsCustomList(method) {
+	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isCustomList(method) || isCustomEdit(method) {
 		return false
 	}
 	return true

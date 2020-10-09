@@ -57,14 +57,14 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	}
 	return nil
 }{{end}}
-{{if eq $method "Edit"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  { {{range $column, $options := $model.Columns}}{{if and $options.IsStruct (not $options.IsArray)}}
+{{if or (eq $method "Edit") (IsCustomEdit $method)}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  { {{range $column, $options := $model.Columns}}{{if and (and $options.IsStruct (not $options.IsArray)) (or (not (IsCustomEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsCustomEdit $method)))}}
 	var {{$column}}ID interface{}
 	if m.{{$options.TitleName}} != nil {
 		{{$column}}ID = m.{{$options.TitleName}}.ID
 	}{{end}}{{end}}
-	if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{$model.SQLEditStr}} WHERE id=$1`, id, {{$model.SQLExecParams}}); err != nil {
+	if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLEditStr}}{{else}}{{$model.SQLEditStr}}{{end}} WHERE id=$1`, id, {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLExecParams}}{{end}}); err != nil {
 		return {{if $model.ReturnWhenEdit}}nil, {{end}}err
-	}{{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
+	}{{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if and $options.IsArray (or (not (IsCustomEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsCustomEdit $method)))}}
 	if len(m.{{$options.TitleName}}) != 0 {
 		if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1`, id); err != nil {
 			return {{if $model.ReturnWhenEdit}}nil, {{end}}err
@@ -75,7 +75,8 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 			}
 		}
 	}{{end}}{{end}}{{end}}{{end}}
-	{{if $model.ReturnWhenEdit}}var edited {{$modelName}}
+	{{if $model.ReturnWhenEdit}}
+	var edited {{$modelName}}
 	if err := a.db.Get(&edited, `SELECT {{$model.SQLSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1`, id); err != nil {
 		return nil, err
 	}{{if $model.HaveLazyLoading}}

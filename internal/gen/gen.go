@@ -42,10 +42,21 @@ var goTmplFuncs = template.FuncMap{
 	"IsCustomList": func(method string) bool {
 		return regexp.MustCompile(`^(L|l)ist.+`).Match([]byte(method))
 	},
+	"IsCustomEdit": func(method string) bool {
+		return regexp.MustCompile(`^(E|e)dit.+`).Match([]byte(method))
+	},
 	"HaveField": func(method, modelName string) bool {
 		return strings.Contains(method, modelName)
 	},
 	"IsCustomMethod": isCustomMethod,
+	"ContainsStr": func(slice []string, str string) bool {
+		for i := range slice {
+			if slice[i] == str {
+				return true
+			}
+		}
+		return false
+	},
 }
 
 // Srv - generate dir with service
@@ -248,7 +259,7 @@ func checkExistenseFile(file string) bool {
 
 func isCustomMethod(method string) bool {
 		method = strings.ToLower(method)
-		if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || strings.HasPrefix(method, "list") {
+		if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || strings.HasPrefix(method, "edit")|| strings.HasPrefix(method, "list") {
 			return false
 		}
 		return true

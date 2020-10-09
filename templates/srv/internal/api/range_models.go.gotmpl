@@ -39,7 +39,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 		log.Info("{{$method}}{{$modelName}} ok", "id", {{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
 	}
 	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}NoContent(){{end}}
-	{{if eq $method "Edit"}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
+	{{if or (eq $method "Edit") (IsCustomEdit $method)}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
 	{{end}}{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}, app{{$modelName}}(params.Body{{if $model.HaveLazyLoading}}, true{{end}}))
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)

@@ -55,7 +55,10 @@ type MethodProps struct {
 	NeedLazyLoading         bool
 	CustomListSQLSelect     string
 	CustomListSQLWhereProps string
+	CustomSQLEditStr        string
+	CustomSQLExecParams     string
 	FilteredFields          []string
+	EditableFields          []string
 	NestedObjs              []NestedObjProps
 }
 
