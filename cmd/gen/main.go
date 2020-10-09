@@ -22,6 +22,9 @@ func main() {
 	flag.Parse()
 
 	cfg, err := parser.ReadYAMLCfg(config)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	cfg, err = parser.HandleCfg(cfg)
 	if err != nil {

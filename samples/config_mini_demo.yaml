@@ -26,13 +26,13 @@ models:
       occupation:
         type: "string"
         sort-on: true
-      location:
-        type: "model.location"
+      locations:
+        type: "[]model.location"
     methods:
       - get
       - add
       - delete
-      - edit
+      - edit(occupation, locations)
       - list
   employe:
     description: "employe object"

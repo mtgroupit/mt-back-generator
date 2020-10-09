@@ -29,3 +29,24 @@ make gen [TARGET_DIRECTORY=~/Desktop] [CONFIG=./config.yaml]
 ```
 
 Open TARGET_DIRECTORY/service.
+
+## Features
+
+### For models
+
+    detailed-pagination: true - добавляет count в response метода list
+
+    id-from-profile: true - позволяет совершать методы для текущего пользователя
+
+    return-when-edit: true - вобавляет модель в response метода edit
+
+    tags:
+    - Tag - добавит тег Tag  во все эндпоинты модели
+
+### For columns
+
+    sort-on: true - позволяет делать сортировку по данной колонке в методе list
+
+### For methods
+
+    edit(column2, column3) - в таком виде метод edit будет изменять только column2 и column3, а также находится в эндпоинте /model/editColumn2Column3

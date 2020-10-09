@@ -258,12 +258,12 @@ func checkExistenseFile(file string) bool {
 }
 
 func isCustomMethod(method string) bool {
-		method = strings.ToLower(method)
-		if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || strings.HasPrefix(method, "edit")|| strings.HasPrefix(method, "list") {
-			return false
-		}
-		return true
+	method = strings.ToLower(method)
+	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || strings.HasPrefix(method, "edit") || strings.HasPrefix(method, "list") {
+		return false
 	}
+	return true
+}
 
 const (
 	apiPattern = `
