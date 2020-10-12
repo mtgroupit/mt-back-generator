@@ -58,7 +58,7 @@ func NewServer(appl app.App, extAuth AuthSvc, cfg Config) (*restapi.Server, erro
 	}
 	swaggerSpec.Spec().BasePath = cfg.BasePath
 
-	api := operations.New{{.Name}}API(swaggerSpec)
+	api := operations.New{{FormatName .Name}}API(swaggerSpec)
 
 	api.Logger = structlog.New(structlog.KeyUnit, "swagger").Printf
 	api.CookieKeyAuth = svc.checkerAuth

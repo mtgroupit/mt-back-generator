@@ -50,3 +50,5 @@ Open TARGET_DIRECTORY/service.
 ### For methods
 
     edit(column2, column3) - в таком виде метод edit будет изменять только column2 и column3, а также находится в эндпоинте /model/editColumn2Column3
+
+    list(column1, column3*, model1*(column1, model1(column1, column2))) - в таком виде метод list будет возвращать только column2, column3 и model1..., то есть только рекурсивно указанные поля и фильтрация может проиваодиться по column3 и по id model1, а также находится в эндпоинте /model/editColumn2Column3Model1

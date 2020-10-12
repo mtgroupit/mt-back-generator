@@ -57,6 +57,13 @@ var goTmplFuncs = template.FuncMap{
 		}
 		return false
 	},
+	"FormatName": func(name string) string {
+		splitedName := regexp.MustCompile("[^a-zA-Z0-9]+").Split(name, -1)
+		for i := range splitedName {
+			splitedName[i] = strings.Title(splitedName[i])
+		}
+		return strings.Join(splitedName, "")
+	},
 }
 
 // Srv - generate dir with service

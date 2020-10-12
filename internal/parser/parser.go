@@ -15,6 +15,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+var isCorectName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]+$`).MatchString
+
 // ReadYAMLCfg create models.Config from configFile
 func ReadYAMLCfg(file string) (*models.Config, error) {
 	cfg := models.Config{}
@@ -34,9 +36,17 @@ func ReadYAMLCfg(file string) (*models.Config, error) {
 func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	cfg = inCfg
 
-	cfg.Description = strconv.Quote(cfg.Description)
+	if cfg.Name == "" {
+		return nil, errors.New("name is empty")
+	}
+	if cfg.Module == "" {
+		return nil, errors.New("module is empty")
+	}
+	if cfg.AuthSrv == "" {
+		return nil, errors.New("auth-srv is empty")
+	}
 
-	cfg.Name = regexp.MustCompile("[^a-zA-Z0-9]+").ReplaceAllString(cfg.Name, "")
+	cfg.Description = strconv.Quote(cfg.Description)
 
 	cfg.Tags = make(map[string]struct{})
 
@@ -47,7 +57,14 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 	binds := map[string]models.Bind{}
 	for name, model := range cfg.Models {
+		if !isCorectName(name) {
+			return nil, errors.New("'" + name + "' is invalid name for model. A valid name must contain only letters and numbers in camelCase")
+		}
 		model.TitleName = strings.Title(name)
+
+		if len(model.Columns) == 0 {
+			return nil, errors.New("model '" + name + "' hasn't any columns")
+		}
 
 		for i := range model.Tags {
 			cfg.Tags[strings.ToLower(model.Tags[i])] = struct{}{}
@@ -56,6 +73,21 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 		var props []models.MethodProps
 		for _, method := range model.Methods {
+			if isCustomMethod(method) {
+				switch {
+				case strings.HasPrefix(method, "list") && strings.Contains(method, "("):
+					return nil, errors.New("model: '" + name + "'. '" + method + "' is invalid as a custom list. A valid custom list must be in this format: 'list(column1, column3*, model1*(column1, model1(column1, column2)))'")
+				case strings.HasPrefix(method, "edit") && strings.Contains(method, "("):
+					return nil, errors.New("model: '" + name + "'. '" + method + "' is invalid as a custom edit. A valid custom edit must be in this format: 'edit(column1, column2)'")
+				default:
+					if !isCorectName(method) {
+						return nil, errors.New("model: '" + name + "'. '" + method + "' is invalid name for method. A valid name must contain only letters and numbers in camelCase")
+					}
+				}
+				cfg.HaveCustomMethod = true
+				model.HaveCustomMethod = true
+			}
+
 			var prop models.MethodProps
 			if method == "delete" {
 				prop.HTTPMethod = "delete"
@@ -70,16 +102,15 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				cfg.HaveListMethod = true
 				model.HaveListMethod = true
 			}
-			if isCustomMethod(method) {
-				cfg.HaveCustomMethod = true
-				model.HaveCustomMethod = true
-			}
 		}
 		model.MethodsProps = props
 
 		psql := []models.PsqlParams{}
 		var indexLastNotArr int
 		for column, options := range model.Columns {
+			if !isCorectName(column) {
+				return nil, errors.New("model: '" + name + "'. '" + column + "' is invalid name for column. A valid name must contain only letters and numbers in camelCase")
+			}
 			if options.IsStruct, options.IsArray, options.GoType, err = checkColumn(options.Type, cfg); err != nil {
 				return
 			}
@@ -137,12 +168,14 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 					pp.Type = "string"
 					pp.TypeSQL = "uuid"
-				default:
+				case "int64":
 					options.GoType = options.Type
 					options.Type = "integer"
 
 					pp.Type = "int64"
 					pp.TypeSQL = "SERIAL"
+				default:
+					return nil, errors.New("model: '" + name + "'. '" + options.Type + "' is invalid type for id. Valid types is 'int64' and 'uuid'")
 				}
 				options.TitleName = "ID"
 
@@ -157,9 +190,12 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				if options.IsStruct {
 					options.Type = strings.ToLower(string(options.GoType[0])) + options.GoType[1:]
 				} else {
+					if options.Type == "int" {
+						options.Type = "int32"
+					}
 					options.GoType = options.Type
 					switch options.Type {
-					case "int", "int32", "int64":
+					case "int32", "int64":
 						options.Format = options.Type
 						options.Type = "integer"
 					case "bool":
@@ -328,7 +364,13 @@ func countDeepNesting(model string, cfg *models.Config) (int, error) {
 		}
 		if options.IsStruct {
 			columnDeepNesting := 1
-			optTypeDeepNesting, err := countDeepNesting(options.Type[6:], cfg)
+			var modelName string
+			if options.IsArray {
+				modelName = options.Type[8:]
+			} else {
+				modelName = options.Type[6:]
+			}
+			optTypeDeepNesting, err := countDeepNesting(modelName, cfg)
 			if err != nil {
 				return 0, err
 			}
