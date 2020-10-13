@@ -58,12 +58,12 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	binds := map[string]models.Bind{}
 	for name, model := range cfg.Models {
 		if !isCorectName(name) {
-			return nil, errors.New("'" + name + "' is invalid name for model. A valid name must contain only letters and numbers in camelCase")
+			return nil, errors.Errorf(`"%s" is invalid name for model. A valid name must contain only letters and numbers in camelCase`, name)
 		}
 		model.TitleName = strings.Title(name)
 
 		if len(model.Columns) == 0 {
-			return nil, errors.New("model '" + name + "' hasn't any columns")
+			return nil, errors.Errorf(`Model "%s" hasn't any columns`, name)
 		}
 
 		for i := range model.Tags {
@@ -76,12 +76,12 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			if isCustomMethod(method) {
 				switch {
 				case strings.HasPrefix(method, "list") && strings.Contains(method, "("):
-					return nil, errors.New("model: '" + name + "'. '" + method + "' is invalid as a custom list. A valid custom list must be in this format: 'list(column1, column3*, model1*(column1, model1(column1, column2)))'")
+					return nil, errors.Errorf(`Model: "%s". "%s"  is invalid as a custom list. A valid custom list shouldn't contain spaces before brackets. Correct method pattern: "list(column1, column3*, model1*(column1, model1(column1, column2))), where * means the field can be sorted by"`, name, method)
 				case strings.HasPrefix(method, "edit") && strings.Contains(method, "("):
-					return nil, errors.New("model: '" + name + "'. '" + method + "' is invalid as a custom edit. A valid custom edit must be in this format: 'edit(column1, column2)'")
+					return nil, errors.Errorf(`Model: "%s". "%s"  is invalid as a custom edit. A valid custom edit shouldn't contain spaces before brackets. Correct method pattern: "edit(column1, column2)"`, name, method)
 				default:
 					if !isCorectName(method) {
-						return nil, errors.New("model: '" + name + "'. '" + method + "' is invalid name for method. A valid name must contain only letters and numbers in camelCase")
+						return nil, errors.Errorf(`Model: "%s". "%s"  is invalid name for method. A valid name must contain only letters and numbers in camelCase`, name, method)
 					}
 				}
 				cfg.HaveCustomMethod = true
@@ -109,7 +109,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		var indexLastNotArr int
 		for column, options := range model.Columns {
 			if !isCorectName(column) {
-				return nil, errors.New("model: '" + name + "'. '" + column + "' is invalid name for column. A valid name must contain only letters and numbers in camelCase")
+				return nil, errors.Errorf(`Model: "%s". "%s"  is invalid name for column. A valid name must contain only letters and numbers in camelCase`, name, column)
 			}
 			if options.IsStruct, options.IsArray, options.GoType, err = checkColumn(options.Type, cfg); err != nil {
 				return
@@ -175,7 +175,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					pp.Type = "int64"
 					pp.TypeSQL = "SERIAL"
 				default:
-					return nil, errors.New("model: '" + name + "'. '" + options.Type + "' is invalid type for id. Valid types is 'int64' and 'uuid'")
+					return nil, errors.Errorf(`Model: "%s". "%s"  is invalid type for id. Valid types is 'int64' and 'uuid'`, name, options.Type)
 				}
 				options.TitleName = "ID"
 
@@ -390,12 +390,12 @@ func checkColumn(columnType string, cfg *models.Config) (bool, bool, string, err
 	switch {
 	case strings.HasPrefix(columnType, "model."):
 		if _, ok := cfg.Models[columnType[6:]]; !ok {
-			return false, false, "", errors.Errorf(`config not contain "%s" field`, columnType[6:])
+			return false, false, "", errors.Errorf(`One of the fields refers to "%s" model which is not described anywhere`, columnType[6:])
 		}
 		return true, false, strings.Title(columnType[6:]), nil
 	case strings.HasPrefix(columnType, "[]model."):
 		if _, ok := cfg.Models[columnType[8:]]; !ok {
-			return false, false, "", errors.Errorf(`config not contain "%s" field`, columnType[8:])
+			return false, false, "", errors.Errorf(`One of the fields refers to "%s" model which is not described anywhere`, columnType[8:])
 		}
 		return true, true, strings.Title(columnType[8:]), nil
 	}
@@ -507,7 +507,7 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 			}
 		}
 		if !haveFieldInColumns {
-			return nil, errors.Errorf(`model "%s" not contain "%s" column for custom method`, modelName, fields[i])
+			return nil, errors.Errorf(`Model "%s" not contain "%s" column for custom list`, modelName, fields[i])
 		}
 		if strings.ToLower(fields[i]) == "id" {
 			haveID = true
@@ -586,7 +586,7 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 					}
 				}
 				if !haveFieldInColumns {
-					return errors.Errorf(`model "%s" not contain "%s" column for method "%s"`, modelName, fields[j], method)
+					return errors.Errorf(`Model "%s" not contain "%s" column for method "%s"`, modelName, fields[j], method)
 				}
 
 				if strings.ToLower(fields[j]) == "id" {
@@ -683,7 +683,7 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 					}
 				}
 				if !haveFieldInColumns {
-					return errors.Errorf(`model "%s" not contain "%s" column for method "%s"`, modelName, fields[j], method)
+					return errors.Errorf(`Model "%s" not contain "%s" column for method "%s"`, modelName, fields[j], method)
 				}
 
 				editableFields = append(editableFields, fields[j])
