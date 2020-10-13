@@ -57,13 +57,16 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 	binds := map[string]models.Bind{}
 	for name, model := range cfg.Models {
+		if name == strings.Title(name) {
+			return nil, errors.Errorf(`"%s" starts with captial letter, please rename it to "%s" starting with small letter`, name, LowerTitle(name))
+		}
 		if !isCorectName(name) {
 			return nil, errors.Errorf(`"%s" is invalid name for model. A valid name must contain only letters and numbers in camelCase`, name)
 		}
 		model.TitleName = strings.Title(name)
 
 		if len(model.Columns) == 0 {
-			return nil, errors.Errorf(`Model "%s" hasn't any columns`, name)
+			return nil, errors.Errorf(`Model "%s" has no any columns`, name)
 		}
 
 		for i := range model.Tags {
@@ -507,7 +510,7 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 			}
 		}
 		if !haveFieldInColumns {
-			return nil, errors.Errorf(`Model "%s" not contain "%s" column for custom list`, modelName, fields[i])
+			return nil, errors.Errorf(`Model "%s" does not contain "%s" column for custom list`, modelName, fields[i])
 		}
 		if strings.ToLower(fields[i]) == "id" {
 			haveID = true
@@ -586,7 +589,7 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 					}
 				}
 				if !haveFieldInColumns {
-					return errors.Errorf(`Model "%s" not contain "%s" column for method "%s"`, modelName, fields[j], method)
+					return errors.Errorf(`Model "%s" does not contain "%s" column for method "%s"`, modelName, fields[j], method)
 				}
 
 				if strings.ToLower(fields[j]) == "id" {
@@ -683,7 +686,7 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 					}
 				}
 				if !haveFieldInColumns {
-					return errors.Errorf(`Model "%s" not contain "%s" column for method "%s"`, modelName, fields[j], method)
+					return errors.Errorf(`Model "%s" does not contain "%s" column for method "%s"`, modelName, fields[j], method)
 				}
 
 				editableFields = append(editableFields, fields[j])
