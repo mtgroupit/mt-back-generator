@@ -5,7 +5,11 @@ if ! [ -x "$(command -v go)" ]; then
   exit 1
 fi
 
-go install ./cmd/mt-gen
+rm -rf ./bin
+mkdir ./bin
+go build -o ./bin ./cmd/mt-gen
+sudo cp ./bin/mt-gen /usr/bin
+rm -rf ./bin
 
 rm -rf ~/mt-gen
 mkdir ~/mt-gen
