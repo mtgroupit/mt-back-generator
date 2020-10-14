@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"time"
 
 	"{{.Module}}/internal/api"
@@ -75,7 +76,7 @@ func connect() (app.App, *extauthapi.Client, error) {
 
 	extAuthSvc, err := extauthapi.NewClient(cfg.extauthEndpoint, &tls.Config{InsecureSkipVerify: true}, false)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("extauthapi: %v", err)
 	}
 
 	a,{{if .HaveCustomMethod}} c,{{end}} err := dal.New(ctx, cfg.db, cfg.gooseDir)
@@ -98,7 +99,7 @@ func runServe(errc chan<- error) {
 
 	srv, err := api.NewServer(appl, extAuthSvc, cfg.api)
 	if err != nil {
-		errc <- err
+		errc <- fmt.Errorf("api: %v", err)
 		return
 	}
 
