@@ -51,5 +51,5 @@ models:
       - add
       - edit
       - list
-      - list(id, name*, company*(name, location(id, name)))
+      - list(id, name*, company*(name, locations(id, name)))
       - custom
