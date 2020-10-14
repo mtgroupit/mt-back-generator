@@ -5,12 +5,15 @@ if ! [ -x "$(command -v docker)" ]; then
   exit 1
 fi
 
+shopt -s expand_aliases
 alias swagger="docker run --rm -it -e GOPATH=$HOME/go:/go -v $HOME:$HOME -w $(pwd) quay.io/goswagger/swagger"
 swagger generate server -t ./internal/api/restapi -f ./swagger.yaml --exclude-main
 swagger generate client -t ./internal/api/restapi -f ./swagger.yaml
 
 rm -rf bin/
 mkdir bin/
+
+env GIT_TERMINAL_PROMPT=1 go get {{.AuthSrv}}
 
 go build -o ./bin/{{FormatName .Name}} ./cmd/main/*
 

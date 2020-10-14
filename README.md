@@ -19,7 +19,7 @@ For using this app install:
 ```bash
 git clone https://github.com/mtgroupit/mt-back-generator.git
 cd mt-back-generator
-sh install
+bash install
 ```
 
 ## Using
