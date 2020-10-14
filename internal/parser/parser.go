@@ -58,7 +58,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	binds := map[string]models.Bind{}
 	for name, model := range cfg.Models {
 		if name == strings.Title(name) {
-			return nil, errors.Errorf(`"%s" starts with captial letter, please rename it to "%s" starting with small letter`, name, LowerTitle(name))
+			return nil, errors.Errorf(`Model "%s" starts with captial letter, please rename it to "%s" starting with small letter`, name, LowerTitle(name))
 		}
 		if !isCorectName(name) {
 			return nil, errors.Errorf(`"%s" is invalid name for model. A valid name must contain only letters and numbers in camelCase`, name)

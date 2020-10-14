@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if ! [ -x "$(command -v go)" ]; then
+  echo 'Error: "go" is not installed.' >&2
+  exit 1
+fi
+
+go install ./cmd/mt-gen
+
+rm -rf $GOPATH/mt-gen
+mkdir $GOPATH/mt-gen
+cp -r templates $GOPATH/mt-gen

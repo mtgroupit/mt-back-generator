@@ -19,16 +19,15 @@ For using this app install:
 ```bash
 git clone https://github.com/mtgroupit/mt-back-generator.git
 cd mt-back-generator
-make
+sh install
 ```
 
 ## Using
 
+Example:
 ```bash
-make gen [TARGET_DIRECTORY=~/Desktop] [CONFIG=./config.yaml]
+mt-gen -dir=./generated/ -config=./config.yaml
 ```
-
-Open TARGET_DIRECTORY/service.
 
 ## Features
 

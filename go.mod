@@ -16,6 +16,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/powerman/check v1.2.1
 	github.com/powerman/structlog v0.7.1
+	github.com/rhysd/abspath v0.0.0-20200817132137-9532ba017882
 	github.com/rogpeppe/godef v1.1.2 // indirect
 	github.com/sqs/goreturns v0.0.0-20181028201513-538ac6014518 // indirect
 	github.com/tpng/gopkgs v0.0.0-20180428091733-81e90e22e204 // indirect

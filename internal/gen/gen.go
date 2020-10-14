@@ -13,6 +13,7 @@ import (
 	"text/template"
 
 	"github.com/mtgroupit/mt-back-generator/internal/parser"
+	"github.com/rhysd/abspath"
 
 	"github.com/mtgroupit/mt-back-generator/models"
 )
@@ -57,22 +58,25 @@ var goTmplFuncs = template.FuncMap{
 		}
 		return false
 	},
-	"FormatName": func(name string) string {
-		splitedName := regexp.MustCompile("[^a-zA-Z0-9]+").Split(name, -1)
-		for i := range splitedName {
-			splitedName[i] = strings.Title(splitedName[i])
-		}
-		return strings.Join(splitedName, "")
-	},
+	"FormatName": formatName,
 }
 
 // Srv - generate dir with service
 func Srv(dir string, cfg *models.Config) error {
-	if err := buildTreeDirs(dir, "service"); err != nil {
+	abs, err := abspath.ExpandFrom(dir)
+	if err != nil {
+		return err
+	}
+	dir = abs.String()
+	if err := ensureDir(dir, ""); err != nil {
 		return err
 	}
 
-	if err := gen("./templates/srv", path.Join(dir, "service"), *cfg); err != nil {
+	if err := buildTreeDirs(dir, formatName(cfg.Name)); err != nil {
+		return err
+	}
+
+	if err := gen(os.Getenv("GOPATH")+"/mt-gen/templates/srv", path.Join(dir, formatName(cfg.Name)), *cfg); err != nil {
 		return err
 	}
 
@@ -270,6 +274,14 @@ func isCustomMethod(method string) bool {
 		return false
 	}
 	return true
+}
+
+func formatName(name string) string {
+	splitedName := regexp.MustCompile("[^a-zA-Z0-9]+").Split(name, -1)
+	for i := range splitedName {
+		splitedName[i] = strings.Title(splitedName[i])
+	}
+	return strings.Join(splitedName, "")
 }
 
 const (

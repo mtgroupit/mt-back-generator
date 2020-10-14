@@ -14,8 +14,8 @@ var (
 )
 
 func init() {
-	flag.StringVar(&dir, "dir", "./", "dir for generated service")
-	flag.StringVar(&config, "config", "./config.yaml", "config file")
+	flag.StringVar(&dir, "dir", "./generated/", "the direrctory to generate the service")
+	flag.StringVar(&config, "config", "./config.yaml", "the config file to use")
 }
 
 func main() {
