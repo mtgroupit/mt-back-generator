@@ -12,5 +12,5 @@ swagger generate client -t ./internal/api/restapi -f ./swagger.yaml
 rm -rf bin/
 mkdir bin/
 
-
 go build -o ./bin/{{FormatName .Name}} ./cmd/main/*
+

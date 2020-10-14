@@ -76,7 +76,11 @@ func Srv(dir string, cfg *models.Config) error {
 		return err
 	}
 
-	if err := gen(os.Getenv("GOPATH")+"/mt-gen/templates/srv", path.Join(dir, formatName(cfg.Name)), *cfg); err != nil {
+	abs, err = abspath.ExpandFrom("~/mt-gen/templates/srv")
+	if err != nil {
+		return err
+	}
+	if err := gen(abs.String(), path.Join(dir, formatName(cfg.Name)), *cfg); err != nil {
 		return err
 	}
 
