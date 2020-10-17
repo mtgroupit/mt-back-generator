@@ -25,7 +25,7 @@ import (
 	flags "github.com/jessevdk/go-flags"
 	"golang.org/x/net/netutil"
 
-	"github.com/Lisss13/french-back-template/snouki-mobile/mtmb-extauthapi/restapi/operations"
+	"github.com/mtgroupit/mt-back-generator/extauthapi/restapi/operations"
 )
 
 const (

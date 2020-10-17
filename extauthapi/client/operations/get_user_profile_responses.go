@@ -12,7 +12,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 
-	"github.com/Lisss13/french-back-template/snouki-mobile/mtmb-extauthapi/models"
+	"github.com/mtgroupit/mt-back-generator/extauthapi/models"
 )
 
 // GetUserProfileReader is a Reader for the GetUserProfile structure.

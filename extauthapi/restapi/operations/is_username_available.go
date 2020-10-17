@@ -14,7 +14,7 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/go-openapi/validate"
 
-	"github.com/Lisss13/french-back-template/snouki-mobile/mtmb-extauthapi/models"
+	"github.com/mtgroupit/mt-back-generator/extauthapi/models"
 )
 
 // IsUsernameAvailableHandlerFunc turns a function with the right signature into a is username available handler

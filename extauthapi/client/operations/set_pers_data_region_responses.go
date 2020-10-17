@@ -14,7 +14,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
-	"github.com/Lisss13/french-back-template/snouki-mobile/mtmb-extauthapi/models"
+	"github.com/mtgroupit/mt-back-generator/extauthapi/models"
 )
 
 // SetPersDataRegionReader is a Reader for the SetPersDataRegion structure.

@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 
-	"github.com/Lisss13/french-back-template/snouki-mobile/mtmb-extauthapi/models"
+	"github.com/mtgroupit/mt-back-generator/extauthapi/models"
 )
 
 // IsEmailAvailableOKCode is the HTTP code returned for type IsEmailAvailableOK

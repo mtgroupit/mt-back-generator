@@ -11,14 +11,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Lisss13/french-back-template/snouki-mobile/mtmb-extauthapi/client/operations"
+	"github.com/mtgroupit/mt-back-generator/extauthapi/client/operations"
 	oapierrors "github.com/go-openapi/errors"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/swag"
 	"github.com/pkg/errors"
 
-	"github.com/Lisss13/french-back-template/snouki-mobile/mtmb-extauthapi/client"
-	"github.com/Lisss13/french-back-template/snouki-mobile/mtmb-extauthapi/models"
+	"github.com/mtgroupit/mt-back-generator/extauthapi/client"
+	"github.com/mtgroupit/mt-back-generator/extauthapi/models"
 )
 
 var (

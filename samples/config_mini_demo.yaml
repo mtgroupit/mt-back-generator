@@ -1,7 +1,7 @@
 name: "Demo"
 module: "Demo"
 description: "demo generated app"
-auth-srv: "github.com/Lisss13/french-back-template/auth-service/mtmb-extauthapi"
+auth-srv: "github.com/mtgroupit/mt-back-generator/extauthapi"
 models:
   location:
     description: "location object"

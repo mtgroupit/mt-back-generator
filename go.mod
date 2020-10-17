@@ -5,9 +5,13 @@ go 1.14
 require (
 	9fans.net/go v0.0.2 // indirect
 	github.com/fatih/camelcase v1.0.0
+	github.com/go-openapi/errors v0.19.6
 	github.com/go-openapi/loads v0.19.5
 	github.com/go-openapi/runtime v0.19.19
 	github.com/go-openapi/spec v0.19.8
+	github.com/go-openapi/strfmt v0.19.5
+	github.com/go-openapi/swag v0.19.9
+	github.com/go-openapi/validate v0.19.10
 	github.com/lukehoban/go-find-references v0.0.0-20150918174914-42505ef666d1 // indirect
 	github.com/lukehoban/go-outline v0.0.0-20161011150102-e78556874252 // indirect
 	github.com/lukehoban/ident v0.0.0-20161021214352-ec6acfba39eb // indirect
@@ -18,6 +22,7 @@ require (
 	github.com/powerman/structlog v0.7.1
 	github.com/rhysd/abspath v0.0.0-20200817132137-9532ba017882
 	github.com/rogpeppe/godef v1.1.2 // indirect
+	github.com/satori/go.uuid v1.2.0
 	github.com/sqs/goreturns v0.0.0-20181028201513-538ac6014518 // indirect
 	github.com/tpng/gopkgs v0.0.0-20180428091733-81e90e22e204 // indirect
 	golang.org/x/tools v0.0.0-20200809012840-6f4f008689da // indirect

@@ -10,7 +10,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 
-	"github.com/Lisss13/french-back-template/snouki-mobile/mtmb-extauthapi/restapi/operations"
+	"github.com/mtgroupit/mt-back-generator/extauthapi/restapi/operations"
 )
 
 //go:generate swagger generate server --target ../../mtmb-extauthapi --name Authentication --spec ../swagger.yml --principal interface{} --exclude-main

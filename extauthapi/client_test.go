@@ -9,9 +9,9 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/powerman/check"
 
-	extauthapi "github.com/Lisss13/french-back-template/snouki-mobile/mtmb-extauthapi"
-	"github.com/Lisss13/french-back-template/snouki-mobile/mtmb-extauthapi/client/operations"
-	"github.com/Lisss13/french-back-template/snouki-mobile/mtmb-extauthapi/models"
+	extauthapi "github.com/mtgroupit/mt-back-generator/extauthapi"
+	"github.com/mtgroupit/mt-back-generator/extauthapi/client/operations"
+	"github.com/mtgroupit/mt-back-generator/extauthapi/models"
 )
 
 func TestGetUserProfile(tt *testing.T) {

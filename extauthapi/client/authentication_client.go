@@ -6,7 +6,7 @@ package client
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
-	"github.com/Lisss13/french-back-template/snouki-mobile/mtmb-extauthapi/client/operations"
+	"github.com/mtgroupit/mt-back-generator/extauthapi/client/operations"
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
