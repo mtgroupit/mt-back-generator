@@ -39,6 +39,7 @@ var goTmplFuncs = template.FuncMap{
 		return strings.ToLower(in)
 	},
 	"LowerTitle": parser.LowerTitle,
+	"Title": strings.Title,
 	"NameSQL":    parser.NameSQL,
 	"IsCustomList": func(method string) bool {
 		return regexp.MustCompile(`^(L|l)ist.+`).Match([]byte(method))

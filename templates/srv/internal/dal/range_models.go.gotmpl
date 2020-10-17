@@ -2,6 +2,8 @@
 package dal
 
 import (
+	"database/sql"
+
 	"{{.Module}}/internal/app"
 
 	{{if $model.IDIsUUID}}"github.com/google/uuid"{{else}}{{$inputed := false}}{{range $name, $options := $model.Columns}}{{$model2 := (index $.Models $options.GoType)}}{{if and $model2.IDIsUUID (not $inputed) (not $options.IsArray)}}"github.com/google/uuid"{{$inputed = true}}{{end}}{{end}}{{end}}
@@ -12,7 +14,7 @@ import (
 type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlParams.IsStruct}}
 	{{if not $psqlParams.IsArray}}{{$psqlParams.Name}}ID {{if eq  $psqlParams.TypeSQL "uuid"}}uuid.UUID{{else}}int64{{end}} `db:"{{$psqlParams.SQLName}}"`{{end}}
 	{{$psqlParams.Name}} {{if $psqlParams.IsArray}}[]{{end}}{{$psqlParams.Type}}{{else}}
-	{{$psqlParams.Name}} {{if eq  $psqlParams.TypeSQL "uuid"}}uuid.UUID{{else}}{{$psqlParams.Type}}{{end}} `db:"{{$psqlParams.SQLName}}"` {{end}}{{end}}
+	{{$psqlParams.Name}} {{if eq  $psqlParams.TypeSQL "uuid"}}uuid.UUID{{else}}sql.Null{{Title $psqlParams.Type}}{{end}} `db:"{{$psqlParams.SQLName}}"` {{end}}{{end}}
 }
 
 {{range $i, $method := $model.Methods}}{{if not (IsCustomMethod $method)}}
@@ -247,7 +249,7 @@ func (a *App) {{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$funct
 
 func app{{$modelName}}(m {{$modelName}}) *app.{{$modelName}} {
 	return &app.{{$modelName}}{ {{range $name, $options := $model.Columns}}
-		{{$options.TitleName}}: {{if $options.IsStruct}}app{{$options.GoType}}{{if $options.IsArray}}s{{end}}(m.{{$options.TitleName}}){{else}}m.{{$options.TitleName}}{{if and $model.IDIsUUID (eq $options.TitleName "ID")}}.String(){{end}}{{end}}, {{end}}
+		{{$options.TitleName}}: {{if $options.IsStruct}}app{{$options.GoType}}{{if $options.IsArray}}s{{end}}(m.{{$options.TitleName}}){{else}}m.{{$options.TitleName}}{{if eq $options.TitleName "ID"}}{{if $model.IDIsUUID}}.String(){{end}}{{else}}.{{Title $options.GoType}}{{end}}{{end}}, {{end}}
 	}
 }
 

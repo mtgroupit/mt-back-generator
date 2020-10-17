@@ -43,6 +43,7 @@ models:
         type: "uuid"
       name:
         type: "string"
+        sort-on: true
       department:
         type: "string"
       company:
