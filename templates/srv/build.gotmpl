@@ -13,7 +13,7 @@ swagger generate client -t ./internal/api/restapi -f ./swagger.yaml
 rm -rf bin/
 mkdir bin/
 
-export GIT_TERMINAL_PROMPT=1
+git config --global --add url."git@github.com:".insteadOf "https://github.com/"
 export GOSUMDB=off
 
 go build -o ./bin/{{FormatName .Name}} ./cmd/main/*
