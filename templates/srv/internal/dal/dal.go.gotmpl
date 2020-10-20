@@ -4,6 +4,7 @@ package dal
 import (
 	"context"
 	"database/sql"
+	"strconv"
 	"time"
 
 	"{{.Module}}/migration"
@@ -101,3 +102,22 @@ func filterCount(include bool, a, b interface{}) int {
 	}
 	return 0
 }{{end}}
+
+func toString(value interface{}) string {
+	switch value.(type) {
+	case string:
+		return value.(string)
+	case int:
+		return strconv.FormatInt(int64(value.(int)), 10)
+	case int32:
+		return strconv.FormatInt(int64(value.(int32)), 10)
+	case int64:
+		return strconv.FormatInt(value.(int64), 10)
+	case bool:
+		if value.(bool) {
+			return "true"
+		}
+		return "false"
+	}
+	return ""
+}
