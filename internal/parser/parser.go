@@ -70,7 +70,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		}
 
 		for i := range model.Tags {
-			cfg.Tags[strings.ToLower(model.Tags[i])] = struct{}{}
+			cfg.Tags[LowerTitle(model.Tags[i])] = struct{}{}
 			model.Tags[i] = strings.Title(model.Tags[i])
 		}
 

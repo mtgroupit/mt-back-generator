@@ -9,7 +9,7 @@ import (
 	"{{.Module}}/internal/api/restapi/models"
 	"{{.Module}}/internal/api/restapi/restapi"
 	"{{.Module}}/internal/api/restapi/restapi/operations"
-	{{$module := .Module}}{{range $tag, $_ := .Tags}}"{{$module}}/internal/api/restapi/restapi/operations/{{$tag}}"
+	{{$module := .Module}}{{range $tag, $_ := .Tags}}{{$tag}} "{{$module}}/internal/api/restapi/restapi/operations/{{NameSQL $tag}}"
 	{{end}}
 	"{{.Module}}/internal/app"
 

@@ -2,7 +2,7 @@
 package api
 
 import (
-	"{{.Module}}/internal/api/restapi/restapi/operations{{if $model.Tags}}/{{LowerTitle (index $model.Tags 0)}}{{end}}"
+	{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}} {{end}}"{{.Module}}/internal/api/restapi/restapi/operations{{if $model.Tags}}/{{NameSQL (index $model.Tags 0)}}{{end}}"
 
 	"github.com/go-openapi/runtime/middleware" 
 )
