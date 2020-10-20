@@ -14,7 +14,11 @@ sudo chown -R "$USER:$USER" ./internal/api/restapi/*
 rm -rf bin/
 mkdir bin/
 
-git config --global --add url."git@github.com:".insteadOf "https://github.com/"
+if !(grep -q 'insteadOf = https://github.com/' ~/.gitconfig) || !(grep -q 'url "git@github.com:"' ~/.gitconfig)
+then
+    git config --global --add url."git@github.com:".insteadOf "https://github.com/"
+    echo "Git: will now use SSH URL instead of HTTPS for github.com"
+fi
 export GOSUMDB=off
 
 go build -o ./bin/{{FormatName .Name}} ./cmd/main/*
