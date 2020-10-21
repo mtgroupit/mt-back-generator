@@ -47,16 +47,17 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 		log.Info("{{$method}}{{$modelName}} ok", "id", params.Body.ID)
 	}
 	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK(){{if $model.ReturnWhenEdit}}.WithPayload(api{{$modelName}}(c)){{end}}{{end}}
-	{{if  or (eq $method "List") (IsCustomList $method)}}c,{{if $model.DetailedPagination}} count,{{end}} err := svc.app.{{$method}}{{$modelName}}(params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters), params.Body.SortBy, params.Body.OrderByASC)
+	{{if  or (eq $method "List") (IsCustomList $method)}}c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}(params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters), params.Body.SortBy, params.Body.OrderByASC)
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {
 		log.Info("{{$method}}{{$modelName}} ok")
 	}
-	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload({{if $model.DetailedPagination}}&{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.List{{$modelName}}OKBody{
+	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(&{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}OKBody{
 		Items: api{{$modelName}}s(c),
-		Count: int32(count),
-	}{{else}}api{{$modelName}}s(c){{end}}){{end}}
+		Warnings: warnings,{{if $model.DetailedPagination}}
+		Count: int32(count),{{end}}
+	}){{end}}
 }
 {{end}}{{end}}
 func (svc *service) {{$modelName}}AccessManager(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$modelName}}AccessManagerParams, profile interface{}) middleware.Responder {

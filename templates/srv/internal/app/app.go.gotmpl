@@ -10,7 +10,7 @@ type App interface {
     {{if eq $method "Add"}}{{$method}}{{$modelName}}({{if $model.IDFromProfile}}profID string, {{end}}m *{{$modelName}}) ({{if $model.IDIsUUID}}string{{else}}int64{{end}}, error){{end}}
 	{{if eq $method "Delete"}}{{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) error{{end}}
     {{if or (eq $method "Edit") (IsCustomEdit $method)}}{{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}}{{end}}
-    {{if or (eq $method "List") (IsCustomList $method)}}{{$method}}{{$modelName}}(offset, limit int64, filters []*Filter, sortBy string, orderByASC bool) ([]*{{$modelName}},{{if $model.DetailedPagination}}int, {{end}} error){{end}}{{end}}
+    {{if or (eq $method "List") (IsCustomList $method)}}{{$method}}{{$modelName}}(offset, limit int64, filters []*Filter, sortBy string, orderByASC bool) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error){{end}}{{end}}
 	{{$modelName}}AccessManager(m *AccessManager) error{{end}}
 
     {{range $modelName, $model := $.Models}}{{range $functionName, $function := $.Functions}}

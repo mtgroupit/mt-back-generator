@@ -89,7 +89,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	return {{if $model.ReturnWhenEdit}}app{{$modelName}}(edited), {{end}}nil
 }{{end}}
 
-{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64, filters []*app.Filter, sortBy string, orderByASC bool) ([]*app.{{$modelName}},{{if $model.DetailedPagination}} int,{{end}} error) { 
+{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64, filters []*app.Filter, sortBy string, orderByASC bool) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
 	ms := []{{$modelName}}{}
 
 	var orderQuery string
@@ -139,7 +139,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	{{if $model.DetailedPagination}}
 	rows, err := a.db.NamedQuery(`SELECT COUNT(*) FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}}`, mapQuery)
 	if err != nil {
-		return nil, -1, err
+		return nil, -1, nil, err
 	}
 	var count int
 	for rows.Next() {
@@ -148,7 +148,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	{{end}}
 	rows, err {{if not $model.DetailedPagination}}:{{end}}= a.db.NamedQuery(`SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} ` + orderQuery + ` OFFSET :offset LIMIT :limit`, mapQuery)
 	if err != nil {
-		return nil,{{if $model.DetailedPagination}} -1,{{end}} err
+		return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 	}
 	for rows.Next() {
 		var m {{$modelName}}
@@ -161,7 +161,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	{{if (IsCustomList $method)}}{{if ((index $model.MethodsProps $i).NeedLazyLoading)}}
 	for i := range ms {
 		if err := ms[i].LazyLoading{{$method}}(a); err != nil {
-			return nil,{{if $model.DetailedPagination}} -1,{{end}} err
+			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 		}
 		ok := true
 		for _, filter := range customFilters {
@@ -176,7 +176,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	}{{end}}{{else}}
 	for i := range ms {
 		if err := ms[i].LazyLoading(a); err != nil {
-			return nil,{{if $model.DetailedPagination}} -1,{{end}} err
+			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 		}
 		ok := true
 		for _, filter := range customFilters {
@@ -190,7 +190,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		}
 	}{{end}}{{end}}
 
-	return app{{$modelName}}s({{if $model.HaveLazyLoading}}result{{else}}ms{{end}}),{{if $model.DetailedPagination}} count,{{end}} nil
+	return app{{$modelName}}s({{if $model.HaveLazyLoading}}result{{else}}ms{{end}}),{{if $model.DetailedPagination}} count,{{end}} []string{}, nil
 }{{end}}
 {{if and (IsCustomList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}{{range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
 {{if $nestedObj.IsFirstForLazyLoading}}func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}) LazyLoading{{$method}}{{$nestedObj.Path}}(a *App) (err error) { {{end}} {{$model2 := (index $.Models $nestedObj.Name)}}{{$options := (index $model2.Columns (LowerTitle $nestedObj.Name))}}{{if  $nestedObj.IsArray}}
