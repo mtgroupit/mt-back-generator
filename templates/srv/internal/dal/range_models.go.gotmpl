@@ -3,7 +3,8 @@ package dal
 
 import (
 	"database/sql"	{{if $model.HaveLazyLoading}}
-	"strings"{{end}}
+	"strings"{{end}}{{if and $model.HaveListMethod $model.HaveLazyLoading}}
+	"fmt"{{end}}
 
 	"{{.Module}}/internal/app"
 
@@ -91,6 +92,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 
 {{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64, filters []*app.Filter, sortBy string, orderByASC bool) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
 	ms := []{{$modelName}}{}
+	warnings := []string{}
 
 	var orderQuery string
 	switch sortBy { {{range $column, $options := $model.Columns}}{{if $options.SortOn}}
@@ -164,10 +166,13 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 		}
 		ok := true
-		for _, filter := range customFilters {
-			ok = ms[i].NestedFilter(filter)
-			if !ok {
-				break
+		for j := 0; j < len(customFilters); j++ {
+			var validFilter bool
+			ok, validFilter = ms[i].{{if $model.HaveLazyLoading}}Nested{{end}}Filter(customFilters[j])
+			if !validFilter {
+				warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
+				customFilters = append(customFilters[:j], customFilters[j+1:]...)
+				j--
 			}
 		}
 		if ok {
@@ -179,8 +184,14 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 		}
 		ok := true
-		for _, filter := range customFilters {
-			ok = ms[i].{{if $model.HaveLazyLoading}}Nested{{end}}Filter(filter)
+		for j := 0; j < len(customFilters); j++ {
+			var validFilter bool
+			ok, validFilter = ms[i].{{if $model.HaveLazyLoading}}Nested{{end}}Filter(customFilters[j])
+			if !validFilter {
+				warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
+				customFilters = append(customFilters[:j], customFilters[j+1:]...)
+				j--
+			}
 			if !ok {
 				break
 			}
@@ -190,7 +201,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		}
 	}{{end}}{{end}}
 
-	return app{{$modelName}}s({{if $model.HaveLazyLoading}}result{{else}}ms{{end}}),{{if $model.DetailedPagination}} count,{{end}} []string{}, nil
+	return app{{$modelName}}s({{if $model.HaveLazyLoading}}result{{else}}ms{{end}}),{{if $model.DetailedPagination}} count,{{end}} warnings, nil
 }{{end}}
 {{if and (IsCustomList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}{{range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
 {{if $nestedObj.IsFirstForLazyLoading}}func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}) LazyLoading{{$method}}{{$nestedObj.Path}}(a *App) (err error) { {{end}} {{$model2 := (index $.Models $nestedObj.Name)}}{{$options := (index $model2.Columns (LowerTitle $nestedObj.Name))}}{{if  $nestedObj.IsArray}}
@@ -272,31 +283,31 @@ func (a *App) {{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$funct
 	return {{$function.OutStr}}, nil
 }{{end}}
 {{if $model.HaveLazyLoading}}
-func (m *{{$modelName}}) NestedFilter(filter *app.Filter) (ok bool) {
+func (m *{{$modelName}}) NestedFilter(filter *app.Filter) (ok, filterIsValid bool) {
 	if strings.Contains(filter.Key, ".") {
 		splitedFilter := strings.SplitN(filter.Key, ".", 2)
 		filter.Key = splitedFilter[1]
 		switch splitedFilter[0] { {{range $column, $options := $model.Columns}}{{if and $options.IsStruct (not $options.IsArray)}}
 		case "{{$column}}":
-			ok = m.{{$options.TitleName}}.{{if (index $models $options.GoType).HaveLazyLoading}}Nested{{end}}Filter(filter){{end}}{{end}}
+			ok, filterIsValid = m.{{$options.TitleName}}.{{if (index $models $options.GoType).HaveLazyLoading}}Nested{{end}}Filter(filter){{end}}{{end}}
 		default:
-			ok = true
+			ok, filterIsValid = true, false
 		}
 	} else {
-		ok = m.Filter(filter)
+		ok, filterIsValid = m.Filter(filter)
 	}
 	return
 }{{end}}
 
-func (m *{{$modelName}}) Filter(filter *app.Filter) (ok bool) {
+func (m *{{$modelName}}) Filter(filter *app.Filter) (ok, filterIsValid bool) {
 	switch filter.Key { {{range $column, $options := $model.Columns}}{{if not $options.IsStruct}}
 	case "{{$column}}":
 		value := toString(m.{{$options.TitleName}}.{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}})
 		if (value == filter.Value && filter.Include) || (value != filter.Value && !filter.Include) {
-			ok = true
+			ok, filterIsValid = true, true
 		}{{end}}{{end}}
 	default:
-		ok = true
+		ok, filterIsValid = true, false
 	}
 	return
 }
