@@ -6,6 +6,7 @@ type Options struct {
 	Type        string
 	GoType      string
 	Format      string
+	Enum        string
 	SortOn      bool     `yaml:"sort-on"`
 	SortBy      []string `yaml:"sort-by"`
 	NestedSorts []string

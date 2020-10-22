@@ -125,6 +125,22 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				model.HaveEmail = true
 			}
 
+			if options.Enum != "" {
+				if (options.Type == "string" || options.Type == "int" || options.Type == "int32" || options.Type == "int64") && column != "id" {
+					if options.Type == "string" {
+						if !regexp.MustCompile(`^\[\s*('.+'\s*,\s*)*'.+'+\s*\]$`).Match([]byte(options.Enum)) {
+							return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum for strings must be in this format: ['asc', 'desc'] and inputed as string`, name, column)
+						}
+					} else {
+						if !regexp.MustCompile(`^\[\s*([0-9]+\s*,\s*)*[0-9]+\s*\]$`).Match([]byte(options.Enum)) {
+							return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum for types 'int', 'int32' and 'int64' must be in this format: [1, 2, 3] and inputed as string`, name, column)
+						}
+					}
+				} else {
+					return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum available only for non id and types: 'string', 'int', 'int32' and 'int64'`, name, column)
+				}
+			}
+
 			if options.IsStruct {
 				model.HaveLazyLoading = true
 				binds[options.GoType] = models.Bind{

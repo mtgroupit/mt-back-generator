@@ -107,7 +107,8 @@ definitions:  {{range $modelName, $model := $.Models}}
         type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}} {{if $options.Format}}
         format: {{$options.Format}}{{end}}{{if .Length}}
         maxLength: {{.Length}}{{end}}{{if .Default}}
-        default: {{.Default}}{{end}}{{end}}{{end}}{{end}} 
+        default: {{.Default}}{{end}}{{if $options.Enum}}
+        enum: {{$options.Enum}}{{end}}{{end}}{{end}}{{end}} 
   accessManager:
     type: object
     description: params for set access
