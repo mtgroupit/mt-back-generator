@@ -142,8 +142,9 @@ definitions:  {{range $modelName, $model := $.Models}}
           $ref: "#/definitions/filterParams"
       sortBy:
         type: string
-      orderByASC:
-        type: boolean
+      orderBy:
+        type: string
+        enum: [ASC, DESC]
   filterParams:
     type: object
     description: params for filter list

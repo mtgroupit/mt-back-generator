@@ -4,7 +4,7 @@ package dal
 import (
 	"database/sql"	{{if $model.HaveLazyLoading}}
 	"strings"{{end}}{{if $haveNestedSorts}}
-	"sort"{{end}}{{if and $model.HaveListMethod $model.HaveLazyLoading}}
+	"sort"{{end}}{{if and $model.HaveLazyLoading $model.HaveListMethod}}
 	"fmt"{{end}}
 
 	"{{.Module}}/internal/app"
@@ -91,7 +91,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	return {{if $model.ReturnWhenEdit}}app{{$modelName}}(edited), {{end}}nil
 }{{end}}
 
-{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64, filters []*app.Filter, sortBy string, orderByASC bool) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
+{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64, filters []*app.Filter, sortBy,orderBy string) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
 	ms := []{{$modelName}}{}
 	warnings := []string{}
 
@@ -105,13 +105,12 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		nestedSort = true{{end}}
 	}
 	if orderQuery != "" {
-		var orderBy string
-		if orderByASC {
-			orderBy = "ASC"
-		} else {
-			orderBy = "DESC"
+		switch orderBy {
+		case "ASC", "":
+			orderQuery += " ASC"
+		case "DESC":
+			orderQuery += " DESC"
 		}
-		orderQuery += " " + orderBy
 	}
 
 	mapQuery := map[string]interface{}{ {{if IsCustomList $method}}{{range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
@@ -207,6 +206,13 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	}{{end}}{{end}}
 	{{if $haveNestedSorts}}
 	if nestedSort {
+		var orderByASC bool
+		switch orderBy {
+		case "ASC", "":
+			orderByASC = true
+		case "DESC":
+			orderByASC = false
+		}
 		switch sortBy { {{range $column, $options := $model.Columns}}{{range $j, $sort := $options.SortBy}}
 		case "{{$column}}.{{$sort}}":
 			if orderByASC {
