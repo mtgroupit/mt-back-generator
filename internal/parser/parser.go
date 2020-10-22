@@ -289,6 +289,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			}
 		}
 
+		if err = handleSorts(cfg.Models, &model, name); err != nil {
+			return
+		}
+
 		if err = handleCustomLists(cfg.Models, &model, name); err != nil {
 			return
 		}
@@ -561,6 +565,65 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 		result = append(result, objs...)
 	}
 	return result, nil
+}
+
+func handleSorts(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
+	result := *model
+	for column, options := range result.Columns {
+		if options.SortOn {
+			if column == "id" {
+				return errors.Errorf(`Model: "%s". Sorting by id is not avaliable`, modelName)
+			}
+			if options.IsArray {
+				return errors.Errorf(`Model: "%s". Column: "%s". Sorting by array is not avaliable`, modelName, column)
+			}
+			if !options.IsStruct && len(options.SortBy) != 0 {
+				return errors.Errorf(`Model: "%s". Column: "%s". Field 'sort-by' is not avaliable for non-structure column`, modelName, column)
+			}
+
+			for i, sort := range options.SortBy {
+				subModelName := options.GoType
+				fields := strings.Split(sort, ".")
+				options.NestedSorts = append(options.NestedSorts, "."+strings.Title(column))
+				for j, field := range fields {
+					if field == "id" {
+						return errors.Errorf(`Model: "%s". Column: "%s". Sort-by: "%s". Sorting by id is not avaliable`, modelName, column, sort)
+					}
+					subModel := modelsMap[LowerTitle(subModelName)]
+					var ok bool
+					var typeSortByColumn string
+					for subColumn, subOptions := range subModel.Columns {
+						if subColumn == field {
+							if j == len(fields)-1 {
+								switch subOptions.GoType {
+								case "int32", "int64", "string":
+									typeSortByColumn = strings.Title(subOptions.GoType)
+								default:
+									return errors.Errorf(`Model: "%s". Column: "%s". Sort-by: "%s". Type "%s" is not avaliable for sorting`, modelName, column, sort, subOptions.GoType)
+								}
+							}
+							ok = true
+							subModelName = subOptions.GoType
+						}
+					}
+					if !ok {
+						return errors.Errorf(`Model: "%s". Column: "%s". Sort-by: "%s". Is not valid element for sort-by`, modelName, column, sort)
+					}
+					options.NestedSorts[i] += "." + strings.Title(field)
+					if j == len(fields)-1 {
+						options.NestedSorts[i] += "." + typeSortByColumn
+					}
+				}
+			}
+		} else {
+			if len(options.SortBy) != 0 {
+				return errors.Errorf(`Model: "%s". Field 'sort-by' is not avaliable, if sort-on is not true`, modelName)
+			}
+		}
+		result.Columns[column] = options
+	}
+	model = &result
+	return nil
 }
 
 func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, modelName string) error {

@@ -2,17 +2,19 @@ package models
 
 // Options contain properties of column
 type Options struct {
-	TitleName string
-	Type      string
-	GoType    string
-	Format    string
-	SortOn    bool `yaml:"sort-on"`
-	IsStruct  bool
-	IsArray   bool
-	Pk        string
-	Unique    bool
-	Length    int64
-	Default   string
+	TitleName   string
+	Type        string
+	GoType      string
+	Format      string
+	SortOn      bool     `yaml:"sort-on"`
+	SortBy      []string `yaml:"sort-by"`
+	NestedSorts []string
+	IsStruct    bool
+	IsArray     bool
+	Pk          string
+	Unique      bool
+	Length      int64
+	Default     string
 }
 
 // PsqlParams - contain properties for postgres generate

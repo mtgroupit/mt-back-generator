@@ -26,6 +26,8 @@ models:
       occupation:
         type: "string"
         sort-on: true
+      headOfficeLocation:
+        type: "model.location"
       locations:
         type: "[]model.location"
     methods:
@@ -48,6 +50,10 @@ models:
         type: "string"
       company:
         type: "model.company"
+        sort-on: true
+        sort-by:
+          - occupation
+          - headOfficeLocation.name
     methods: 
       - add
       - edit
