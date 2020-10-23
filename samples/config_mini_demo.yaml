@@ -48,6 +48,8 @@ models:
         sort-on: true
       department:
         type: "string"
+      age:
+        type: "int"
       status:
         type: "string"
         enum: "['working', 'fired', 'onVacation']"

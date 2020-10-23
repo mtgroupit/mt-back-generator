@@ -46,8 +46,12 @@ mt-gen -dir=./generated/ -config=./config.yaml
 
     sort-on: true - позволяет делать сортировку по данной колонке в методе list
 
+    sort-by: этот параметр доступен только для колонок, которые являются структурам и позволяет устанавливать 
+
 ### For methods
 
     edit(column2, column3) - в таком виде метод edit будет изменять только column2 и column3, а также находится в эндпоинте /model/editColumn2Column3
 
     list(column1, column3*, model1*(column1, model1(column1, column2))) - в таком виде метод list будет возвращать только column2, column3 и model1..., то есть только рекурсивно указанные поля и фильтрация может производиться по column3 и по id model1, а также находится в эндпоинте /model/editColumn2Column3Model1
+
+    с методом list могут использоваться фильтры по вложенным объектам для этого в поле filter.Key нужно передать имя колонки и далее через "." колонку вложенного объекта, также таким образом можно углубляться до элемента любой глубины вложенности (пример filter.Key: "columnModel1.columnModel2.column")
