@@ -16,7 +16,6 @@ import (
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/runtime/middleware"
 	{{if .HaveDateTime}}"github.com/go-openapi/strfmt"{{end}}
-	goflags "github.com/jessevdk/go-flags"
 	"github.com/pkg/errors"
 	"github.com/powerman/structlog"
 	"github.com/sebest/xff"
@@ -34,8 +33,6 @@ type Config struct {
 	Host       string
 	Port       int
 	BasePath   string
-	TLSCert    string
-	TLSCertKey string
 }
 
 type service struct {
@@ -72,10 +69,8 @@ func NewServer(appl app.App, extAuth AuthSvc, cfg Config) (*restapi.Server, erro
 	api.{{$modelName}}{{$function}}Handler = operations.{{$modelName}}{{$function}}HandlerFunc(svc.{{$function}}{{$modelName}}) {{end}}{{end}}
 
 	server := restapi.NewServer(api)
-	server.TLSHost = string(cfg.Host)
-	server.TLSPort = int(cfg.Port)
-	server.TLSCertificate = goflags.Filename(cfg.TLSCert)
-	server.TLSCertificateKey = goflags.Filename(cfg.TLSCertKey)
+	server.Host = string(cfg.Host)
+	server.Port = int(cfg.Port)
 
 	// The middleware executes before anything.
 	globalMiddlewares := func(handler http.Handler) http.Handler {

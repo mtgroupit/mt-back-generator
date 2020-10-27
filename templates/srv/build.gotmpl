@@ -23,13 +23,3 @@ export GOSUMDB=off
 
 go build -o ./bin/{{FormatName .Name}} ./cmd/main/*
 
-if [ ! -d "./test-cert" ] || [ ! -f "./test-cert/test.crt" ] || [ ! -f "./test-cert/test.key" ]
-then
-  if ! [ -x "$(command -v openssl)" ]; then
-    echo 'Warning: "openssl" is not installed. If you need a certificate and key for testing, install openssl or use your own.' >&2
-    exit 1
-  fi 
-  mkdir test-cert/
-  openssl req -new -newkey rsa:4096 -x509 -sha256 -days 365 -nodes -out test-cert/test.crt -keyout test-cert/test.key
-fi
-

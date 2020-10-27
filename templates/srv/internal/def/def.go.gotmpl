@@ -48,8 +48,6 @@ var (
 	APIHost         = strGetenv("MSRV_HOST", oapiHost)
 	APIPort         = intGetenv("MSRV_PORT", oapiPort)
 	APIBasePath     = strGetenv("MSRV_BASEPATH", oapiBasePath)
-	APITLSCert      = strGetenv("MSRV_TLS_CRT", "/ssl/site.crt")
-	APITLSKey       = strGetenv("MSRV_TLS_KEY", "/ssl/site.key")
 	ExtauthEndpoint = os.Getenv("MSRV_EXTAUTH_ENDPOINT")
 )
 
