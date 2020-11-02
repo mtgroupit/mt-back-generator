@@ -39,7 +39,7 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
               id:
                 type: {{if $model.IDIsUUID}}string{{else}}{{(index $model.Columns "id").Type}}{{end}}{{else}}{{if or (eq $method "List") (IsCustomList $method)}}
             $ref: "#/definitions/listParams" {{else}}
-            $ref: "#/definitions/{{LowerTitle $modelName}}" {{end}}{{end}}{{end}} 
+            $ref: "#/definitions/{{LowerTitle $modelName}}Add" {{end}}{{end}}{{end}} 
       responses:        {{if eq $method "Delete"}}
         204:
           description: Deleted        {{else}}{{if eq $method "Add"}}
@@ -103,6 +103,22 @@ definitions:  {{range $modelName, $model := $.Models}}
           $ref: "#/definitions/{{$options.Type}}"{{else}}            
       {{$name}}:
         $ref: "#/definitions/{{$options.Type}}"{{end}} {{else}}
+      {{$name}}:
+        type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}} {{if $options.Format}}
+        format: {{$options.Format}}{{end}}{{if .Length}}
+        maxLength: {{.Length}}{{end}}{{if .Default}}
+        default: {{.Default}}{{end}}{{if $options.Enum}}
+        enum: {{$options.Enum}}{{end}}{{end}}{{end}}
+  {{LowerTitle $modelName}}Add:
+    type: object
+    description: "{{LowerTitle $modelName}} model for add and edit methods"
+    properties:      {{range $name, $options := $model.Columns}} {{if $options.IsStruct}}{{if $options.IsArray}}  
+      {{$name}}IDs:
+        type: array
+        items:
+          type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}{{else}}            
+      {{$name}}ID:
+        type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}{{end}} {{else}}
       {{$name}}:
         type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}} {{if $options.Format}}
         format: {{$options.Format}}{{end}}{{if .Length}}

@@ -24,7 +24,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 	}
 	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c)){{end}}
 	{{if eq $method "Add"}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
-	{{end}}id, err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(), {{end}}app{{$modelName}}(params.Body{{if $model.HaveLazyLoading}}, true{{end}}))
+	{{end}}id, err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(), {{end}}app{{$modelName}}Add(params.Body))
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {
@@ -40,7 +40,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 	}
 	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}NoContent(){{end}}
 	{{if or (eq $method "Edit") (IsCustomEdit $method)}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
-	{{end}}{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}, app{{$modelName}}(params.Body{{if $model.HaveLazyLoading}}, true{{end}}))
+	{{end}}{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}, app{{$modelName}}Add(params.Body))
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {
@@ -124,4 +124,29 @@ func app{{$modelName}}s(apis []*models.{{$modelName}}{{if $model.HaveLazyLoading
 		apps = append(apps, app{{$modelName}}(apis[i]{{if $model.HaveLazyLoading}}, withStructs{{end}}))
 	}
 	return apps
+}
+
+func app{{$modelName}}Add(a *models.{{$modelName}}Add) *app.{{$modelName}} {
+	if a == nil {
+		return nil
+	}
+	{{LowerTitle $modelName}} := &app.{{$modelName}}{}
+
+	{{range $name, $options := $model.Columns}}{{if not $options.IsStruct}}
+	{{LowerTitle $modelName}}.{{$options.TitleName}} = a.{{$options.TitleName}}{{if or (eq $options.Format "date-time") (eq $options.Format "email")}}.String(){{end}}{{end}}{{end}}
+	{{range $name, $options := $model.Columns}}{{if and $options.IsStruct (not $options.IsArray)}}
+	if a.{{$options.TitleName}}ID != "" {
+		{{LowerTitle $modelName}}.{{$options.TitleName}} = &app.{{$options.GoType}}{ID: a.{{$options.TitleName}}ID}
+	}{{end}}{{end}}
+	{{range $name, $options := $model.Columns}}{{if $options.IsArray}}
+	if len(a.{{$options.TitleName}}IDs) > 0 {
+		for _, id := range a.{{$options.TitleName}}IDs {
+			{{LowerTitle $modelName}}.{{$options.TitleName}} = append({{LowerTitle $modelName}}.{{$options.TitleName}}, &app.{{$options.GoType}}{
+				ID: id,
+			})
+		}
+	}{{end}}{{end}}
+	
+	
+	return {{LowerTitle $modelName}}
 }
