@@ -60,6 +60,27 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 	}){{end}}
 }
 {{end}}{{end}}
+{{range $column, $options := $model.Columns}} {{if $options.IsArray}}
+func (svc *service) Add{{Title $column}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.Add{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
+	err := svc.app.Add{{Title $column}}{{$modelName}}(params.Body.ID, params.Body.Items)
+	if err != nil {
+		log.Err("Add{{Title $column}}{{$modelName}} error", err)
+	} else {
+		log.Info("Add{{Title $column}}{{$modelName}} ok")
+	}
+	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewAdd{{Title $column}}{{$modelName}}OK()
+}
+
+func (svc *service) Delete{{Title $column}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.Delete{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
+	err := svc.app.Delete{{Title $column}}{{$modelName}}(params.Body.ID, params.Body.Items)
+	if err != nil {
+		log.Err("Delete{{Title $column}}{{$modelName}} error", err)
+	} else {
+		log.Info("Delete{{Title $column}}{{$modelName}} ok")
+	}
+	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewDelete{{Title $column}}{{$modelName}}OK()
+}
+{{end}}{{end}}
 func (svc *service) {{$modelName}}AccessManager(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$modelName}}AccessManagerParams, profile interface{}) middleware.Responder {
 	err := svc.app.{{$modelName}}AccessManager(appAccessManager(params.Body))
 	if err != nil {
