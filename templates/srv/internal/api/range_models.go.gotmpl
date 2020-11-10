@@ -62,7 +62,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 {{end}}{{end}}
 {{range $column, $options := $model.Columns}} {{if $options.IsArray}}
 func (svc *service) Add{{Title $column}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.Add{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
-	err := svc.app.Add{{Title $column}}{{$modelName}}(params.Body.ID, params.Body.Items)
+	err := svc.app.Add{{Title $column}}{{$modelName}}(params.Body.ID, params.Body.ItemsID, app{{$options.GoType}}sAdd(params.Body.Items))
 	if err != nil {
 		log.Err("Add{{Title $column}}{{$modelName}} error", err)
 	} else {
@@ -170,4 +170,12 @@ func app{{$modelName}}Add(a *models.{{$modelName}}Add) *app.{{$modelName}} {
 	
 	
 	return {{LowerTitle $modelName}}
+}
+
+func app{{$modelName}}sAdd(apis []*models.{{$modelName}}Add) []*app.{{$modelName}} {
+	apps := []*app.{{$modelName}}{}
+	for i := range apis {
+		apps = append(apps, app{{$modelName}}Add(apis[i]))
+	}
+	return apps
 }

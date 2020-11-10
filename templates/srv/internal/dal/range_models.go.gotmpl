@@ -32,20 +32,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	return app{{$modelName}}(m), nil
 }{{end}}
 {{if eq $method "Add"}}func (a *App) {{$method}}{{$modelName}}({{if $model.IDFromProfile}}profileID string, {{end}}m *app.{{$modelName}}) ({{if $model.IDIsUUID}}string{{else}}int64{{end}}, error) {
-	{{if $model.IDIsUUID}}{{$modelName}}ID := {{if $model.IDFromProfile}}profileID{{else}}uuid.New(){{end}}{{else}}var {{$modelName}}ID int64{{end}}	{{range $column, $options := $model.Columns}}{{if and $options.IsStruct (not $options.IsArray)}}
-	var {{$column}}ID interface{}
-	if m.{{$options.TitleName}} != nil {
-		{{$column}}ID = m.{{$options.TitleName}}.ID
-	}{{end}}{{end}}
-	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{NameSQL $modelName}}s{{$model.SQLAddStr}} RETURNING id`, {{$model.SQLExecParams}}{{if $model.IDIsUUID}}, {{$modelName}}ID{{end}}); err != nil {
-		return {{if $model.IDIsUUID}}""{{else}}0{{end}}, err
-	}{{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
-	for _, m := range m.{{$options.TitleName}} {
-		if _, err := a.db.Exec(`INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}({{NameSQL $modelName}}_id, {{NameSQL $column}}_id) VALUES ($1, $2)`, {{$modelName}}ID, m.ID); err != nil {
-			return {{if $model.IDIsUUID}}""{{else}}0{{end}}, err
-		}
-	}{{end}}{{end}}{{end}}{{end}}
-	return {{$modelName}}ID{{if $model.IDIsUUID}}{{if not $model.IDFromProfile}}.String(){{end}}{{end}}, nil
+	return a.add{{$modelName}}({{if $model.IDFromProfile}}profileID, {{end}}m)
 }{{end}}
 {{if eq $method "Delete"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) error { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
 	if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1`, id); err != nil {
@@ -280,9 +267,16 @@ func (m *{{$modelName}}) LazyLoading(a *App) (err error) { {{range $modelName2, 
 }
 {{end}}
 {{range $column, $options := $model.Columns}} {{if $options.IsArray}}
-func (a *App) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error {
+func (a *App) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*app.{{$options.GoType}}) error {
 	for _, item := range items {
-		if _, err := a.db.Exec(`INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}({{NameSQL $modelName}}_id, {{NameSQL $column}}_id) VALUES ($1, $2)`, id, item); err != nil {
+		id, err := a.add{{$options.GoType}}(item)
+		if err != nil {
+			return err
+		}
+		itemsID = append(itemsID, id)
+	}
+	for _, itemID := range itemsID {
+		if _, err := a.db.Exec(`INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}({{NameSQL $modelName}}_id, {{NameSQL $column}}_id) VALUES ($1, $2)`, id, itemID); err != nil {
 			return err
 		}
 	}
@@ -303,6 +297,22 @@ func (a *App) {{$modelName}}AccessManager(am *app.AccessManager) error {
 		return err
 	}
 	return nil
+}
+func (a *App) add{{$modelName}}({{if $model.IDFromProfile}}profileID string, {{end}}m *app.{{$modelName}}) ({{if $model.IDIsUUID}}string{{else}}int64{{end}}, error) {
+	{{if $model.IDIsUUID}}{{$modelName}}ID := {{if $model.IDFromProfile}}profileID{{else}}uuid.New(){{end}}{{else}}var {{$modelName}}ID int64{{end}}	{{range $column, $options := $model.Columns}}{{if and $options.IsStruct (not $options.IsArray)}}
+	var {{$column}}ID interface{}
+	if m.{{$options.TitleName}} != nil {
+		{{$column}}ID = m.{{$options.TitleName}}.ID
+	}{{end}}{{end}}
+	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{NameSQL $modelName}}s{{$model.SQLAddStr}} RETURNING id`, {{$model.SQLExecParams}}{{if $model.IDIsUUID}}, {{$modelName}}ID{{end}}); err != nil {
+		return {{if $model.IDIsUUID}}""{{else}}0{{end}}, err
+	}{{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
+	for _, m := range m.{{$options.TitleName}} {
+		if _, err := a.db.Exec(`INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}({{NameSQL $modelName}}_id, {{NameSQL $column}}_id) VALUES ($1, $2)`, {{$modelName}}ID, m.ID); err != nil {
+			return {{if $model.IDIsUUID}}""{{else}}0{{end}}, err
+		}
+	}{{end}}{{end}}{{end}}{{end}}
+	return {{$modelName}}ID{{if $model.IDIsUUID}}{{if not $model.IDFromProfile}}.String(){{end}}{{end}}, nil
 }
 {{range $functionName, $function := $.Functions}}
 func (a *App) {{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$function.OutStrType}}, error){
