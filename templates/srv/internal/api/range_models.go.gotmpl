@@ -156,12 +156,12 @@ func app{{$modelName}}Add(a *models.{{$modelName}}Add) *app.{{$modelName}} {
 	{{range $name, $options := $model.Columns}}{{if not $options.IsStruct}}
 	{{LowerTitle $modelName}}.{{$options.TitleName}} = a.{{$options.TitleName}}{{if or (eq $options.Format "date-time") (eq $options.Format "email")}}.String(){{end}}{{end}}{{end}}
 	{{range $name, $options := $model.Columns}}{{if and $options.IsStruct (not $options.IsArray)}}
-	if a.{{$options.TitleName}}ID != "" {
-		{{LowerTitle $modelName}}.{{$options.TitleName}} = &app.{{$options.GoType}}{ID: a.{{$options.TitleName}}ID}
+	if a.{{$options.TitleName}} != "" {
+		{{LowerTitle $modelName}}.{{$options.TitleName}} = &app.{{$options.GoType}}{ID: a.{{$options.TitleName}}}
 	}{{end}}{{end}}
 	{{range $name, $options := $model.Columns}}{{if $options.IsArray}}
-	if len(a.{{$options.TitleName}}IDs) > 0 {
-		for _, id := range a.{{$options.TitleName}}IDs {
+	if len(a.{{$options.TitleName}}) > 0 {
+		for _, id := range a.{{$options.TitleName}} {
 			{{LowerTitle $modelName}}.{{$options.TitleName}} = append({{LowerTitle $modelName}}.{{$options.TitleName}}, &app.{{$options.GoType}}{
 				ID: id,
 			})
