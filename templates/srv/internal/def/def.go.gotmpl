@@ -30,6 +30,8 @@ const (
 	LogUser       = "userID"
 	LogEvent      = "ev"
 	LogEventID    = "evID"
+
+	ExtauthEndpointEnvName = "MSRV_EXTAUTH_ENDPOINT"
 )
 
 var (
@@ -44,11 +46,11 @@ var (
 	DBUser          = os.Getenv("MSRV_DB_USER")
 	DBPass          = os.Getenv("MSRV_DB_PASS")
 	DBName          = os.Getenv("MSRV_DB_NAME")
-	GooseDir        = "migration"
+	GooseDir        = "./migration"
 	APIHost         = strGetenv("MSRV_HOST", oapiHost)
 	APIPort         = intGetenv("MSRV_PORT", oapiPort)
 	APIBasePath     = strGetenv("MSRV_BASEPATH", oapiBasePath)
-	ExtauthEndpoint = os.Getenv("MSRV_EXTAUTH_ENDPOINT")
+	ExtauthEndpoint = os.Getenv(ExtauthEndpointEnvName)
 )
 
 func intGetenv(name string, def int) int {

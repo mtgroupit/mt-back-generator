@@ -22,6 +22,8 @@ import (
 
 const (
 	connectTimeout = 3 * time.Second
+
+	ExtauthEndpointFlag = "extauth.endpoint"
 )
 
 var (
@@ -41,7 +43,7 @@ var (
 func init() {
 	cfg.db.SSLMode = pqx.SSLDisable
 	flag.StringVar(&cfg.logLevel, "log.level", "debug", "log `level` (debug|info|warn|err)")
-	flag.StringVar(&cfg.gooseDir, "goose.dir", "./migration", "goose migrations `dir`") // flag.StringVar(&cfg.gooseDir, "goose.dir", def.GooseDir, "goose migrations `dir`")
+	flag.StringVar(&cfg.gooseDir, "goose.dir", def.GooseDir, "goose migrations `dir`")
 	flag.StringVar(&cfg.db.Host, "db.host", def.DBHost, "PostgreSQL `host`")
 	flag.IntVar(&cfg.db.Port, "db.port", def.DBPort, "PostgreSQL `port`")
 	flag.StringVar(&cfg.db.User, "db.user", def.DBUser, "PostgreSQL `user`")
@@ -52,7 +54,7 @@ func init() {
 	flag.IntVar(&cfg.api.Port, "api.port", def.APIPort, "serve API on `port` (>0)")
 	flag.StringVar(&cfg.api.BasePath, "api.basepath", def.APIBasePath, "serve API on `path`")
 
-	flag.StringVar(&cfg.extauthEndpoint, "extauth.endpoint", def.ExtauthEndpoint, "extauth service `endpoint`")
+	flag.StringVar(&cfg.extauthEndpoint, ExtauthEndpointFlag, def.ExtauthEndpoint, "extauth service `endpoint`")
 }
 
 func main() {
@@ -74,7 +76,7 @@ func connect() (app.App, *extauthapi.Client, error) {
 
 	extAuthSvc, err := extauthapi.NewClient(cfg.extauthEndpoint, &tls.Config{InsecureSkipVerify: true}, false)
 	if err != nil {
-		return nil, nil, fmt.Errorf("extauthapi: %v", err)
+		return nil, nil, fmt.Errorf("extauthapi: %v. Error can be if flag '%s' or environment variable '%s' is not set", err, ExtauthEndpointFlag, def.ExtauthEndpointEnvName)
 	}
 
 	a,{{if .HaveCustomMethod}} c,{{end}} err := dal.New(ctx, cfg.db, cfg.gooseDir)
