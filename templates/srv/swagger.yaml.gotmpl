@@ -39,7 +39,13 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
               id:
                 type: {{if $model.IDIsUUID}}string{{else}}{{(index $model.Columns "id").Type}}{{end}}{{else}}{{if or (eq $method "List") (IsCustomList $method)}}
             $ref: "#/definitions/listParams" {{else}}
-            $ref: "#/definitions/{{LowerTitle $modelName}}Add" {{end}}{{end}}{{end}} 
+            {{if or (eq $method "Edit") (IsCustomEdit $method)}}
+            type: object
+            properties:
+              id:
+                type: string 
+              data:
+                {{end}}$ref: "#/definitions/{{LowerTitle $modelName}}Add" {{end}}{{end}}{{end}} 
       responses:        {{if eq $method "Delete"}}
         204:
           description: Deleted        {{else}}{{if eq $method "Add"}}
@@ -156,7 +162,7 @@ definitions:  {{range $modelName, $model := $.Models}}
   {{LowerTitle $modelName}}Add:
     type: object
     description: "{{LowerTitle $modelName}} model for add and edit methods"
-    properties:      {{range $name, $options := $model.Columns}} {{if $options.IsStruct}}{{if $options.IsArray}}  
+    properties:      {{range $name, $options := $model.Columns}}{{if ne $name "id"}}{{if $options.IsStruct}}{{if $options.IsArray}}  
       {{$name}}:
         type: array
         items:
@@ -168,7 +174,7 @@ definitions:  {{range $modelName, $model := $.Models}}
         format: {{$options.Format}}{{end}}{{if .Length}}
         maxLength: {{.Length}}{{end}}{{if .Default}}
         default: {{.Default}}{{end}}{{if $options.Enum}}
-        enum: {{$options.Enum}}{{end}}{{end}}{{end}}{{end}} 
+        enum: {{$options.Enum}}{{end}}{{end}}{{end}}{{end}}{{end}} 
   accessManager:
     type: object
     description: params for set access
