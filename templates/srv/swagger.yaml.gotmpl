@@ -52,10 +52,7 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
         201:
           description: Created 
           schema:
-            type: object
-            properties:
-              id:
-                type: {{if $model.IDIsUUID}}string{{else}}{{(index $model.Columns "id").Type}}{{end}}       {{else}}
+            $ref: "#/definitions/{{LowerTitle $modelName}}" {{else}}
         200:
           description: OK        {{end}}{{end}}        {{if or (eq $method "List") (IsCustomList $method) (eq $method "Get") (and (or (eq $method "Edit") (IsCustomEdit $method)) $model.ReturnWhenEdit)}}
           schema:          

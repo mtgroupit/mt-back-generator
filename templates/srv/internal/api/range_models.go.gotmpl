@@ -24,13 +24,13 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 	}
 	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c)){{end}}
 	{{if eq $method "Add"}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
-	{{end}}id, err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(), {{end}}app{{$modelName}}Add(params.Body))
+	{{end}}c, err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(), {{end}}app{{$modelName}}Add(params.Body))
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {
 		log.Info("{{$method}}{{$modelName}} ok")
 	}
-	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}Created().WithPayload(&{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}CreatedBody{ID: id}){{end}}
+	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}Created().WithPayload(api{{$modelName}}(c)){{end}}
 	{{if eq $method "Delete"}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
 	{{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
 	if err != nil {
