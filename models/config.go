@@ -8,6 +8,7 @@ type Options struct {
 	Format      string
 	Enum        string
 	SortOn      bool     `yaml:"sort-on"`
+	SortDefault bool     `yaml:"sort-default"`
 	SortBy      []string `yaml:"sort-by"`
 	NestedSorts []string
 	IsStruct    bool

@@ -110,12 +110,26 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 		psql := []models.PsqlParams{}
 		var indexLastNotArr int
+		var haveDefaultSort bool
 		for column, options := range model.Columns {
 			if !isCorectName(column) {
 				return nil, errors.Errorf(`Model: "%s". "%s"  is invalid name for column. A valid name must contain only letters and numbers in camelCase`, name, column)
 			}
 			if options.IsStruct, options.IsArray, options.GoType, err = checkColumn(options.Type, cfg); err != nil {
 				return
+			}
+
+			if options.SortDefault {
+				if options.IsStruct {
+					return nil, errors.Errorf(`Model: "%s". Column: "%s". Structure can not be as default column for sorting`, name, column)
+				}
+				if !options.SortOn {
+					return nil, errors.Errorf(`Model: "%s". Column "%s" can not be as default column for sorting because sorting is not enabled for this column`, name, column)
+				}
+				if haveDefaultSort {
+					return nil, errors.Errorf(`Model "%s" has multiple columns as default for sorting, model should has one column as default for sorting`, name)
+				}
+				haveDefaultSort = true
 			}
 
 			if options.Format == "date-time" {
