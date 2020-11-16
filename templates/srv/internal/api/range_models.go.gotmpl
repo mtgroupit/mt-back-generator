@@ -40,7 +40,21 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 	}
 	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}NoContent(){{end}}
 	{{if or (eq $method "Edit") (IsCustomEdit $method)}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
-	{{end}}{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}, app{{$modelName}}Add(params.Body.Data))
+	{{end}}{{if IsCustomEdit $method}}in := &app.{{$modelName}}{}{{range $name, $options := $model.Columns}}{{if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}{{if and (not $options.IsStruct) (ne $name "id")}}
+	in.{{$options.TitleName}} = params.Body.Data.{{$options.TitleName}}{{if or (eq $options.Format "date-time") (eq $options.Format "email")}}.String(){{end}}{{end}}
+	{{end}}{{end}}{{range $name, $options := $model.Columns}}{{if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}{{if and $options.IsStruct (not $options.IsArray)}}
+	if params.Body.Data.{{$options.TitleName}} != "" {
+		in.{{$options.TitleName}} = &app.{{$options.GoType}}{ID: params.Body.Data.{{$options.TitleName}}}
+	}{{end}}
+	{{end}}{{end}}{{range $name, $options := $model.Columns}}{{if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}{{if $options.IsArray}}
+	if len(params.Body.Data.{{$options.TitleName}}) > 0 {
+		for _, id := range params.Body.Data.{{$options.TitleName}} {
+			in.{{$options.TitleName}} = append(in.{{$options.TitleName}}, &app.{{$options.GoType}}{
+				ID: id,
+			})
+		}
+	}{{end}}
+	{{end}}{{end}}{{end}}{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}, {{if IsCustomEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {

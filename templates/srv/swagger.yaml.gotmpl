@@ -39,13 +39,26 @@ paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.
               id:
                 type: {{if $model.IDIsUUID}}string{{else}}{{(index $model.Columns "id").Type}}{{end}}{{else}}{{if or (eq $method "List") (IsCustomList $method)}}
             $ref: "#/definitions/listParams" {{else}}
-            {{if or (eq $method "Edit") (IsCustomEdit $method)}}
-            type: object
+            {{if or (eq $method "Edit") (IsCustomEdit $method)}}type: object
             properties:
               id:
                 type: string 
-              data:
-                {{end}}$ref: "#/definitions/{{LowerTitle $modelName}}Add" {{end}}{{end}}{{end}} 
+              data:{{if IsCustomEdit $method}}
+                type: object
+                properties:{{range $name, $options := $model.Columns}}{{if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}{{if $options.IsStruct}}{{if $options.IsArray}}  
+                  {{$name}}:
+                    type: array
+                    items:
+                      type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}{{else}}            
+                  {{$name}}:
+                    type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}{{end}} {{else}}
+                  {{$name}}:
+                    type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}} {{if $options.Format}}
+                    format: {{$options.Format}}{{end}}{{if .Length}}
+                    maxLength: {{.Length}}{{end}}{{if .Default}}
+                    default: {{.Default}}{{end}}{{if $options.Enum}}
+                    enum: {{$options.Enum}}{{end}}{{end}}{{end}}{{end}}{{end}}
+                  {{end}}{{if not (IsCustomEdit $method)}}$ref: "#/definitions/{{LowerTitle $modelName}}Add"{{end}} {{end}}{{end}}{{end}} 
       responses:        {{if eq $method "Delete"}}
         204:
           description: Deleted        {{else}}{{if eq $method "Add"}}
