@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if ! [ -x "$(command -v go)" ]; then
+  echo 'Error: "go" is not installed.' >&2
+  exit 1
+fi
+
 if ! [ -x "$(command -v docker)" ]; then
   echo 'Error: "docker" is not installed.' >&2
   exit 1
