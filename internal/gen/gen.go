@@ -39,7 +39,7 @@ var goTmplFuncs = template.FuncMap{
 		return strings.ToLower(in)
 	},
 	"LowerTitle": parser.LowerTitle,
-	"Title": strings.Title,
+	"Title":      strings.Title,
 	"NameSQL":    parser.NameSQL,
 	"IsCustomList": func(method string) bool {
 		return regexp.MustCompile(`^(L|l)ist.+`).Match([]byte(method))
@@ -139,10 +139,13 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 					}
 					for _, method := range model.Methods {
 						if isCustomMethod(method) && !regexp.MustCompile(`func \(.+\) `+method+modelName).Match(file) {
-							var pattern string
+							var pattern, tag string
 							switch {
 							case strings.HasSuffix(dirTMPL, "api"):
 								pattern = apiPattern
+								if len(model.Tags) != 0 {
+									tag = parser.LowerTitle(model.Tags[0])
+								}
 							case strings.HasSuffix(dirTMPL, "app"):
 								pattern = appPattern
 							case strings.HasSuffix(dirTMPL, "dal"):
@@ -153,9 +156,11 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 							if err := t.Execute(&buf, struct {
 								Method    string
 								ModelName string
+								Tag       string
 							}{
 								method,
 								modelName,
+								tag,
 							}); err != nil {
 								return err
 							}
@@ -291,8 +296,8 @@ func formatName(name string) string {
 
 const (
 	apiPattern = `
-func (svc *service) {{.Method}}{{.ModelName}}(params operations.{{.Method}}{{.ModelName}}Params, profile interface{}) middleware.Responder {
-	return operations.New{{.Method}}{{.ModelName}}OK()
+func (svc *service) {{.Method}}{{.ModelName}}(params {{if .Tag}}{{.Tag}}{{else}}operations{{end}}.{{.Method}}{{.ModelName}}Params, profile interface{}) middleware.Responder {
+	return {{if .Tag}}{{.Tag}}{{else}}operations{{end}}.New{{.Method}}{{.ModelName}}OK()
 }`
 	appPattern = `
 func (a *app) {{.Method}}{{.ModelName}}(m *{{.ModelName}}) error {
