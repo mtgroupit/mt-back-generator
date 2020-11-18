@@ -43,7 +43,12 @@ type {{$et.RefTableOne}}{{$et.RefTableTwo}} struct{
 }
 {{end}}
 
-func connect(ctx context.Context, cfg pqx.Config, migrationDir string) (*sqlxx.DB, error) {
+func connect(ctx context.Context, cfg pqx.Config, migrationDir string{{if .Debug}}, resetDB bool{{end}}) (*sqlxx.DB, error) { {{if .Debug}}
+	if resetDB {
+		if err := migration.DownAll(ctx, migrationDir, cfg); err != nil {
+			return nil, err
+		}
+	}{{end}}
 	if err := migration.Up(ctx, migrationDir, cfg); err != nil {
 		return nil, err
 	}
@@ -73,8 +78,8 @@ func connect(ctx context.Context, cfg pqx.Config, migrationDir string) (*sqlxx.D
 	return sqlxx.NewDB(sqlx.NewDb(db, "postgres")), nil
 }
 
-func New(ctx context.Context, dbCfg pqx.Config, migrationDir string) (*App, {{if .HaveCustomMethod}}*Customs, {{end}}error) {
-	db, err := connect(ctx, dbCfg, migrationDir)
+func New(ctx context.Context, dbCfg pqx.Config, migrationDir string{{if .Debug}}, resetDB bool{{end}}) (*App, {{if .HaveCustomMethod}}*Customs, {{end}}error) {
+	db, err := connect(ctx, dbCfg, migrationDir{{if .Debug}}, resetDB{{end}})
 	if err != nil {
 		return nil,{{if .HaveCustomMethod}} nil, {{end}} err
 	}

@@ -36,7 +36,8 @@ var (
 		gooseDir string
 		db       pqx.Config
 		api      api.Config
-		extauthEndpoint string
+		extauthEndpoint string{{if .Debug}}
+		resetDB   bool{{end}}
 	}
 )
 
@@ -54,7 +55,9 @@ func init() {
 	flag.IntVar(&cfg.api.Port, "api.port", def.APIPort, "serve API on `port` (>0)")
 	flag.StringVar(&cfg.api.BasePath, "api.basepath", def.APIBasePath, "serve API on `path`")
 
-	flag.StringVar(&cfg.extauthEndpoint, ExtauthEndpointFlag, def.ExtauthEndpoint, "extauth service `endpoint`")
+	flag.StringVar(&cfg.extauthEndpoint, ExtauthEndpointFlag, def.ExtauthEndpoint, "extauth service `endpoint`"){{if .Debug}}
+
+	flag.BoolVar(&cfg.resetDB, "db.reset", def.ResetDB, "reset database if true"){{end}}
 }
 
 func main() {
@@ -79,7 +82,7 @@ func connect() (app.App, *extauthapi.Client, error) {
 		return nil, nil, fmt.Errorf("extauthapi: %v. Error can be if flag '%s' or environment variable '%s' is not set", err, ExtauthEndpointFlag, def.ExtauthEndpointEnvName)
 	}
 
-	a,{{if .HaveCustomMethod}} c,{{end}} err := dal.New(ctx, cfg.db, cfg.gooseDir)
+	a,{{if .HaveCustomMethod}} c,{{end}} err := dal.New(ctx, cfg.db, cfg.gooseDir{{if .Debug}}, cfg.resetDB{{end}})
 	if err != nil {
 		return nil, nil, err
 	}

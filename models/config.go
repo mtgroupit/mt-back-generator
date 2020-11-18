@@ -129,6 +129,7 @@ type Config struct {
 	Module           string
 	AuthSrv          string `yaml:"auth-srv"`
 	Description      string
+	Debug            bool
 	Models           map[string]Model
 	Functions        map[string]Function
 	HaveListMethod   bool

@@ -50,7 +50,8 @@ var (
 	APIHost         = strGetenv("MSRV_HOST", oapiHost)
 	APIPort         = intGetenv("MSRV_PORT", oapiPort)
 	APIBasePath     = strGetenv("MSRV_BASEPATH", oapiBasePath)
-	ExtauthEndpoint = os.Getenv(ExtauthEndpointEnvName)
+	ExtauthEndpoint = os.Getenv(ExtauthEndpointEnvName){{if .Debug}}
+	ResetDB   = boolGetenv("MSRV_RESET_DB"){{end}}
 )
 
 func intGetenv(name string, def int) int {
@@ -85,6 +86,14 @@ func strGetenv(name, def string) string {
 		return def
 	}
 	return value
+}
+
+func boolGetenv(name string) bool {
+	value := os.Getenv(name)
+	if value == "true" {
+		return true
+	}
+	return false
 }
 
 func swaggerEndpoint() (host string, port int, basePath string) {
