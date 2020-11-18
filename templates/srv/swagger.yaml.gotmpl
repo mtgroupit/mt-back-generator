@@ -24,7 +24,20 @@ security:
   - cookieKey: []
   - cookieKey: []
     csrfToken: []
-paths:  {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.Methods}}
+paths:  
+  /healthCheck:    
+    get:
+      security:
+        - {}
+      operationId: healthCheck 
+      responses:        
+        200:
+          description: OK 
+          schema:
+            type: object
+            properties:
+              ok:
+                type: boolean {{range $modelName, $model := $.Models}}  {{range $i, $method := $model.Methods}}
   /{{LowerTitle $modelName}}/{{LowerTitle $method}}:    
     {{(index $model.MethodsProps $i).HTTPMethod}}: {{if $model.Tags}}
       tags:{{range $_, $tag := $model.Tags}}

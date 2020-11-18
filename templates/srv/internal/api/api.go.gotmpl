@@ -61,6 +61,7 @@ func NewServer(appl app.App, extAuth AuthSvc, cfg Config) (*restapi.Server, erro
 	api.CookieKeyAuth = svc.checkerAuth
 	api.CsrfTokenAuth = svc.csrfTokenAuth
 
+	api.HealthCheckHandler = operations.HealthCheckHandlerFunc(healthCheck)
     {{range $modelName, $model := $.Models}}{{range $i, $method := $model.Methods}}
 	api.{{if $model.Tags}}{{(index $model.Tags 0)}}{{end}}{{$method}}{{$model.TitleName}}Handler = {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}HandlerFunc(svc.{{$method}}{{$modelName}}) {{end}}
 	{{range $column, $options := $model.Columns}}{{if $options.IsArray}}
@@ -103,6 +104,10 @@ func NewServer(appl app.App, extAuth AuthSvc, cfg Config) (*restapi.Server, erro
 	server.SetHandler(globalMiddlewares(api.Serve(middlewares)))
 
 	return server, nil
+}
+
+func healthCheck(params operations.HealthCheckParams, profile interface{}) middleware.Responder {
+	return operations.NewHealthCheckOK().WithPayload(&operations.HealthCheckOKBody{Ok: true})
 }
 
 func appAccessManager(am *models.AccessManager) *app.AccessManager {
