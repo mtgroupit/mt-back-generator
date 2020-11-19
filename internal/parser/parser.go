@@ -129,7 +129,19 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				if haveDefaultSort {
 					return nil, errors.Errorf(`Model "%s" has multiple columns as default for sorting, model should has one column as default for sorting`, name)
 				}
+				if options.SortOrderDefault != "" {
+					orderDefault := strings.ToTitle(options.SortOrderDefault)
+					if orderDefault == "ASC" || orderDefault == "DESC" {
+						options.SortOrderDefault = orderDefault
+					} else {
+						return nil, errors.Errorf(`Model: "%s". Column: "%s". "%s" can not be as default order for sorting. Order for sorting can be only "ASC" or "DESC"`, name, column, options.SortOrderDefault)
+					}
+				}
 				haveDefaultSort = true
+			} else {
+				if options.SortOrderDefault != "" {
+					return nil, errors.Errorf(`Model: "%s". Column: "%s". Default order for sorting allow only for fields which set as default for sorting`, name, column)
+				}
 			}
 
 			if options.Format == "date-time" {

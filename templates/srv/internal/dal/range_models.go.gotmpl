@@ -76,7 +76,10 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		orderQuery = "ORDER BY " + sortBy{{end}}{{end}}
 	default:{{range $column, $options := $model.Columns}}{{if $options.SortDefault}}{{if $haveNestedSorts}}
 		if sortBy == "" { {{end}}
-			orderQuery = "ORDER BY {{$column}}"{{end}}{{end}}{{if $haveNestedSorts}}
+			orderQuery = "ORDER BY {{$column}}"{{if $options.SortOrderDefault}}
+			if orderBy == "" {
+				orderBy = "{{$options.SortOrderDefault}}"
+			}{{end}}{{end}}{{end}}{{if $haveNestedSorts}}
 		} else {
 			nestedSort = true
 		}{{end}}
