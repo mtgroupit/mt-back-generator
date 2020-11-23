@@ -185,7 +185,7 @@ definitions:  {{range $modelName, $model := $.Models}}
   {{LowerTitle $modelName}}Add:
     type: object
     description: "{{LowerTitle $modelName}} model for add and edit methods"
-    properties:      {{range $name, $options := $model.Columns}}{{if ne $name "id"}}{{if $options.IsStruct}}{{if $options.IsArray}}  
+    properties:      {{range $name, $options := $model.Columns}}{{if and (ne $name "id") (not (IsStandartColumn $name))}}{{if $options.IsStruct}}{{if $options.IsArray}}  
       {{$name}}:
         type: array
         items:

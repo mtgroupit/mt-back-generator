@@ -60,6 +60,7 @@ var goTmplFuncs = template.FuncMap{
 		return false
 	},
 	"FormatName": formatName,
+	"IsStandartColumn": parser.IsStandartColumn,
 }
 
 // Srv - generate dir with service

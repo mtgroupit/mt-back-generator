@@ -4,7 +4,8 @@ package dal
 import (
 	"database/sql"	{{if $model.HaveLazyLoading}}
 	"strings"{{end}}{{if $haveNestedSorts}}
-	"sort"{{end}}{{if and $model.HaveLazyLoading $model.HaveListMethod}}
+	"sort"{{end}}{{if or $model.HaveCreatedAt $model.HaveModifiedAt}}
+	"time"{{end}}{{if and $model.HaveLazyLoading $model.HaveListMethod}}
 	"fmt"{{end}}
 
 	"{{.Module}}/internal/app"
@@ -24,8 +25,8 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 {{if eq $method "Get"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) (*app.{{$modelName}}, error) { 
 	return a.get{{$modelName}}(id)
 }{{end}}
-{{if eq $method "Add"}}func (a *App) {{$method}}{{$modelName}}({{if $model.IDFromProfile}}profileID string, {{end}}m *app.{{$modelName}}) (*app.{{$modelName}}, error) {
-	id, err := a.add{{$modelName}}({{if $model.IDFromProfile}}profileID, {{end}}m)
+{{if eq $method "Add"}}func (a *App) {{$method}}{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profileID string, {{end}}m *app.{{$modelName}}) (*app.{{$modelName}}, error) {
+	id, err := a.add{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profileID, {{end}}m)
 	if err != nil {
 		return nil, err
 	}
@@ -46,12 +47,14 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	}
 	return nil
 }{{end}}
-{{if or (eq $method "Edit") (IsCustomEdit $method)}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  { {{range $column, $options := $model.Columns}}{{if and (and $options.IsStruct (not $options.IsArray)) (or (not (IsCustomEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsCustomEdit $method)))}}
+{{if or (eq $method "Edit") (IsCustomEdit $method)}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  { {{range $column, $options := $model.Columns}}{{if and (and $options.IsStruct (not $options.IsArray)) (or (not (IsCustomEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsCustomEdit $method)))}}
 	var {{$column}}ID interface{}
 	if m.{{$options.TitleName}} != nil {
 		{{$column}}ID = m.{{$options.TitleName}}.ID
-	}{{end}}{{end}}
-	if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLEditStr}}{{else}}{{$model.SQLEditStr}}{{end}} WHERE id=$1`, id, {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLExecParams}}{{end}}); err != nil {
+	}{{end}}{{end}}{{if $model.HaveModifiedAt}}
+	m.ModifiedAt = time.Now().Format(time.RFC3339){{end}}{{if $model.HaveModifiedBy}}
+	m.ModifiedBy = profileID{{end}}
+	if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLEditStr}}{{else}}{{$model.SQLEditStr}}{{end}} WHERE id=$1`, id, {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLEditExecParams}}{{end}}); err != nil {
 		return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 	}
 	{{if $model.ReturnWhenEdit}}
@@ -270,7 +273,7 @@ func (m *{{$modelName}}) LazyLoading(a *App) (err error) { {{range $modelName2, 
 }
 {{end}}
 {{range $column, $options := $model.Columns}} {{if $options.IsArray}}
-func (a *App) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*app.{{$options.GoType}}) error {
+func (a *App) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*app.{{$options.GoType}}) error {
 	for _, item := range items {
 		id, err := a.add{{$options.GoType}}(item)
 		if err != nil {
@@ -282,16 +285,22 @@ func (a *App) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string
 		if _, err := a.db.Exec(`INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}({{NameSQL $modelName}}_id, {{NameSQL $column}}_id) VALUES ($1, $2)`, id, itemID); err != nil {
 			return err
 		}
-	}
+	}{{if or $model.HaveModifiedAt $model.HaveModifiedBy}}
+	if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if and  $model.HaveModifiedAt $model.HaveModifiedBy}}modified_at=$2, modified_by=$3{{else}}{{if $model.HaveModifiedAt}}modified_at=$2{{end}}{{if $model.HaveModifiedBy}}modified_by=$2{{end}}{{end}} WHERE id=$1`, id{{if $model.HaveModifiedAt}}, time.Now().Format(time.RFC3339){{end}}{{if $model.HaveModifiedBy}}, profileID{{end}}); err != nil {
+		return {{if $model.ReturnWhenEdit}}nil, {{end}}err
+	}{{end}}
 	return nil
 }
 
-func (a *App) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error {
+func (a *App) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error {
 	for _, item := range items {
 		if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1 AND {{NameSQL $column}}_id=$2`, id, item); err != nil {
 			return err
 		}
-	}
+	}{{if or $model.HaveModifiedAt $model.HaveModifiedBy}}
+	if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if and  $model.HaveModifiedAt $model.HaveModifiedBy}}modified_at=$2, modified_by=$3{{else}}{{if $model.HaveModifiedAt}}modified_at=$2{{end}}{{if $model.HaveModifiedBy}}modified_by=$2{{end}}{{end}} WHERE id=$1`, id{{if $model.HaveModifiedAt}}, time.Now().Format(time.RFC3339){{end}}{{if $model.HaveModifiedBy}}, profileID{{end}}); err != nil {
+		return {{if $model.ReturnWhenEdit}}nil, {{end}}err
+	}{{end}}
 	return nil
 }
 {{end}}{{end}}
@@ -313,13 +322,17 @@ func (a *App) get{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{en
 	return app{{$modelName}}(m), nil
 }
 
-func (a *App) add{{$modelName}}({{if $model.IDFromProfile}}profileID string, {{end}}m *app.{{$modelName}}) ({{if $model.IDIsUUID}}string{{else}}int64{{end}}, error) {
-	{{if $model.IDIsUUID}}{{$modelName}}ID := {{if $model.IDFromProfile}}profileID{{else}}uuid.New(){{end}}{{else}}var {{$modelName}}ID int64{{end}}	{{range $column, $options := $model.Columns}}{{if and $options.IsStruct (not $options.IsArray)}}
+func (a *App) add{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profileID string, {{end}}m *app.{{$modelName}}) ({{if $model.IDIsUUID}}string{{else}}int64{{end}}, error) {
+	{{if $model.IDIsUUID}}{{$modelName}}ID := {{if $model.IDFromProfile}}profileID{{else}}uuid.New(){{end}}{{else}}var {{$modelName}}ID int64{{end}}	
+	{{if $model.HaveCreatedBy}}m.CreatedBy = profileID
+	{{end}}
+	{{if $model.HaveCreatedAt}}m.CreatedAt = time.Now().Format(time.RFC3339)
+	{{end}}{{range $column, $options := $model.Columns}}{{if and $options.IsStruct (not $options.IsArray)}}
 	var {{$column}}ID interface{}
 	if m.{{$options.TitleName}} != nil {
 		{{$column}}ID = m.{{$options.TitleName}}.ID
 	}{{end}}{{end}}
-	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{NameSQL $modelName}}s{{$model.SQLAddStr}} RETURNING id`, {{$model.SQLExecParams}}{{if $model.IDIsUUID}}, {{$modelName}}ID{{end}}); err != nil {
+	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{NameSQL $modelName}}s{{$model.SQLAddStr}} RETURNING id`, {{$model.SQLAddExecParams}}{{if $model.IDIsUUID}}, {{$modelName}}ID{{end}}); err != nil {
 		return {{if $model.IDIsUUID}}""{{else}}0{{end}}, err
 	}{{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
 	for _, m := range m.{{$options.TitleName}} {

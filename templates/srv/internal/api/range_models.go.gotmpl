@@ -6,7 +6,7 @@ import (
 	{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}} {{end}}"{{.Module}}/internal/api/restapi/restapi/operations{{if $model.Tags}}/{{NameSQL (index $model.Tags 0)}}{{end}}"
 	"{{.Module}}/internal/app"
 
-	{{if $model.IDFromProfile}}extauthapi "{{.AuthSrv}}"{{end}}
+	{{if or $model.IDFromProfile $model.HaveCreatedBy $model.HaveModifiedBy}}extauthapi "{{.AuthSrv}}"{{end}}
 	{{if $model.HaveEmail}}"github.com/go-openapi/strfmt"{{end}}
 	"github.com/go-openapi/runtime/middleware" 
 )
@@ -23,8 +23,8 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 		log.Info("{{$method}}{{$modelName}} ok", "id", {{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
 	}
 	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c)){{end}}
-	{{if eq $method "Add"}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
-	{{end}}c, err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(), {{end}}app{{$modelName}}Add(params.Body))
+	{{if eq $method "Add"}}{{if or $model.IDFromProfile $model.HaveCreatedBy}}prof := profile.(*extauthapi.Profile)
+	{{end}}c, err := svc.app.{{$method}}{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}prof.ID.String(), {{end}}app{{$modelName}}Add(params.Body))
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {
@@ -39,7 +39,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 		log.Info("{{$method}}{{$modelName}} ok", "id", {{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
 	}
 	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}NoContent(){{end}}
-	{{if or (eq $method "Edit") (IsCustomEdit $method)}}{{if $model.IDFromProfile}}prof := profile.(*extauthapi.Profile)
+	{{if or (eq $method "Edit") (IsCustomEdit $method)}}{{if or $model.IDFromProfile $model.HaveModifiedBy}}prof := profile.(*extauthapi.Profile)
 	{{end}}{{if IsCustomEdit $method}}in := &app.{{$modelName}}{}{{range $name, $options := $model.Columns}}{{if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}{{if and (not $options.IsStruct) (ne $name "id")}}
 	in.{{$options.TitleName}} = params.Body.Data.{{$options.TitleName}}{{if or (eq $options.Format "date-time") (eq $options.Format "email")}}.String(){{end}}{{end}}
 	{{end}}{{end}}{{range $name, $options := $model.Columns}}{{if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}{{if and $options.IsStruct (not $options.IsArray)}}
@@ -54,7 +54,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 			})
 		}
 	}{{end}}
-	{{end}}{{end}}{{end}}{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}, {{if IsCustomEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
+	{{end}}{{end}}{{end}}{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if IsCustomEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {
@@ -76,7 +76,8 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 {{end}}{{end}}
 {{range $column, $options := $model.Columns}} {{if $options.IsArray}}
 func (svc *service) Add{{Title $column}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.Add{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
-	err := svc.app.Add{{Title $column}}{{$modelName}}(params.Body.ID, params.Body.ItemsID, app{{$options.GoType}}sAdd(params.Body.Items))
+	{{if  $model.HaveModifiedBy}}prof := profile.(*extauthapi.Profile)
+	{{end}}err := svc.app.Add{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}params.Body.ItemsID, app{{$options.GoType}}sAdd(params.Body.Items))
 	if err != nil {
 		log.Err("Add{{Title $column}}{{$modelName}} error", err)
 	} else {
@@ -86,7 +87,8 @@ func (svc *service) Add{{Title $column}}{{$modelName}}(params {{if $model.Tags}}
 }
 
 func (svc *service) Delete{{Title $column}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.Delete{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
-	err := svc.app.Delete{{Title $column}}{{$modelName}}(params.Body.ID, params.Body.Items)
+	{{if $model.HaveModifiedBy}}prof := profile.(*extauthapi.Profile)
+	{{end}}err := svc.app.Delete{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}params.Body.Items)
 	if err != nil {
 		log.Err("Delete{{Title $column}}{{$modelName}} error", err)
 	} else {
@@ -167,7 +169,7 @@ func app{{$modelName}}Add(a *models.{{$modelName}}Add) *app.{{$modelName}} {
 	}
 	{{LowerTitle $modelName}} := &app.{{$modelName}}{}
 
-	{{range $name, $options := $model.Columns}}{{if and (not $options.IsStruct) (ne $name "id")}}
+	{{range $name, $options := $model.Columns}}{{if and (not $options.IsStruct) (ne $name "id") (not (IsStandartColumn $name))}}
 	{{LowerTitle $modelName}}.{{$options.TitleName}} = a.{{$options.TitleName}}{{if or (eq $options.Format "date-time") (eq $options.Format "email")}}.String(){{end}}{{end}}{{end}}
 	{{range $name, $options := $model.Columns}}{{if and $options.IsStruct (not $options.IsArray)}}
 	if a.{{$options.TitleName}} != "" {

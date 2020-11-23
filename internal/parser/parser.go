@@ -112,6 +112,22 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		var indexLastNotArr int
 		var haveDefaultSort bool
 		for column, options := range model.Columns {
+			switch column {
+			case "createdAt":
+				options.Type = "string"
+				options.Format = "date-time"
+				model.HaveCreatedAt = true
+			case "createdBy":
+				options.Type = "string"
+				model.HaveCreatedBy = true
+			case "modifiedAt":
+				options.Type = "string"
+				options.Format = "date-time"
+				model.HaveModifiedAt = true
+			case "modifiedBy":
+				options.Type = "string"
+				model.HaveModifiedBy = true
+			}
 			if !isCorectName(column) {
 				return nil, errors.Errorf(`Model: "%s". "%s"  is invalid name for column. A valid name must contain only letters and numbers in camelCase`, name, column)
 			}
@@ -282,18 +298,24 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		psql[indexLastNotArr].Last = true
 		model.Psql = psql
 
-		var SQLSelect, sqlWhereParams, sqlAdd, sqlEdit, sqlExexParams, countFields []string
+		var SQLSelect, sqlWhereParams, sqlAdd, sqlEdit, sqlAddExecParams, sqlEditExecParams, countFields []string
 		count := 1
+		countCreatedColumns := 0
 		for column, options := range model.Columns {
 			if !options.IsStruct {
 				SQLSelect = append(SQLSelect, NameSQL(options.TitleName))
 				sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName), column, "not_"+column, "not_"+column, NameSQL(options.TitleName), "not_"+column))
 				if options.TitleName != "ID" {
 					sqlAdd = append(sqlAdd, NameSQL(options.TitleName))
-					sqlExexParams = append(sqlExexParams, "m."+options.TitleName)
+					sqlAddExecParams = append(sqlAddExecParams, "m."+options.TitleName)
 					countFields = append(countFields, fmt.Sprintf("$%d", count))
 					count++
-					sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", NameSQL(options.TitleName), count))
+					if isCreatedStandartColumn(column) {
+						countCreatedColumns++
+					} else {
+						sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", NameSQL(options.TitleName), count-countCreatedColumns))
+						sqlEditExecParams = append(sqlEditExecParams, "m."+options.TitleName)
+					}
 				}
 			} else {
 				if !options.IsArray {
@@ -304,10 +326,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					}
 					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
 					sqlAdd = append(sqlAdd, NameSQL(options.TitleName)+"_id")
-					sqlExexParams = append(sqlExexParams, column+"ID")
+					sqlAddExecParams = append(sqlAddExecParams, column+"ID")
+					sqlEditExecParams = append(sqlEditExecParams, column+"ID")
 					countFields = append(countFields, fmt.Sprintf("$%d", count))
 					count++
-					sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count))
+					sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count-countCreatedColumns))
 				}
 			}
 		}
@@ -319,7 +342,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		}
 		model.SQLAddStr = fmt.Sprintf("(%s) VALUES (%s)", strings.Join(sqlAdd, ", "), strings.Join(countFields, ", "))
 		model.SQLEditStr = strings.Join(sqlEdit, ", ")
-		model.SQLExecParams = strings.Join(sqlExexParams, ", ")
+		model.SQLAddExecParams = strings.Join(sqlAddExecParams, ", ")
+		model.SQLEditExecParams = strings.Join(sqlEditExecParams, ", ")
 
 		cfg.Models[name] = model
 	}
@@ -779,11 +803,15 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 	result := *model
 	for i, method := range result.Methods {
 		if isCustomEdit(method) {
-			var sqlEdit, sqlExexParams, editableFields []string
+			var sqlEdit, sqlAddExecParams, editableFields []string
 			count := 1
 			_, fieldsStr := expandStrNestedFields(method)
 			fields := splitFields(fieldsStr)
 			for j := range fields {
+				if IsStandartColumn(fields[j]) {
+					return errors.Errorf(`Model "%s". Method: "%s". "%s" can not be used in custom edit method, it edits automatically`, modelName, method, fields[j])
+				}
+
 				var haveFieldInColumns bool
 				for column := range result.Columns {
 					if column == fields[j] {
@@ -801,12 +829,12 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 				for column, options := range result.Columns {
 					if fields[j] == options.TitleName {
 						if !options.IsStruct {
-							sqlExexParams = append(sqlExexParams, "m."+options.TitleName)
+							sqlAddExecParams = append(sqlAddExecParams, "m."+options.TitleName)
 							count++
 							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", NameSQL(options.TitleName), count))
 						} else {
 							if !options.IsArray {
-								sqlExexParams = append(sqlExexParams, column+"ID")
+								sqlAddExecParams = append(sqlAddExecParams, column+"ID")
 								count++
 								sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count))
 							}
@@ -816,7 +844,7 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 			}
 			result.Methods[i] = "edit" + strings.Join(fields, "")
 			result.MethodsProps[i].CustomSQLEditStr = strings.Join(sqlEdit, ", ")
-			result.MethodsProps[i].CustomSQLExecParams = strings.Join(sqlExexParams, ", ")
+			result.MethodsProps[i].CustomSQLExecParams = strings.Join(sqlAddExecParams, ", ")
 			result.MethodsProps[i].EditableFields = editableFields
 		}
 	}
@@ -842,4 +870,26 @@ func isCustomMethod(method string) bool {
 		return false
 	}
 	return true
+}
+
+// IsStandartColumn check if column is one of column which description column with auto substituted when model is created or modified
+func IsStandartColumn(column string) bool {
+	if isCreatedStandartColumn(column) || isModifiedStandartColumn(column) {
+		return true
+	}
+	return false
+}
+
+func isCreatedStandartColumn(column string) bool {
+	if column == "createdAt" || column == "createdBy" {
+		return true
+	}
+	return false
+}
+
+func isModifiedStandartColumn(column string) bool {
+	if column == "modifiedAt" || column == "modifiedBy" {
+		return true
+	}
+	return false
 }

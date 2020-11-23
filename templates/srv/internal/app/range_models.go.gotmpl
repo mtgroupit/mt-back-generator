@@ -10,26 +10,26 @@ type {{$modelName}} struct { {{range $name, $options := $model.Columns}}
 {{if eq $method "Get"}}func (a *app) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) (*{{$modelName}}, error) {
 	return a.appl.{{$method}}{{$modelName}}(id)
 }{{end}}
-{{if eq $method "Add"}}func (a *app) {{$method}}{{$modelName}}({{if $model.IDFromProfile}}profID string, {{end}}m *{{$modelName}}) (*{{$modelName}}, error) {
-	return a.appl.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}profID, {{end}}m)
+{{if eq $method "Add"}}func (a *app) {{$method}}{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profID string, {{end}}m *{{$modelName}}) (*{{$modelName}}, error) {
+	return a.appl.{{$method}}{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profID, {{end}}m)
 }{{end}}
 {{if eq $method "Delete"}}func (a *app) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) error {
 	return a.appl.{{$method}}{{$modelName}}(id)
 }{{end}}
-{{if or (eq $method "Edit") (IsCustomEdit $method)}}func (a *app) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}} {
-	return a.appl.{{$method}}{{$modelName}}(id, m)
+{{if or (eq $method "Edit") (IsCustomEdit $method)}}func (a *app) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profID string, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}} {
+	return a.appl.{{$method}}{{$modelName}}(id, {{if $model.HaveModifiedBy}}profID, {{end}}m)
 }{{end}}
 {{if or (eq $method "List") (IsCustomList $method)}}func (a *app) {{$method}}{{$modelName}}(offset, limit int64, filters []*Filter, sortBy, orderBy string) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error) {
 	return a.appl.{{$method}}{{$modelName}}(offset, limit, filters, sortBy, orderBy)
 }{{end}}
 {{end}}{{end}}
 {{range $column, $options := $model.Columns}} {{if $options.IsArray}}
-func (a *app) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*{{$options.GoType}}) error {
-	return a.appl.Add{{Title $column}}{{$modelName}}(id, itemsID, items)
+func (a *app) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*{{$options.GoType}}) error {
+	return a.appl.Add{{Title $column}}{{$modelName}}(id, {{if $model.HaveModifiedBy}}profileID, {{end}}itemsID, items)
 }
 
-func (a *app) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error {
-	return a.appl.Delete{{Title $column}}{{$modelName}}(id, items)
+func (a *app) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error {
+	return a.appl.Delete{{Title $column}}{{$modelName}}(id, {{if $model.HaveModifiedBy}}profileID, {{end}}items)
 }
 {{end}}{{end}}
 func (a *app) {{$modelName}}AccessManager(m *AccessManager) error {

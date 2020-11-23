@@ -78,17 +78,26 @@ type Model struct {
 	Fields             map[string]string
 	Psql               []PsqlParams
 	DeepNesting        int
-	HaveLazyLoading    bool
-	IDIsUUID           bool
-	HaveEmail          bool
-	HaveListMethod     bool
-	HaveCustomMethod   bool
-	SQLSelectStr       string
-	SQLWhereParams     string
-	SQLAddStr          string
-	SQLEditStr         string
-	SQLExecParams      string
-	TitleName          string
+
+	HaveLazyLoading  bool
+	IDIsUUID         bool
+	HaveEmail        bool
+	HaveListMethod   bool
+	HaveCustomMethod bool
+
+	SQLSelectStr   string
+	SQLWhereParams string
+	SQLAddStr      string
+	SQLEditStr     string
+	SQLAddExecParams  string
+	SQLEditExecParams  string
+
+	TitleName string
+
+	HaveCreatedAt  bool
+	HaveCreatedBy  bool
+	HaveModifiedAt bool
+	HaveModifiedBy bool
 
 	Binds        []Bind
 	Methods      []string
