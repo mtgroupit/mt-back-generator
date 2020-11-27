@@ -42,7 +42,7 @@ var (
 )
 
 func init() {
-	cfg.db.SSLMode = pqx.SSLDisable
+	cfg.db.SSLMode = pqx.SSLRequire
 	flag.StringVar(&cfg.logLevel, "log.level", "debug", "log `level` (debug|info|warn|err)")
 	flag.StringVar(&cfg.gooseDir, "goose.dir", def.GooseDir, "goose migrations `dir`")
 	flag.StringVar(&cfg.db.Host, "db.host", def.DBHost, "PostgreSQL `host`")
