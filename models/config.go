@@ -70,6 +70,7 @@ type MethodProps struct {
 // Model - description one component of models
 type Model struct {
 	Description        string
+	Shared             bool
 	DetailedPagination bool `yaml:"detailed-pagination"`
 	IDFromProfile      bool `yaml:"id-from-profile"`
 	ReturnWhenEdit     bool `yaml:"return-when-edit"`
@@ -85,12 +86,12 @@ type Model struct {
 	HaveListMethod   bool
 	HaveCustomMethod bool
 
-	SQLSelectStr   string
-	SQLWhereParams string
-	SQLAddStr      string
-	SQLEditStr     string
+	SQLSelectStr      string
+	SQLWhereParams    string
+	SQLAddStr         string
+	SQLEditStr        string
 	SQLAddExecParams  string
-	SQLEditExecParams  string
+	SQLEditExecParams string
 
 	TitleName string
 

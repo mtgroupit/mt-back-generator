@@ -22,17 +22,17 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 }
 
 {{range $i, $method := $model.Methods}}{{if not (IsCustomMethod $method)}}
-{{if eq $method "Get"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) (*app.{{$modelName}}, error) { 
-	return a.get{{$modelName}}(id)
+{{if eq $method "Get"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
+	return a.get{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}})
 }{{end}}
-{{if eq $method "Add"}}func (a *App) {{$method}}{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profileID string, {{end}}m *app.{{$modelName}}) (*app.{{$modelName}}, error) {
-	id, err := a.add{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profileID, {{end}}m)
+{{if eq $method "Add"}}func (a *App) {{$method}}{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) (*app.{{$modelName}}, error) {
+	id, err := a.add{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profileID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
 	if err != nil {
 		return nil, err
 	}
-	return a.get{{$modelName}}(id)
+	return a.get{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}})
 }{{end}}
-{{if eq $method "Delete"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) error { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
+{{if eq $method "Delete"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) error { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
 	if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1`, id); err != nil {
 		return err
 	}{{end}}{{end}}{{end}}{{end}} {{range $_, $bind := $model.Binds}}{{if $bind.IsArray}}
@@ -47,7 +47,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	}
 	return nil
 }{{end}}
-{{if or (eq $method "Edit") (IsCustomEdit $method)}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  { {{range $column, $options := $model.Columns}}{{if and (and $options.IsStruct (not $options.IsArray)) (or (not (IsCustomEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsCustomEdit $method)))}}
+{{if or (eq $method "Edit") (IsCustomEdit $method)}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  { {{range $column, $options := $model.Columns}}{{if and (and $options.IsStruct (not $options.IsArray)) (or (not (IsCustomEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsCustomEdit $method)))}}
 	var {{$column}}ID interface{}
 	if m.{{$options.TitleName}} != nil {
 		{{$column}}ID = m.{{$options.TitleName}}.ID
@@ -62,13 +62,13 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	if err := a.db.Get(&edited, `SELECT {{$model.SQLSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1`, id); err != nil {
 		return nil, err
 	}{{if $model.HaveLazyLoading}}
-	if err := edited.LazyLoading(a); err != nil {
+	if err := edited.LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
 		return nil, err
 	}{{end}}{{end}}
 	return {{if $model.ReturnWhenEdit}}app{{$modelName}}(edited), {{end}}nil
 }{{end}}
 
-{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}(offset, limit int64, filters []*app.Filter, sortBy,orderBy string) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
+{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*app.Filter, sortBy,orderBy string) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
 	ms := []{{$modelName}}{}
 	warnings := []string{}
 
@@ -149,7 +149,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	result := []{{$modelName}}{}
 	{{if (IsCustomList $method)}}{{if ((index $model.MethodsProps $i).NeedLazyLoading)}}
 	for i := range ms {
-		if err := ms[i].LazyLoading{{$method}}(a); err != nil {
+		if err := ms[i].LazyLoading{{$method}}({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
 			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 		}
 		ok := true
@@ -167,7 +167,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		}
 	}{{end}}{{else}}
 	for i := range ms {
-		if err := ms[i].LazyLoading(a); err != nil {
+		if err := ms[i].LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
 			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 		}
 		ok := true
@@ -211,7 +211,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	return app{{$modelName}}s({{if $model.HaveLazyLoading}}result{{else}}ms{{end}}),{{if $model.DetailedPagination}} count,{{end}} warnings, nil
 }{{end}}
 {{if and (IsCustomList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}{{range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
-{{if $nestedObj.IsFirstForLazyLoading}}func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}) LazyLoading{{$method}}{{$nestedObj.Path}}(a *App) (err error) { {{end}} {{$model2 := (index $.Models $nestedObj.Name)}}{{$options := (index $model2.Columns (LowerTitle $nestedObj.Name))}}{{if  $nestedObj.IsArray}}
+{{if $nestedObj.IsFirstForLazyLoading}}func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}) LazyLoading{{$method}}{{$nestedObj.Path}}({{if not $model.Shared}}isolatedEntityID string, {{end}}a *App) (err error) { {{end}} {{$model2 := (index $.Models $nestedObj.Name)}}{{$options := (index $model2.Columns (LowerTitle $nestedObj.Name))}}{{if  $nestedObj.IsArray}}
 	slice{{$options.TitleName}} := []{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}{{$nestedObj.Type}}{}
 	if err = a.db.Select(&slice{{$options.TitleName}}, `SELECT * FROM {{if $nestedObj.Path}}{{NameSQL $nestedObj.ParentStruct}}{{else}}{{NameSQL $modelName}}{{end}}_{{NameSQL $nestedObj.Name}} WHERE {{if $nestedObj.Path}}{{NameSQL $nestedObj.ParentStruct}}{{else}}{{NameSQL $modelName}}{{end}}_id=$1`, m.ID); err != nil {
 		return
@@ -244,7 +244,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 {{end}}{{end}}
 
 {{if $model.HaveLazyLoading}}
-func (m *{{$modelName}}) LazyLoading(a *App) (err error) { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if  $options.IsArray}}
+func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID string, {{end}}a *App) (err error) { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if  $options.IsArray}}
 	slice{{$options.TitleName}} := []{{$modelName}}{{$options.GoType}}{}
 	if err = a.db.Select(&slice{{$options.TitleName}}, `SELECT * FROM {{NameSQL $modelName}}_{{NameSQL $options.TitleName}} WHERE {{NameSQL $modelName}}_id=$1`, m.ID); err != nil {
 		return
@@ -255,7 +255,7 @@ func (m *{{$modelName}}) LazyLoading(a *App) (err error) { {{range $modelName2, 
 			return
 		}{{if $model2.HaveLazyLoading}}
 		if err == nil {
-			if err = {{$column}}.LazyLoading(a); err != nil {
+			if err = {{$column}}.LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
 				return
 			}
 		}{{end}}
@@ -265,7 +265,7 @@ func (m *{{$modelName}}) LazyLoading(a *App) (err error) { {{range $modelName2, 
 		return
 	}{{if $model2.HaveLazyLoading}}
 	if err == nil {
-		if err = m.{{$options.TitleName}}.LazyLoading(a); err != nil {
+		if err = m.{{$options.TitleName}}.LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
 			return
 		}
 	}{{end}}{{end}}{{end}}{{end}}{{end}}
@@ -273,9 +273,9 @@ func (m *{{$modelName}}) LazyLoading(a *App) (err error) { {{range $modelName2, 
 }
 {{end}}
 {{range $column, $options := $model.Columns}} {{if $options.IsArray}}
-func (a *App) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*app.{{$options.GoType}}) error {
+func (a *App) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*app.{{$options.GoType}}) error {
 	for _, item := range items {
-		id, err := a.add{{$options.GoType}}(item)
+		id, err := a.add{{$options.GoType}}({{if not $model.Shared}}isolatedEntityID, {{end}}item)
 		if err != nil {
 			return err
 		}
@@ -292,7 +292,7 @@ func (a *App) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string
 	return nil
 }
 
-func (a *App) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error {
+func (a *App) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error {
 	for _, item := range items {
 		if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1 AND {{NameSQL $column}}_id=$2`, id, item); err != nil {
 			return err
@@ -311,18 +311,18 @@ func (a *App) {{$modelName}}AccessManager(am *app.AccessManager) error {
 	return nil
 }
 
-func (a *App) get{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}) (*app.{{$modelName}}, error) { 
+func (a *App) get{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
 	var m {{$modelName}}
 	if err := a.db.Get(&m, `SELECT {{$model.SQLSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1`, id); err != nil {
 		return nil, err
 	}{{if $model.HaveLazyLoading}}
-	if err := m.LazyLoading(a); err != nil {
+	if err := m.LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
 		return nil, err
 	}{{end}}
 	return app{{$modelName}}(m), nil
 }
 
-func (a *App) add{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profileID string, {{end}}m *app.{{$modelName}}) ({{if $model.IDIsUUID}}string{{else}}int64{{end}}, error) {
+func (a *App) add{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) ({{if $model.IDIsUUID}}string{{else}}int64{{end}}, error) {
 	{{if $model.IDIsUUID}}{{$modelName}}ID := {{if $model.IDFromProfile}}profileID{{else}}uuid.New(){{end}}{{else}}var {{$modelName}}ID int64{{end}}	
 	{{if $model.HaveCreatedBy}}m.CreatedBy = profileID
 	{{end}}

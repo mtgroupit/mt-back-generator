@@ -2,8 +2,8 @@
 package app
 
 {{range $i, $method := $model.Methods}}{{if (IsCustomMethod $method)}}
-func (a *app) {{$method}}{{$modelName}}(m *{{$modelName}}) error {
-	return a.cust.{{$method}}{{$modelName}}(m)
+func (a *app) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) error {
+	return a.cust.{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}m)
 }
 {{end}}{{end}}
 

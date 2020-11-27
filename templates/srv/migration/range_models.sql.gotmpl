@@ -1,7 +1,8 @@
 -- +goose Up {{$modelName := .CurModel}} {{$model := (index $.Models $modelName)}}
 CREATE TABLE {{NameSQL $modelName}}s
 ({{range $j, $psqlParams := $model.Psql}}{{if not $psqlParams.IsArray}}
-    {{$psqlParams.SQLName}} {{$psqlParams.TypeSQL}}{{if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}{{if $psqlParams.Unique}} UNIQUE{{end}}{{if $psqlParams.IsStruct}}  REFERENCES {{NameSQL $psqlParams.Type}}s({{$psqlParams.FK}}){{end}}{{if not $psqlParams.Last}},{{end}}{{end}}{{end}}
+    {{$psqlParams.SQLName}} {{$psqlParams.TypeSQL}}{{if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}{{if $psqlParams.Unique}} UNIQUE{{end}}{{if $psqlParams.IsStruct}}  REFERENCES {{NameSQL $psqlParams.Type}}s({{$psqlParams.FK}}){{end}}{{if not $psqlParams.Last}},{{end}}{{end}}{{end}}{{if not $model.Shared}},
+    isolated_entity_id uuid NOT NULL{{end}}
 );
 CREATE TABLE {{NameSQL $modelName}}s_access 
 (
@@ -17,9 +18,9 @@ CREATE TABLE {{NameSQL $modelName}}s_access
 CREATE TABLE {{$et.Name}}
 (
     {{$et.FieldIDOne}} {{$et.TypeIDOne}} NOT NULL REFERENCES {{NameSQL $et.RefTableOne}}s({{$et.RefIDOne}}),
-    {{$et.FieldIDTwo}} {{$et.TypeIDTwo}} NOT NULL REFERENCES {{NameSQL $et.RefTableTwo}}s({{$et.RefIDTwo}})
+    {{$et.FieldIDTwo}} {{$et.TypeIDTwo}} NOT NULL REFERENCES {{NameSQL $et.RefTableTwo}}s({{$et.RefIDTwo}}){{if not $model.Shared}},
+    isolated_entity_id uuid NOT NULL{{end}}
 );{{end}}{{end}}
-
 
 
 -- +goose Down{{range $i, $et := $.ExtraTables}}{{if eq $et.RefTableOne $modelName}}
