@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"strconv"
+	"strings"
 	"time"
 
 	"{{.Module}}/migration"
@@ -125,4 +126,9 @@ func toString(value interface{}) string {
 		return "false"
 	}
 	return ""
+}
+
+// contains is equal to strings.Contains but case insensitive
+func contains(str, substr string) bool  {
+	return strings.Contains(strings.ToLower(str), strings.ToLower(substr))
 }

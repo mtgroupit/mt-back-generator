@@ -241,6 +241,9 @@ definitions:  {{range $modelName, $model := $.Models}}
     properties:
       include:
         type: boolean
+      logic:
+        description: "Comparing option: true == 'AND', false == 'OR'"
+        type: boolean
       key:
         type: string
       value:

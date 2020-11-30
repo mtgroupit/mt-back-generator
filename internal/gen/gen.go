@@ -59,8 +59,14 @@ var goTmplFuncs = template.FuncMap{
 		}
 		return false
 	},
-	"FormatName": formatName,
+	"FormatName":       formatName,
 	"IsStandartColumn": parser.IsStandartColumn,
+	"IsNotStrictFilter": func(model models.Model, column string) bool {
+		if model.Columns[column].Type != "string" || model.Columns[column].StrictFilter {
+			return false
+		}
+		return true
+	},
 }
 
 // Srv - generate dir with service

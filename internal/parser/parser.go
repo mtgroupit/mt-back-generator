@@ -160,6 +160,12 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			}
 
+			if options.StrictFilter {
+				if options.Type != "string" {
+					return nil, errors.Errorf(`Model: "%s". Column: "%s". "strict-sorting" option not available for non "string" columns`, name, column)
+				}
+			}
+
 			if options.Format == "date-time" {
 				cfg.HaveDateTime = true
 			}
@@ -304,7 +310,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		for column, options := range model.Columns {
 			if !options.IsStruct {
 				SQLSelect = append(SQLSelect, NameSQL(options.TitleName))
-				sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName), column, "not_"+column, "not_"+column, NameSQL(options.TitleName), "not_"+column))
+				if options.Type != "string" || options.StrictFilter {
+					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName), column, "not_"+column, "not_"+column, NameSQL(options.TitleName), "not_"+column))
+				} else {
+					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) LIKE LOWER(:%s)) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, column, NameSQL(options.TitleName), column, "not_"+column, "not_"+column, NameSQL(options.TitleName), "not_"+column))
+				}
 				if options.TitleName != "ID" {
 					sqlAdd = append(sqlAdd, NameSQL(options.TitleName))
 					sqlAddExecParams = append(sqlAddExecParams, "m."+options.TitleName)
@@ -734,7 +744,11 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 						if !options.IsStruct {
 							SQLSelect = append(SQLSelect, NameSQL(column))
 							if needFilter {
-								sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName), column, "not_"+column, "not_"+column, NameSQL(options.TitleName), "not_"+column))
+								if options.Type != "string" || options.StrictFilter {
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName), column, "not_"+column, "not_"+column, NameSQL(options.TitleName), "not_"+column))
+								} else {
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) LIKE LOWER(:%s)) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, column, NameSQL(options.TitleName), column, "not_"+column, "not_"+column, NameSQL(options.TitleName), "not_"+column))
+								}
 							}
 						} else {
 							if !options.IsArray {
