@@ -5,7 +5,7 @@ import (
 	"database/sql"	{{if $model.HaveLazyLoading }}
 	"strings"{{end}}{{if $haveNestedSorts}}
 	"sort"{{end}}{{if or $model.HaveCreatedAt $model.HaveModifiedAt}}
-	"time"{{end}}{{if and $model.HaveLazyLoading $model.HaveListMethod}}
+	"time"{{end}}{{if $model.HaveListMethod}}
 	"fmt"{{end}}
 
 	"{{.Module}}/internal/app"
@@ -68,7 +68,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	return {{if $model.ReturnWhenEdit}}app{{$modelName}}(edited), {{end}}nil
 }{{end}}
 
-{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*app.Filter, sortBy, orderBy string) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
+{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*app.Filter, logicFilter bool, sortBy, orderBy string) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
 	ms := []{{$modelName}}{}
 	warnings := []string{}
 
@@ -107,21 +107,27 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 
 	customFilters := []*app.Filter{}
 	{{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}
-	for _, filter := range filters {
-		switch filter.Key { {{if IsCustomList $method}}{{range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
-		case "{{$column}}":
-			if filter.Include {
-				mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-			} else {
-				mapQuery["not_{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-			}{{end}}{{else}}{{range $column, $options := $model.Columns}}{{if not $options.IsArray}}
-		case "{{$column}}":
-			if filter.Include {
-				mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-			} else {
-				mapQuery["not_{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-			}{{end}}{{end}}{{end}}
-		default:
+	if logicFilter {
+		for _, filter := range filters {
+			switch filter.Key { {{if IsCustomList $method}}{{range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
+			case "{{$column}}":
+				if filter.Include {
+					mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+				} else {
+					mapQuery["not_{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+				}{{end}}{{else}}{{range $column, $options := $model.Columns}}{{if not $options.IsArray}}
+			case "{{$column}}":
+				if filter.Include {
+					mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+				} else {
+					mapQuery["not_{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+				}{{end}}{{end}}{{end}}
+			default:
+				customFilters = append(customFilters, filter)
+			}
+		}
+	} else {
+		for _, filter := range filters {
 			customFilters = append(customFilters, filter)
 		}
 	}{{end}}
@@ -145,8 +151,8 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		ms = append(ms, m)
 	}
 	
-	{{if $model.HaveLazyLoading}}
 	result := []{{$modelName}}{}
+	{{if $model.HaveLazyLoading}}
 	{{if (IsCustomList $method)}}{{if ((index $model.MethodsProps $i).NeedLazyLoading)}}
 	for i := range ms {
 		if err := ms[i].LazyLoading{{$method}}({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
@@ -156,12 +162,19 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		for j := 0; j < len(customFilters); j++ {
 			var validFilter bool
 			filterKey := customFilters[j].Key
-			ok, validFilter = ms[i].{{if $model.HaveLazyLoading}}Nested{{end}}Filter(customFilters[j])
+			{{if $model.HaveLazyLoading}}if !logicFilter && !strings.Contains(customFilters[j].Key, ".") {
+				ok, validFilter = ms[i].Filter(customFilters[j])
+			} else {
+				ok, validFilter = ms[i].NestedFilter(customFilters[j])
+			}{{else}}ok, validFilter = ms[i].Filter(customFilters[j]){{end}}
 			customFilters[j].Key = filterKey
 			if !validFilter {
 				warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
 				customFilters = append(customFilters[:j], customFilters[j+1:]...)
 				j--
+			}
+			if (!ok && logicFilter) || (ok && !logicFilter) {
+				break
 			}
 		}
 		if ok {
@@ -176,21 +189,43 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		for j := 0; j < len(customFilters); j++ {
 			var validFilter bool
 			filterKey := customFilters[j].Key
-			ok, validFilter = ms[i].{{if $model.HaveLazyLoading}}Nested{{end}}Filter(customFilters[j])
+			{{if $model.HaveLazyLoading}}if !logicFilter && !strings.Contains(customFilters[j].Key, ".") {
+				ok, validFilter = ms[i].Filter(customFilters[j])
+			} else {
+				ok, validFilter = ms[i].NestedFilter(customFilters[j])
+			}{{else}}ok, validFilter = ms[i].Filter(customFilters[j]){{end}}
 			customFilters[j].Key = filterKey
 			if !validFilter {
 				warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
 				customFilters = append(customFilters[:j], customFilters[j+1:]...)
 				j--
 			}
-			if !ok {
+			if (!ok && logicFilter) || (ok && !logicFilter) {
 				break
 			}
 		}
 		if ok {
 			result = append(result, ms[i])
 		}
-	}{{end}}{{end}}
+	}{{end}}{{else}}
+	for i := range ms {
+		ok := true
+		for j := 0; j < len(customFilters); j++ {
+			var validFilter bool
+			ok, validFilter = ms[i].Filter(customFilters[j])
+			if !validFilter {
+				warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
+				customFilters = append(customFilters[:j], customFilters[j+1:]...)
+				j--
+			}
+			if (!ok && logicFilter) || (ok && !logicFilter) {
+				break
+			}
+		}
+		if ok {
+			result = append(result, ms[i])
+		}
+	}{{end}}
 	{{if $haveNestedSorts}}
 	if nestedSort {
 		var orderByASC bool
@@ -212,7 +247,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		}
 	}{{end}}
 
-	return app{{$modelName}}s({{if $model.HaveLazyLoading}}result{{else}}ms{{end}}),{{if $model.DetailedPagination}} count,{{end}} warnings, nil
+	return app{{$modelName}}s(result),{{if $model.DetailedPagination}} count,{{end}} warnings, nil
 }{{end}}
 {{if and (IsCustomList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}{{range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
 {{if $nestedObj.IsFirstForLazyLoading}}func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}) LazyLoading{{$method}}{{$nestedObj.Path}}({{if not $model.Shared}}isolatedEntityID string, {{end}}a *App) (err error) { {{end}} {{$model2 := (index $.Models $nestedObj.Name)}}{{$options := (index $model2.Columns (LowerTitle $nestedObj.Name))}}{{if  $nestedObj.IsArray}}

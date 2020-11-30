@@ -19,8 +19,8 @@ type {{$modelName}} struct { {{range $name, $options := $model.Columns}}
 {{if or (eq $method "Edit") (IsCustomEdit $method)}}func (a *app) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}} {
 	return a.appl.{{$method}}{{$modelName}}(id, {{if $model.HaveModifiedBy}}profID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
 }{{end}}
-{{if or (eq $method "List") (IsCustomList $method)}}func (a *app) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*Filter, sortBy, orderBy string) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error) {
-	return a.appl.{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}offset, limit, filters, sortBy, orderBy)
+{{if or (eq $method "List") (IsCustomList $method)}}func (a *app) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*Filter, logicFilter bool, sortBy, orderBy string) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error) {
+	return a.appl.{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}offset, limit, filters, logicFilter, sortBy, orderBy)
 }{{end}}
 {{end}}{{end}}
 {{range $column, $options := $model.Columns}} {{if $options.IsArray}}
