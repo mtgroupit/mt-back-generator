@@ -68,7 +68,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	return {{if $model.ReturnWhenEdit}}app{{$modelName}}(edited), {{end}}nil
 }{{end}}
 
-{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*app.Filter, sortBy,orderBy string) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
+{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*app.Filter, sortBy, orderBy string) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
 	ms := []{{$modelName}}{}
 	warnings := []string{}
 
@@ -155,7 +155,9 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		ok := true
 		for j := 0; j < len(customFilters); j++ {
 			var validFilter bool
+			filterKey := customFilters[j].Key
 			ok, validFilter = ms[i].{{if $model.HaveLazyLoading}}Nested{{end}}Filter(customFilters[j])
+			customFilters[j].Key = filterKey
 			if !validFilter {
 				warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
 				customFilters = append(customFilters[:j], customFilters[j+1:]...)
@@ -173,7 +175,9 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		ok := true
 		for j := 0; j < len(customFilters); j++ {
 			var validFilter bool
+			filterKey := customFilters[j].Key
 			ok, validFilter = ms[i].{{if $model.HaveLazyLoading}}Nested{{end}}Filter(customFilters[j])
+			customFilters[j].Key = filterKey
 			if !validFilter {
 				warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
 				customFilters = append(customFilters[:j], customFilters[j+1:]...)
@@ -376,6 +380,8 @@ func (m *{{$modelName}}) Filter(filter *app.Filter) (ok, filterIsValid bool) {
 		value := toString(m.{{$options.TitleName}}.{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}})
 		if ({{if or (ne $options.Type "string") $options.StrictFilter}}value == filter.Value{{else}}contains(value, filter.Value){{end}} && filter.Include) || ({{if or (ne $options.Type "string") $options.StrictFilter}}value != filter.Value{{else}}!contains(value, filter.Value){{end}} && !filter.Include) {
 			ok, filterIsValid = true, true
+		} else {
+			ok, filterIsValid = false, true
 		}{{end}}{{end}}
 	default:
 		ok, filterIsValid = true, false
