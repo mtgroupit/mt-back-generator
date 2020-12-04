@@ -79,8 +79,9 @@ func Srv(dir string, cfg *models.Config) error {
 	if err := ensureDir(dir, ""); err != nil {
 		return err
 	}
+	fmt.Println(cfg.Name)
 
-	if err := buildTreeDirs(dir, formatName(cfg.Name)); err != nil {
+	if err := buildTreeDirs(dir, cfg.Name); err != nil {
 		return err
 	}
 
@@ -88,7 +89,7 @@ func Srv(dir string, cfg *models.Config) error {
 	if err != nil {
 		return err
 	}
-	if err := gen(abs.String(), path.Join(dir, formatName(cfg.Name)), *cfg); err != nil {
+	if err := gen(abs.String(), path.Join(dir, cfg.Name), *cfg); err != nil {
 		return err
 	}
 
