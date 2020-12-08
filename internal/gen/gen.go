@@ -122,6 +122,9 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 		switch {
 		case strings.HasSuffix(name, ".sql.gotmpl"):
 			counter := 0
+			if cfg.Debug {
+				counter = 1
+			}
 			for i := 0; i <= cfg.MaxDeepNesting; i++ {
 				for modelName, model := range cfg.Models {
 					if model.DeepNesting == i {
@@ -189,6 +192,9 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 		}
 	} else {
 		if !cfg.HaveCustomMethod && strings.HasSuffix(name, "custom.go.gotmpl") {
+			return nil
+		}
+		if !cfg.Debug && name == "00001_reset_all.sql.gotmpl" {
 			return nil
 		}
 		fileName := name[:len(name)-len(".gotmpl")]

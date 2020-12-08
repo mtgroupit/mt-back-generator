@@ -76,22 +76,21 @@ func Up(ctx context.Context, dir string, cfg pqx.Config) error {
 	return nil
 }
 
-// DownAll rolls back all migrations.
-func DownAll(ctx context.Context, dir string, cfg pqx.Config) error {
+// ResetAll rolls back all migrations and applies all available migrations.
+func ResetAll(ctx context.Context, dir string, cfg pqx.Config) error {
 	gooseMu.Lock()
 	defer gooseMu.Unlock()
 
 	db, err := connect(ctx, cfg)
 	if err != nil {
+		log.Warn("connect!")
 		return err
 	}
 	defer log.WarnIfFail(db.Close)
 
-	if _, err := db.Exec(`DROP SCHEMA public CASCADE`); err != nil {
-		return err
-	}
-	if _, err := db.Exec(`CREATE SCHEMA public`); err != nil {
-		return err
+	err = goose.DownTo(db, dir, 0)
+	if err != nil {
+		return errors.Wrapf(err, "failed migration down")
 	}
 
 	return nil

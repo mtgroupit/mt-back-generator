@@ -46,7 +46,7 @@ type {{$et.RefTableOne}}{{$et.RefTableTwo}} struct{
 
 func connect(ctx context.Context, cfg pqx.Config, migrationDir string{{if .Debug}}, resetDB bool{{end}}) (*sqlxx.DB, error) { {{if .Debug}}
 	if resetDB {
-		if err := migration.DownAll(ctx, migrationDir, cfg); err != nil {
+		if err := migration.ResetAll(ctx, migrationDir, cfg); err != nil {
 			return nil, err
 		}
 	}{{end}}

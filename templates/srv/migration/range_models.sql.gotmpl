@@ -24,6 +24,6 @@ CREATE TABLE {{$et.Name}}
 
 
 -- +goose Down{{range $i, $et := $.ExtraTables}}{{if eq $et.RefTableOne $modelName}}
-DROP TABLE {{$et.Name}};{{end}}{{end}}
-DROP TABLE {{NameSQL $modelName}}s;
-DROP TABLE {{NameSQL $modelName}}s_access;
+DROP TABLE IF EXISTS {{$et.Name}};{{end}}{{end}}
+DROP TABLE IF EXISTS {{NameSQL $modelName}}s;
+DROP TABLE IF EXISTS {{NameSQL $modelName}}s_access;

@@ -1,0 +1,7 @@
+-- +goose Up  
+;
+-- +goose Down{{range $i, $et := $.ExtraTables}}
+DROP TABLE IF EXISTS {{$et.Name}};{{end}}
+{{range $modelName, $model := $.Models}}
+DROP TABLE IF EXISTS {{NameSQL $modelName}}s;
+DROP TABLE IF EXISTS {{NameSQL $modelName}}s_access;{{end}}
