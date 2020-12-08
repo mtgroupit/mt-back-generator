@@ -53,9 +53,9 @@ paths:
                 type: {{if $model.IDIsUUID}}string{{else}}{{(index $model.Columns "id").Type}}{{end}}{{else}}{{if or (eq $method "List") (IsCustomList $method)}}
             $ref: "#/definitions/listParams" {{else}}
             {{if or (eq $method "Edit") (IsCustomEdit $method)}}type: object
-            properties:
+            properties:{{if not $model.IDFromProfile}}
               id:
-                type: string 
+                type: {{if $model.IDIsUUID}}string{{else}}int64{{end}} {{end}}
               data:{{if IsCustomEdit $method}}
                 type: object
                 properties:{{range $name, $options := $model.Columns}}{{if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}{{if $options.IsStruct}}{{if $options.IsArray}}  
