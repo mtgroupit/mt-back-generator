@@ -10,7 +10,7 @@ import (
 
 	"{{.Module}}/migration"
 
-	{{$inputed := false}}{{range $modelName, $model := $.Models}}{{range $name, $options := $model.Columns}}{{if and $model.IDIsUUID $options.IsArray (not $inputed)}}"github.com/google/uuid"{{$inputed = true}}{{end}}{{end}}{{end}}
+	{{$inputed := false}}{{range $modelName, $model := $.Models}}{{range $name, $options := $model.Columns}}{{if and $model.IDIsUUID (and $options.IsArray $options.IsStruct) (not $inputed)}}"github.com/google/uuid"{{$inputed = true}}{{end}}{{end}}{{end}}
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"github.com/powerman/pqx"

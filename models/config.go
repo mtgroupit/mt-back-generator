@@ -84,11 +84,12 @@ type Model struct {
 	Psql               []PsqlParams
 	DeepNesting        int
 
-	HaveLazyLoading  bool
-	IDIsUUID         bool
-	HaveEmail        bool
-	HaveListMethod   bool
-	HaveCustomMethod bool
+	HaveLazyLoading         bool
+	IDIsUUID                bool
+	HaveEmail               bool
+	HaveListMethod          bool
+	HaveCustomMethod        bool
+	HaveArrayOfStandatrType bool
 
 	SQLSelectStr      string
 	SQLWhereParams    string

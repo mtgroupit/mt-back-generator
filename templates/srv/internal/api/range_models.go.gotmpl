@@ -46,7 +46,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 	if params.Body.Data.{{$options.TitleName}} != "" {
 		in.{{$options.TitleName}} = &app.{{$options.GoType}}{ID: params.Body.Data.{{$options.TitleName}}}
 	}{{end}}
-	{{end}}{{end}}{{range $name, $options := $model.Columns}}{{if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}{{if $options.IsArray}}
+	{{end}}{{end}}{{range $name, $options := $model.Columns}}{{if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}{{if and $options.IsArray $options.IsStruct}}
 	if len(params.Body.Data.{{$options.TitleName}}) > 0 {
 		for _, id := range params.Body.Data.{{$options.TitleName}} {
 			in.{{$options.TitleName}} = append(in.{{$options.TitleName}}, &app.{{$options.GoType}}{
@@ -75,7 +75,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 	}){{end}}
 }
 {{end}}{{end}}
-{{range $column, $options := $model.Columns}} {{if $options.IsArray}}
+{{range $column, $options := $model.Columns}} {{if and $options.IsArray $options.IsStruct}}
 func (svc *service) Add{{Title $column}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.Add{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
 	{{if or $model.HaveModifiedBy (not $model.Shared)}}prof := profile.(*extauthapi.Profile)
 	{{end}}err := svc.app.Add{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.ID.String(), {{end}}params.Body.ItemsID, app{{$options.GoType}}sAdd(params.Body.Items))
@@ -176,7 +176,7 @@ func app{{$modelName}}Add(a *models.{{$modelName}}Add) *app.{{$modelName}} {
 	if a.{{$options.TitleName}} != "" {
 		{{LowerTitle $modelName}}.{{$options.TitleName}} = &app.{{$options.GoType}}{ID: a.{{$options.TitleName}}}
 	}{{end}}{{end}}
-	{{range $name, $options := $model.Columns}}{{if $options.IsArray}}
+	{{range $name, $options := $model.Columns}}{{if  and $options.IsArray $options.IsStruct}}
 	if len(a.{{$options.TitleName}}) > 0 {
 		for _, id := range a.{{$options.TitleName}} {
 			{{LowerTitle $modelName}}.{{$options.TitleName}} = append({{LowerTitle $modelName}}.{{$options.TitleName}}, &app.{{$options.GoType}}{

@@ -6,7 +6,8 @@ import (
 	"strings"{{end}}{{if $haveNestedSorts}}
 	"sort"{{end}}{{if or $model.HaveCreatedAt $model.HaveModifiedAt}}
 	"time"{{end}}{{if $model.HaveListMethod}}
-	"fmt"{{end}}
+	"fmt"{{end}}{{if $model.HaveArrayOfStandatrType}}
+	"encoding/json"{{end}}
 
 	"{{.Module}}/internal/app"
 
@@ -17,8 +18,10 @@ import (
 
 type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlParams.IsStruct}}
 	{{if not $psqlParams.IsArray}}{{$psqlParams.Name}}ID {{if eq  $psqlParams.TypeSQL "uuid"}}uuid.UUID{{else}}int64{{end}} `db:"{{$psqlParams.SQLName}}"`{{end}}
-	{{$psqlParams.Name}} {{if $psqlParams.IsArray}}[]{{end}}{{$psqlParams.Type}}{{else}}
-	{{$psqlParams.Name}} {{if eq  $psqlParams.TypeSQL "uuid"}}uuid.UUID{{else}}sql.Null{{Title $psqlParams.Type}}{{end}} `db:"{{$psqlParams.SQLName}}"` {{end}}{{end}}
+	{{$psqlParams.Name}} {{if $psqlParams.IsArray}}[]{{end}}{{$psqlParams.Type}}{{else}}{{if not $psqlParams.IsArray}}
+	{{$psqlParams.Name}} {{if eq  $psqlParams.TypeSQL "uuid"}}uuid.UUID{{else}}sql.Null{{Title $psqlParams.Type}}{{end}} `db:"{{$psqlParams.SQLName}}"` {{else}}
+	{{$psqlParams.Name}}JSON []byte `db:"{{$psqlParams.SQLName}}"`
+	{{$psqlParams.Name}} []{{$psqlParams.Type}} {{end}}{{end}}{{end}}
 }
 
 {{range $i, $method := $model.Methods}}{{if not (IsCustomMethod $method)}}
@@ -32,7 +35,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	}
 	return a.get{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}})
 }{{end}}
-{{if eq $method "Delete"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) error { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
+{{if eq $method "Delete"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) error { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if and $options.IsArray $options.IsStruct}}
 	if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1`, id); err != nil {
 		return err
 	}{{end}}{{end}}{{end}}{{end}} {{range $_, $bind := $model.Binds}}{{if $bind.IsArray}}
@@ -47,11 +50,12 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	}
 	return nil
 }{{end}}
-{{if or (eq $method "Edit") (IsCustomEdit $method)}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  { {{range $column, $options := $model.Columns}}{{if and (and $options.IsStruct (not $options.IsArray)) (or (not (IsCustomEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsCustomEdit $method)))}}
+{{if or (eq $method "Edit") (IsCustomEdit $method)}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  { {{range $column, $options := $model.Columns}}{{if or (not (IsCustomEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsCustomEdit $method))}}{{if and $options.IsStruct (not $options.IsArray)}}
 	var {{$column}}ID interface{}
 	if m.{{$options.TitleName}} != nil {
 		{{$column}}ID = m.{{$options.TitleName}}.ID
-	}{{end}}{{end}}{{if $model.HaveModifiedAt}}
+	}{{end}}{{if and $options.IsArray (not $options.IsStruct)}}
+	{{$options.TitleName}}JSON, _ := json.Marshal(m.{{$options.TitleName}}){{end}}{{end}}{{end}}{{if $model.HaveModifiedAt}}
 	m.ModifiedAt = time.Now().Format(time.RFC3339){{end}}{{if $model.HaveModifiedBy}}
 	m.ModifiedBy = profileID{{end}}
 	if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLEditStr}}{{else}}{{$model.SQLEditStr}}{{end}} WHERE id=$1`, id, {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLEditExecParams}}{{end}}); err != nil {
@@ -150,6 +154,12 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		err = rows.StructScan(&m)
 		ms = append(ms, m)
 	}
+
+	{{if $model.HaveArrayOfStandatrType}}for i := range ms { {{range $column, $options := $model.Columns}}{{if and $options.IsArray (not $options.IsStruct)}}
+		if err := json.Unmarshal(ms[i].{{$options.TitleName}}JSON, &ms[i].{{$options.TitleName}}); err != nil {
+			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
+		}{{end}}{{end}}
+	}{{end}}
 	
 	result := []{{$modelName}}{}
 	{{if $model.HaveLazyLoading}}
@@ -283,7 +293,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 {{end}}{{end}}
 
 {{if $model.HaveLazyLoading}}
-func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID string, {{end}}a *App) (err error) { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if  $options.IsArray}}
+func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID string, {{end}}a *App) (err error) { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if and $options.IsArray $options.IsStruct}}
 	slice{{$options.TitleName}} := []{{$modelName}}{{$options.GoType}}{}
 	if err = a.db.Select(&slice{{$options.TitleName}}, `SELECT * FROM {{NameSQL $modelName}}_{{NameSQL $options.TitleName}} WHERE {{NameSQL $modelName}}_id=$1`, m.ID); err != nil {
 		return
@@ -311,7 +321,7 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 	return nil
 }
 {{end}}
-{{range $column, $options := $model.Columns}} {{if $options.IsArray}}
+{{range $column, $options := $model.Columns}} {{if  and $options.IsArray $options.IsStruct}}
 func (a *App) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*app.{{$options.GoType}}) error {
 	for _, item := range items {
 		id, err := a.add{{$options.GoType}}({{if not $model.Shared}}isolatedEntityID, {{end}}item)
@@ -354,7 +364,10 @@ func (a *App) get{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{en
 	var m {{$modelName}}
 	if err := a.db.Get(&m, `SELECT {{$model.SQLSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1`, id); err != nil {
 		return nil, err
-	}{{if $model.HaveLazyLoading}}
+	}{{range $column, $options := $model.Columns}}{{if and $options.IsArray (not $options.IsStruct)}}
+	if err := json.Unmarshal(m.{{$options.TitleName}}JSON, &m.{{$options.TitleName}}); err != nil {
+		return nil, err
+	}{{end}}{{end}}{{if $model.HaveLazyLoading}}
 	if err := m.LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
 		return nil, err
 	}{{end}}
@@ -370,10 +383,11 @@ func (a *App) add{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedB
 	var {{$column}}ID interface{}
 	if m.{{$options.TitleName}} != nil {
 		{{$column}}ID = m.{{$options.TitleName}}.ID
-	}{{end}}{{end}}
+	}{{end}}{{if and $options.IsArray (not $options.IsStruct)}}
+	{{$options.TitleName}}JSON, _ := json.Marshal(m.{{$options.TitleName}}){{end}}{{end}}
 	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{NameSQL $modelName}}s{{$model.SQLAddStr}} RETURNING id`, {{$model.SQLAddExecParams}}{{if $model.IDIsUUID}}, {{$modelName}}ID{{end}}); err != nil {
 		return {{if $model.IDIsUUID}}""{{else}}0{{end}}, err
-	}{{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if $options.IsArray}}
+	}{{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if and $options.IsArray $options.IsStruct}}
 	for _, m := range m.{{$options.TitleName}} {
 		if _, err := a.db.Exec(`INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}({{NameSQL $modelName}}_id, {{NameSQL $column}}_id) VALUES ($1, $2)`, {{$modelName}}ID, m.ID); err != nil {
 			return {{if $model.IDIsUUID}}""{{else}}0{{end}}, err
@@ -412,12 +426,14 @@ func (m *{{$modelName}}) NestedFilter(filter *app.Filter) (ok, filterIsValid boo
 func (m *{{$modelName}}) Filter(filter *app.Filter) (ok, filterIsValid bool) {
 	switch filter.Key { {{range $column, $options := $model.Columns}}{{if not $options.IsStruct}}
 	case "{{$column}}":
-		value := toString(m.{{$options.TitleName}}.{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}})
+		{{if $options.IsArray}}for _, elem := range m.{{$options.TitleName}} { {{end}}
+		value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}})
 		if ({{if or (ne $options.Type "string") $options.StrictFilter}}value == filter.Value{{else}}contains(value, filter.Value){{end}} && filter.Include) || ({{if or (ne $options.Type "string") $options.StrictFilter}}value != filter.Value{{else}}!contains(value, filter.Value){{end}} && !filter.Include) {
 			ok, filterIsValid = true, true
 		} else {
 			ok, filterIsValid = false, true
-		}{{end}}{{end}}
+		}{{if $options.IsArray}}
+		}{{end}}{{end}}{{end}}
 	default:
 		ok, filterIsValid = true, false
 	}
@@ -426,7 +442,7 @@ func (m *{{$modelName}}) Filter(filter *app.Filter) (ok, filterIsValid bool) {
 
 func app{{$modelName}}(m {{$modelName}}) *app.{{$modelName}} {
 	return &app.{{$modelName}}{ {{range $name, $options := $model.Columns}}
-		{{$options.TitleName}}: {{if $options.IsStruct}}app{{$options.GoType}}{{if $options.IsArray}}s{{end}}(m.{{$options.TitleName}}){{else}}m.{{$options.TitleName}}{{if eq $options.TitleName "ID"}}{{if $model.IDIsUUID}}.String(){{end}}{{else}}.{{Title $options.GoType}}{{end}}{{end}}, {{end}}
+		{{$options.TitleName}}: {{if $options.IsStruct}}app{{$options.GoType}}{{if $options.IsArray}}s{{end}}(m.{{$options.TitleName}}){{else}}m.{{$options.TitleName}}{{if eq $options.TitleName "ID"}}{{if $model.IDIsUUID}}.String(){{end}}{{else}}{{if not $options.IsArray}}.{{Title $options.GoType}}{{end}}{{end}}{{end}}, {{end}}
 	}
 }
 

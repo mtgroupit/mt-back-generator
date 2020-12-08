@@ -17,6 +17,17 @@ import (
 
 var isCorectName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]+$`).MatchString
 
+var standartTypes = []string{"string", "int", "int32", "int64"}
+
+func isStandartTypes(t string) bool {
+	for i := range standartTypes {
+		if t == standartTypes[i] {
+			return true
+		}
+	}
+	return false
+}
+
 // ReadYAMLCfg create models.Config from configFile
 func ReadYAMLCfg(file string) (*models.Config, error) {
 	cfg := models.Config{}
@@ -109,7 +120,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		model.MethodsProps = props
 
 		psql := []models.PsqlParams{}
-		var indexLastNotArr int
+		var indexLastNotArrOfStruct int
 		var haveDefaultSort bool
 		for column, options := range model.Columns {
 			switch column {
@@ -139,6 +150,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				if options.IsStruct {
 					return nil, errors.Errorf(`Model: "%s". Column: "%s". Structure can not be as default column for sorting`, name, column)
 				}
+				if options.IsArray {
+					return nil, errors.Errorf(`Model: "%s". Column: "%s". Array can not be as default column for sorting`, name, column)
+				}
 				if !options.SortOn {
 					return nil, errors.Errorf(`Model: "%s". Column "%s" can not be as default column for sorting because sorting is not enabled for this column`, name, column)
 				}
@@ -161,7 +175,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			}
 
 			if options.StrictFilter {
-				if options.Type != "string" {
+				if options.Type != "string" && options.GoType != "string" {
 					return nil, errors.Errorf(`Model: "%s". Column: "%s". "strict-sorting" option not available for non "string" columns`, name, column)
 				}
 			}
@@ -174,7 +188,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			}
 
 			if options.Enum != "" {
-				if (options.Type == "string" || options.Type == "int" || options.Type == "int32" || options.Type == "int64") && column != "id" {
+				if isStandartTypes(options.Type) && column != "id" {
 					if options.Type == "string" {
 						if !regexp.MustCompile(`^\[\s*('.+'\s*,\s*)*'.+'+\s*\]$`).Match([]byte(options.Enum)) {
 							return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum for strings must be in this format: ['asc', 'desc'] and inputed as string`, name, column)
@@ -185,7 +199,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 						}
 					}
 				} else {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum available only for non id and types: 'string', 'int', 'int32' and 'int64'`, name, column)
+					return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum available only for non id and types: %s`, name, column, standartTypes)
 				}
 			}
 
@@ -196,32 +210,35 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					FieldName: column,
 					IsArray:   options.IsArray,
 				}
-			}
+				if options.IsArray {
+					et := models.ExtraTable{}
 
-			if options.IsArray {
-				et := models.ExtraTable{}
+					et.Name = NameSQL(name) + "_" + NameSQL(column)
 
-				et.Name = NameSQL(name) + "_" + NameSQL(column)
+					et.RefTableOne = strings.Title(name)
+					et.RefIDOne = "id"
+					et.FieldIDOne = NameSQL(name) + "_id"
+					if cfg.Models[name].Columns["id"].Type == "uuid" {
+						et.TypeIDOne = "uuid"
+					} else {
+						et.TypeIDOne = "integer"
+					}
 
-				et.RefTableOne = strings.Title(name)
-				et.RefIDOne = "id"
-				et.FieldIDOne = NameSQL(name) + "_id"
-				if cfg.Models[name].Columns["id"].Type == "uuid" {
-					et.TypeIDOne = "uuid"
-				} else {
-					et.TypeIDOne = "integer"
+					et.RefTableTwo = options.GoType
+					et.RefIDTwo = "id"
+					et.FieldIDTwo = NameSQL(column) + "_id"
+					if cfg.Models[LowerTitle(options.GoType)].Columns["id"].Type == "uuid" {
+						et.TypeIDTwo = "uuid"
+					} else {
+						et.TypeIDTwo = "integer"
+					}
+
+					cfg.ExtraTables = append(cfg.ExtraTables, et)
 				}
-
-				et.RefTableTwo = options.GoType
-				et.RefIDTwo = "id"
-				et.FieldIDTwo = NameSQL(column) + "_id"
-				if cfg.Models[LowerTitle(options.GoType)].Columns["id"].Type == "uuid" {
-					et.TypeIDTwo = "uuid"
-				} else {
-					et.TypeIDTwo = "integer"
+			} else {
+				if options.IsArray {
+					model.HaveArrayOfStandatrType = true
 				}
-
-				cfg.ExtraTables = append(cfg.ExtraTables, et)
 			}
 
 			pp := models.PsqlParams{}
@@ -260,7 +277,16 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					if options.Type == "int" {
 						options.Type = "int32"
 					}
-					options.GoType = options.Type
+					if !options.IsArray {
+						options.GoType = options.Type
+					} else {
+						if options.GoType == "int" {
+							options.Type = "int32"
+							options.GoType = "int32"
+						} else {
+							options.Type = options.GoType
+						}
+					}
 					switch options.Type {
 					case "int32", "int64":
 						options.Format = options.Type
@@ -271,7 +297,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 
 				pp.Type = options.GoType
-
 				pp.Name = options.TitleName
 				if pp.IsStruct {
 					pp.SQLName = NameSQL(column) + "_id"
@@ -282,12 +307,17 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 						pp.TypeSQL = "integer"
 					}
 				} else {
-					pp.SQLName = NameSQL(column)
-					switch options.Type {
-					case "string":
-						pp.TypeSQL = "text"
-					default:
-						pp.TypeSQL = options.Type
+					if pp.IsArray {
+						pp.SQLName = NameSQL(column) + "_json"
+						pp.TypeSQL = "jsonb"
+					} else {
+						pp.SQLName = NameSQL(column)
+						switch options.Type {
+						case "string":
+							pp.TypeSQL = "text"
+						default:
+							pp.TypeSQL = options.Type
+						}
 					}
 				}
 			}
@@ -297,11 +327,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			pp.Unique = options.Unique
 
 			psql = append(psql, pp)
-			if !pp.IsArray {
-				indexLastNotArr = len(psql) - 1
+			if !pp.IsStruct || (!pp.IsArray && pp.IsStruct) {
+				indexLastNotArrOfStruct = len(psql) - 1
 			}
 		}
-		psql[indexLastNotArr].Last = true
+		psql[indexLastNotArrOfStruct].Last = true
 		model.Psql = psql
 
 		var SQLSelect, sqlWhereParams, sqlAdd, sqlEdit, sqlAddExecParams, sqlEditExecParams, countFields []string
@@ -309,22 +339,32 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		countCreatedColumns := 0
 		for column, options := range model.Columns {
 			if !options.IsStruct {
-				SQLSelect = append(SQLSelect, NameSQL(options.TitleName))
-				if options.Type != "string" || options.StrictFilter {
-					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName), column, "not_"+column, "not_"+column, NameSQL(options.TitleName), "not_"+column))
+				sqlName := NameSQL(options.TitleName)
+				titleName := options.TitleName
+				if options.IsArray {
+					sqlName += "_json"
+					titleName += "JSON"
 				} else {
-					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) LIKE LOWER(:%s)) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, column, NameSQL(options.TitleName), column, "not_"+column, "not_"+column, NameSQL(options.TitleName), "not_"+column))
+					titleName = "m." + titleName
+				}
+				SQLSelect = append(SQLSelect, sqlName)
+				if !options.IsArray {
+					if options.Type != "string" || options.StrictFilter {
+						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, sqlName, column, "not_"+column, "not_"+column, sqlName, "not_"+column))
+					} else {
+						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) LIKE LOWER(:%s)) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, column, sqlName, column, "not_"+column, "not_"+column, sqlName, "not_"+column))
+					}
 				}
 				if options.TitleName != "ID" {
-					sqlAdd = append(sqlAdd, NameSQL(options.TitleName))
-					sqlAddExecParams = append(sqlAddExecParams, "m."+options.TitleName)
+					sqlAdd = append(sqlAdd, sqlName)
+					sqlAddExecParams = append(sqlAddExecParams, titleName)
 					countFields = append(countFields, fmt.Sprintf("$%d", count))
 					count++
 					if isCreatedStandartColumn(column) {
 						countCreatedColumns++
 					} else {
-						sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", NameSQL(options.TitleName), count-countCreatedColumns))
-						sqlEditExecParams = append(sqlEditExecParams, "m."+options.TitleName)
+						sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", sqlName, count-countCreatedColumns))
+						sqlEditExecParams = append(sqlEditExecParams, titleName)
 					}
 				}
 			} else {
@@ -481,6 +521,15 @@ func checkColumn(columnType string, cfg *models.Config) (bool, bool, string, err
 			return false, false, "", errors.Errorf(`One of the fields refers to "%s" model which is not described anywhere`, columnType[8:])
 		}
 		return true, true, strings.Title(columnType[8:]), nil
+	case strings.HasPrefix(columnType, "[]") && !strings.HasPrefix(columnType, "[]model."):
+		t := columnType[2:]
+		switch {
+		case isStandartTypes(t):
+			return false, true, t, nil
+		default:
+			return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarat types %s or refers to any other model`, t, standartTypes)
+		}
+
 	}
 	return false, false, "", nil
 }
