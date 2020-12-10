@@ -363,7 +363,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					if isCreatedStandartColumn(column) {
 						countCreatedColumns++
 					} else {
-						sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", sqlName, count-countCreatedColumns))
+						if model.Shared {
+							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", sqlName, count-countCreatedColumns))
+						} else {
+							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", sqlName, (count-countCreatedColumns)+1))
+						}
 						sqlEditExecParams = append(sqlEditExecParams, titleName)
 					}
 				}
@@ -388,6 +392,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		model.SQLWhereParams = strings.Join(sqlWhereParams, " AND ")
 		if model.IDIsUUID {
 			sqlAdd = append(sqlAdd, "id")
+			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
+		}
+		if !model.Shared {
+			sqlAdd = append(sqlAdd, "isolated_entity_id")
 			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
 		}
 		model.SQLAddStr = fmt.Sprintf("(%s) VALUES (%s)", strings.Join(sqlAdd, ", "), strings.Join(countFields, ", "))
