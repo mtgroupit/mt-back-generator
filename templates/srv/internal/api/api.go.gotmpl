@@ -12,6 +12,7 @@ import (
 	{{$module := .Module}}{{range $tag, $_ := .Tags}}{{$tag}} "{{$module}}/internal/api/restapi/restapi/operations/{{NameSQL $tag}}"
 	{{end}}
 	"{{.Module}}/internal/app"
+	"github.com/rs/cors"
 
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/runtime/middleware"
@@ -33,6 +34,7 @@ type Config struct {
 	Host       string
 	Port       int
 	BasePath   string
+	AllowedOrigin string
 }
 
 type service struct {
@@ -101,7 +103,17 @@ func NewServer(appl app.App, extAuth AuthSvc, cfg Config) (*restapi.Server, erro
 		forbidCSRF := makeForbidCSRF(isSafe)
 		return forbidCSRF(handler)
 	}
-	server.SetHandler(globalMiddlewares(api.Serve(middlewares)))
+
+	handleCORS := cors.New(cors.Options{
+		AllowedOrigins:   []string{cfg.AllowedOrigin},
+		AllowedMethods:   []string{"POST", "PUT", "GET", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: true,{{if .Debug}}
+		// Enable Debugging for testing, consider disabling in production
+		Debug: true,{{end}}
+	}).Handler
+	
+	server.SetHandler(handleCORS(globalMiddlewares(api.Serve(middlewares))))
 
 	return server, nil
 }

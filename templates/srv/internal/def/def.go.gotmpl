@@ -50,7 +50,8 @@ var (
 	APIHost         = strGetenv("MSRV_HOST", oapiHost)
 	APIPort         = intGetenv("MSRV_PORT", oapiPort)
 	APIBasePath     = strGetenv("MSRV_BASEPATH", oapiBasePath)
-	ExtauthEndpoint = os.Getenv(ExtauthEndpointEnvName){{if .Debug}}
+	ExtauthEndpoint = os.Getenv(ExtauthEndpointEnvName)
+	CORSAllowedOrigin = os.Getenv("MSRV_CORS_ALLOWED_ORIGIN"){{if .Debug}}
 	ResetDB   = boolGetenv("MSRV_RESET_DB"){{end}}
 )
 
