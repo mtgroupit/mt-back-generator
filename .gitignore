@@ -1,0 +1,6 @@
+bin
+generated
+config.yaml
+
+.vscode
+.DS_Store

@@ -37,7 +37,7 @@ mt-gen -dir=./generated/ -config=./config.yaml
 
     id-from-profile: true - позволяет совершать методы для текущего пользователя
 
-    return-when-edit: true - вобавляет модель в response метода edit
+    return-when-edit: true - добавляет модель в response метода edit
 
     tags:
     - Tag - добавит тег Tag  во все эндпоинты модели
