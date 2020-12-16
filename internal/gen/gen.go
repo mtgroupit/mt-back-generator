@@ -142,6 +142,9 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 				if !model.HaveCustomMethod && strings.HasSuffix(name, "custom.go.gotmpl") {
 					continue
 				}
+				if len(model.Methods) == 0 && strings.HasSuffix(name, "_test.go.gotmpl") {
+					continue
+				}
 				fileName := parser.NameSQL(modelName) + name[len("range_models"):len(name)-len(".gotmpl")]
 				if strings.HasSuffix(name, "custom.go.gotmpl") && checkExistenseFile(path.Join(dirTarget, fileName)) {
 					file, err := ioutil.ReadFile(path.Join(dirTarget, fileName))
