@@ -58,7 +58,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 	if err != nil {
 		log.Err("{{$method}}{{$modelName}} error", err)
 	} else {
-		log.Info("{{$method}}{{$modelName}} ok", "id", params.Body.ID)
+		log.Info("{{$method}}{{$modelName}} ok")
 	}
 	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK(){{if $model.ReturnWhenEdit}}.WithPayload(api{{$modelName}}(c)){{end}}{{end}}
 	{{if  or (eq $method "List") (IsCustomList $method)}}{{if not $model.Shared}}prof := profile.(*extauthapi.Profile)
