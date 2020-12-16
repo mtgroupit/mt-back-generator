@@ -2,12 +2,12 @@ FROM ubuntu
 
 WORKDIR /app/cmd/main/migration
 
-ADD /migration/*.sql .
+ADD /migration/*.sql ./
 
 WORKDIR /app/cmd/main
 
-ADD /bin/main .
+ADD /bin/{{.Name}} .
 
 EXPOSE 5432
 
-CMD ["./main"]
+CMD ["./{{.Name}}"]
