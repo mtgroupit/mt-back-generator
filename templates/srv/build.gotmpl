@@ -12,11 +12,24 @@ fi
 
 go fmt ./...
 
+
+echo "Swagger API generate started"
 shopt -s expand_aliases
 alias swagger="docker run --rm -it -e GOPATH=$HOME/go:/go -v $HOME:$HOME -w $(pwd) quay.io/goswagger/swagger"
 swagger generate server -t ./internal/api/restapi -f ./swagger.yaml --exclude-main
 swagger generate client -t ./internal/api/restapi -f ./swagger.yaml
 sudo chown -R "$USER:$USER" ./internal/api/restapi/*
+echo "Swagger API generate stopped"
+
+echo "Mock generate started"
+GO111MODULE=on go get github.com/golang/mock/mockgen
+export PATH=$PATH:$(go env GOPATH)/bin
+mockgen -source=./internal/app/app.go -destination=./internal/app/app_mock.generated.go -package=app
+{{- if .HaveCustomMethod}}
+mockgen -source=./internal/app/app_custom.go -destination=./internal/app/custom_mock.generated.go -package=app
+{{- end}}
+mockgen -source=./internal/api/auth.go -destination=./internal/api/auth_mock.generated.go -package=api
+echo "Mock generate stopped"
 
 rm -rf bin/
 mkdir bin/

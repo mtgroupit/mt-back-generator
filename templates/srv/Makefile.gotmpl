@@ -6,6 +6,12 @@ POSTGRES_DB=test
 DOCKER_IMAGE_NAME={{FormatName .Name}}_service
 DOCKER_CONTAINER_NAME={{FormatName .Name}}
 
+build:
+	env GOOS=linux GOARCH=amd64 go build
+
+test:
+	go test  ./...
+
 db_start:
 	docker run --name $(DB_CONTAINER_NAME) -e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) -e POSTGRES_DB=$(POSTGRES_DB) -d -p 5432:5432 --rm postgres
 

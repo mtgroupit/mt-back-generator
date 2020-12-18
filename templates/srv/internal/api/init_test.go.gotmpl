@@ -2,11 +2,13 @@ package api
 
 import (
 	"fmt"
+	"net/http"
 	"testing"
 
 	"{{.Module}}/internal/api/restapi/models"
 	"{{.Module}}/internal/app"
 	"{{.Module}}/internal/def"
+	extauthapi "{{.AuthSrv}}"
 
 	{{$strfmtOn := false}}
 	{{if .HaveDateTime}}"github.com/go-openapi/strfmt"{{$strfmtOn = true}}{{end}}
@@ -14,17 +16,49 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/powerman/check"
 	"github.com/powerman/gotest/testinit"
+	"github.com/google/uuid"
+	"github.com/phayes/freeport"
 )
 
-var ({{range $modelName, $model := $.Models}}
-	test{{$modelName}}1 = &models.{{$modelName}}{  {{range $column, $options := $model.Columns}}
-		{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}1{{end}}{{if eq $options.GoType "string"}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://127.0.0.1:34763"{{end}}{{if eq $options.Format "date-time"}}toDateTime("1970-01-01T00:00:00.000Z"){{end}}{{if eq $options.Format "email"}}strfmt.Email("test1@test.com"){{end}}{{if eq $options.Format "phone"}}"+79998887766"{{end}}{{else}}"test1"{{end}}{{end}}{{if eq $options.GoType "bool"}}true{{end}}{{end}},{{end}}
+var (
+	isolatedEntityID = uuid.New().String()
+	profID           = uuid.New().String()
+	sess             = extauthapi.SessionCookieName + "=sess"
+	profile          = &extauthapi.Profile{
+		ID:    extauthapi.MustParseUserID(profID),
+		Authn: true,
 	}
-	test{{$modelName}}2 = &models.{{$modelName}}{  {{range $column, $options := $model.Columns}}
-		{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}2{{end}}{{if eq $options.GoType "string"}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://localhost:34764"{{end}}{{if eq $options.Format "date-time"}}toDateTime("1980-02-01T02:00:00.000Z"){{end}}{{if eq $options.Format "email"}}strfmt.Email("test2@test.com"){{end}}{{if eq $options.Format "phone"}}"8(999)888-77-66"{{end}}{{else}}"test2"{{end}}{{end}}{{if eq $options.GoType "bool"}}false{{end}}{{end}},{{end}}
-	}
-	test{{$modelName}}s = []*models.{{$modelName}}{test{{$modelName}}1, test{{$modelName}}2}
-	{{end}}
+
+	{{- range $modelName, $model := $.Models}}
+		{{- $idType := (index $model.Columns "id").Type}}
+		test{{$modelName}}ID1 {{if eq $idType "int64"}}int64{{end}} = {{if eq $idType "uuid"}}uuid.New().String(){{else}}1{{end}}
+		test{{$modelName}}1 = &models.{{$modelName}}{  
+			{{- range $column, $options := $model.Columns}}
+			{{$options.TitleName}}: {{if eq $column "id"}}test{{$modelName}}ID1{{else}}{{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}1{{end}}{{if eq $options.GoType "string"}}{{if $options.IsArray}}[]string{ {{end}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://127.0.0.1:34763"{{end}}{{if eq $options.Format "date-time"}}toDateTime("1970-01-01T00:00:00.000Z"){{end}}{{if eq $options.Format "email"}}strfmt.Email("test1@test.com"){{end}}{{if eq $options.Format "phone"}}"+79998887766"{{end}}{{else}}"test1"{{end}}{{if $options.IsArray}} }{{end}}{{end}}{{if eq $options.GoType "bool"}}true{{end}}{{end}}{{end}},
+			{{- end}}
+		}
+		test{{$modelName}}ID2 {{if eq $idType "int64"}}int64{{end}} = {{if eq $idType "uuid"}}uuid.New().String(){{else}}2{{end}}
+		test{{$modelName}}2 = &models.{{$modelName}}{  
+			{{- range $column, $options := $model.Columns}}
+			{{$options.TitleName}}: {{if eq $column "id"}}test{{$modelName}}ID1{{else}}{{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}2{{end}}{{if eq $options.GoType "string"}}{{if $options.IsArray}}[]string{ {{end}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://localhost:34764"{{end}}{{if eq $options.Format "date-time"}}toDateTime("1980-02-01T02:00:00.000Z"){{end}}{{if eq $options.Format "email"}}strfmt.Email("test2@test.com"){{end}}{{if eq $options.Format "phone"}}"8(999)888-77-66"{{end}}{{else}}"test2"{{end}}{{if $options.IsArray}} }{{end}}{{end}}{{if eq $options.GoType "bool"}}false{{end}}{{end}}{{end}},
+			{{- end}}
+		}
+		test{{$modelName}}s = []*models.{{$modelName}}{test{{$modelName}}1, test{{$modelName}}2}
+		testAdd{{$modelName}}1 = &models.{{$modelName}}Add{  
+			{{- range $column, $options := $model.Columns}}
+			{{- if and (ne $column "id") (not (IsStandartColumn $column))}}
+			{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}[]{{if eq $idType "uuid"}}string{{else}}int64{{end}}{test{{$options.GoType}}ID1, test{{$options.GoType}}ID2}{{else}}test{{$options.GoType}}1.ID{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}1{{end}}{{if eq $options.GoType "string"}}{{if $options.IsArray}}[]string{ {{end}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://127.0.0.1:34763"{{end}}{{if eq $options.Format "date-time"}}toDateTime("1970-01-01T00:00:00.000Z"){{end}}{{if eq $options.Format "email"}}strfmt.Email("test1@test.com"){{end}}{{if eq $options.Format "phone"}}"+79998887766"{{end}}{{else}}"test1"{{end}}{{if $options.IsArray}} }{{end}}{{end}}{{if eq $options.GoType "bool"}}true{{end}}{{end}},
+			{{- end}}
+			{{- end}}
+		}
+		testAdd{{$modelName}}2 = &models.{{$modelName}}Add{  
+			{{- range $column, $options := $model.Columns}}
+			{{- if and (ne $column "id") (not (IsStandartColumn $column))}}
+			{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}[]{{if eq $idType "uuid"}}string{{else}}int64{{end}}{test{{$options.GoType}}ID1, test{{$options.GoType}}ID2}{{else}}test{{$options.GoType}}2.ID{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}2{{end}}{{if eq $options.GoType "string"}}{{if $options.IsArray}}[]string{ {{end}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://localhost:34764"{{end}}{{if eq $options.Format "date-time"}}toDateTime("1980-02-01T02:00:00.000Z"){{end}}{{if eq $options.Format "email"}}strfmt.Email("test2@test.com"){{end}}{{if eq $options.Format "phone"}}"8(999)888-77-66"{{end}}{{else}}"test2"{{end}}{{if $options.IsArray}} }{{end}}{{end}}{{if eq $options.GoType "bool"}}false{{end}}{{end}},
+			{{- end}}
+			{{- end}}
+		}
+	{{- end}}
 	{{if .HaveListMethod}}
 	offset int64 = 0
 	limit  int64 = 5
@@ -42,23 +76,31 @@ var ({{range $modelName, $model := $.Models}}
 		},
 	}
 	testList = &models.ListParams{
-		Offset: &offset,
+		Offset: offset,
 		Limit:  &limit,
+		LogicFilter: false,
+		SortBy: "ASC",
 	}
 	{{end}}
 )
 
 func TestMain(m *testing.M) { testinit.Main(m) }
 
-func testNewServer(t *check.C) (string, func(), *app.MockApp) {
+func testNewServer(t *check.C) (string, func(), *app.MockApp, *MockAuthSvc) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 
 	mockApp := app.NewMockApp(ctrl)
+	mockExtAuthSvc := NewMockAuthSvc(ctrl)
 
-	server, err := NewServer(mockApp, Config{
+	port , err := freeport.GetFreePort()
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	server, err := NewServer(mockApp, mockExtAuthSvc, Config{
 		Host:     "localhost",
-		Port:     def.APIPort,
+		Port:     port,
 		BasePath: def.APIBasePath,
 	})
 	t.Nil(err, "NewServer")
@@ -75,5 +117,17 @@ func testNewServer(t *check.C) (string, func(), *app.MockApp) {
 
 	url := fmt.Sprintf("localhost:%d", server.Port)
 
-	return url, shutdown, mockApp
+	return url, shutdown, mockApp, mockExtAuthSvc
+}
+
+type matchCookie string // Implements gomock.Matcher.
+
+func (m matchCookie) String() string { return string(m) }
+func (m matchCookie) Matches(x interface{}) bool {
+	for _, c := range (&http.Request{Header: map[string][]string{"Cookie": {x.(string)}}}).Cookies() {
+		if c.String() == string(m) {
+			return true
+		}
+	}
+	return false
 }
