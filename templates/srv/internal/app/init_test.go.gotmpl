@@ -10,7 +10,8 @@ import (
 var (
 	isolatedEntityID = uuid.New().String()
 	profID = uuid.New().String()
-	{{range $modelName, $model := $.Models}}
+
+	{{- range $modelName, $model := $.Models}}
 	test{{$modelName}}1 = &{{$modelName}}{  
 		{{- range $column, $options := $model.Columns}}
 		{{$options.TitleName}}: {{if and (eq $column "id") (eq $options.Type "uuid")}}uuid.New().String(){{else}}{{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}1{{end}}{{if eq $options.GoType "string"}}{{if $options.IsArray}}[]string{ {{end}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://127.0.0.1:34763"{{end}}{{if eq $options.Format "date-time"}}"1970-01-01T00:00:00.000Z"{{end}}{{if eq $options.Format "email"}}"test1@test.com"{{end}}{{if eq $options.Format "phone"}}"+79998887766"{{end}}{{else}}"test1"{{end}}{{if $options.IsArray}} }{{end}}{{end}}{{if eq $options.GoType "bool"}}true{{end}}{{end}}{{end}},
@@ -36,9 +37,9 @@ var (
 		{{- end}}
 	} */}}
 	test{{$modelName}}s = []*{{$modelName}}{test{{$modelName}}1, test{{$modelName}}2}
-	{{end}}
+	{{- end}}
 
-	{{if .HaveListMethod}}
+	{{- if .HaveListMethod}}
 	offset int64 = 0
 	limit int64 = 5
 	logicFilter = false
@@ -57,5 +58,5 @@ var (
 			Value: "2",
 		},
 	}
-	{{end}}
+	{{- end}}
 )

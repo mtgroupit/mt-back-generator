@@ -8,30 +8,39 @@ import (
 	"github.com/powerman/check"
 )
 
-{{range $i, $method := $model.Methods}}
+{{- range $i, $method := $model.Methods}}
+{{- if not (IsCustomMethod $method)}}
 func Test{{$method}}{{$modelName}}Smoke(tt *testing.T) {
 	t := check.T(tt)
 
 	addTestData(t)
 
-	{{if eq $method "Get"}}
-	getted, err := testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID)
+	{{- if eq $method "Get"}}
+	getted, err := testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.Shared}}, isolatedEntityID{{end}})
 	t.Nil(err)
-	t.DeepEqual(getted, test{{$modelName}}1){{end}}
-	{{if eq $method "Add"}}{{end}}
-	{{if eq $method "Delete"}}
+	t.DeepEqual(getted, test{{$modelName}}1)
+	{{- end}}
+	{{- if eq $method "Add"}}{{end}}
+	{{- if eq $method "Delete"}}
+	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.Shared}}, isolatedEntityID{{end}}))
+	{{- end}}
+	{{- if eq $method "Edit"}}
 	addTestData(t)
-	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID)){{end}}
-	{{if eq $method "Edit"}}
-	addTestData(t)
-	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID, test{{$modelName}}2)){{end}}
+	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID, {{if $model.HaveModifiedBy}}profID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}2))
+	{{- end}}
 
-	{{if or (eq $method "List") (IsCustomList $method)}}	
-	list, err := testApp.{{$method}}{{$modelName}}(offset, limit, []*app.Filter{})
+	{{- if or (eq $method "List") (IsCustomList $method)}}	
+	filters[0].Value = test{{$modelName}}1.ID
+	filters[1].Value = test{{$modelName}}2.ID
+
+	list, {{if $model.DetailedPagination}}_, {{end}}_,  err := testApp.{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}offset, limit, filters, logicFilter, sortBy, orderBy)
 	t.Nil(err)
-	t.DeepEqual(list, test{{$modelName}}s){{end}}
-	{{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
-	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1)){{end}}
+	t.DeepEqual(list, test{{$modelName}}s)
+	{{- end}}
+	{{/* {{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
+	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1)){{end}} */}}
 
 	t.Nil(testApp.truncate())
-}{{end}}
+}
+{{- end}}
+{{- end}}

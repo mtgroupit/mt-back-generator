@@ -5,10 +5,11 @@ package dal
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/powerman/gotest/testinit"
 	"github.com/powerman/pqx"
 	"github.com/powerman/structlog"
-	"gopkg.in/check.v1"
+	"github.com/powerman/check"
 
 	"{{.Module}}/internal/app"
 	"{{.Module}}/internal/def"
@@ -18,19 +19,35 @@ var testApp *App
 var ctx = context.Background()
 
 var (
-	{{range $modelName, $model := $.Models}}
-	test{{$modelName}}1 = &app.{{$modelName}}{  {{range $column, $options := $model.Columns}}
-		{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}1{{end}}{{if eq $options.GoType "string"}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://127.0.0.1:34763"{{end}}{{if eq $options.Format "date-time"}}"1970-01-01T00:00:00.000Z"{{end}}{{if eq $options.Format "email"}}"test1@test.com"{{end}}{{if eq $options.Format "phone"}}"+79998887766"{{end}}{{else}}"test1"{{end}}{{end}}{{if eq $options.GoType "bool"}}true{{end}}{{end}},{{end}}
+	isolatedEntityID = uuid.New().String()
+	profID1 = uuid.New().String()
+	profID2 = uuid.New().String()
+	
+	{{- range $modelName, $model := $.Models}}
+	test{{$modelName}}1 = &app.{{$modelName}}{
+		{{- range $column, $options := $model.Columns}}
+			{{- if not (and (eq $column "id") (eq $options.Type "uuid"))}}
+			{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}1{{end}}{{if eq $options.GoType "string"}}{{if $options.IsArray}}[]string{ {{end}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://127.0.0.1:34763"{{end}}{{if eq $options.Format "date-time"}}"1970-01-01T00:00:00.000Z"{{end}}{{if eq $options.Format "email"}}"test1@test.com"{{end}}{{if eq $options.Format "phone"}}"+79998887766"{{end}}{{else}}"test1"{{end}}{{if $options.IsArray}} }{{end}}{{end}}{{if eq $options.GoType "bool"}}true{{end}}{{end}},
+			{{- end}}
+		{{- end}}
 	}
-	test{{$modelName}}2 = &app.{{$modelName}}{  {{range $column, $options := $model.Columns}}
-		{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}2{{end}}{{if eq $options.GoType "string"}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://localhost:34764"{{end}}{{if eq $options.Format "date-time"}}"1980-02-01T02:00:00.000Z"{{end}}{{if eq $options.Format "email"}}"test2@test.com"{{end}}{{if eq $options.Format "phone"}}"8(999)888-77-66"{{end}}{{else}}"test2"{{end}}{{end}}{{if eq $options.GoType "bool"}}false{{end}}{{end}},{{end}}
+	test{{$modelName}}2 = &app.{{$modelName}}{  
+		{{- range $column, $options := $model.Columns}}
+			{{- if not (and (eq $column "id") (eq $options.Type "uuid"))}}
+			{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}2{{end}}{{if eq $options.GoType "string"}}{{if $options.IsArray}}[]string{ {{end}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://localhost:34764"{{end}}{{if eq $options.Format "date-time"}}"1980-02-01T02:00:00.000Z"{{end}}{{if eq $options.Format "email"}}"test2@test.com"{{end}}{{if eq $options.Format "phone"}}"8(999)888-77-66"{{end}}{{else}}"test2"{{end}}{{if $options.IsArray}} }{{end}}{{end}}{{if eq $options.GoType "bool"}}false{{end}}{{end}},
+			{{- end}}
+		{{- end}}
 	}
 	test{{$modelName}}s = []*app.{{$modelName}}{test{{$modelName}}1, test{{$modelName}}2}
-	{{end}}
-	{{if .HaveListMethod}}
+	{{- end}}
+
+	{{- if .HaveListMethod}}
 	offset int64 = 0
 	limit int64 = 5
-
+	logicFilter = false
+	sortBy = ""
+	orderBy = "ASC"
+	
 	filters = []*app.Filter{
 		&app.Filter{
 			Key: "ID",
@@ -43,7 +60,7 @@ var (
 			Value: "2",
 		},
 	}
-	{{end}}
+	{{- end}}
 )
 
 func init() { testinit.Setup(2, setupIntegration) }
@@ -71,7 +88,7 @@ func setupIntegration() {
 	testinit.Teardown(cleanup)
 	dbCfg.DBName += "_" + dbSuffix
 
-	testApp, err = New(ctx, dbCfg, migrationDir)
+	testApp, {{if .HaveCustomMethod}}_,{{end}} err = New(ctx, dbCfg, migrationDir{{if .Debug}}, false{{end}})
 	if err != nil {
 		testinit.Fatal(err)
 	}
@@ -82,8 +99,18 @@ func (a *App) truncate() error {
 	_, err := a.db.Exec("TRUNCATE {{TruncateParams .Models}} RESTART IDENTITY CASCADE")
 	return err
 }
-{{$MaxDeepNesting:=.MaxDeepNesting}}
-func addTestData(t *check.C){ {{range $i := Iterate $MaxDeepNesting}}{{range $modelName, $model := $.Models}}{{if eq $model.DeepNesting $i}}
-	t.Nil(testApp.Add{{$modelName}}(test{{$modelName}}1))
-	t.Nil(testApp.Add{{$modelName}}(test{{$modelName}}2)){{end}}{{end}}{{end}}
+
+{{- $MaxDeepNesting:=.MaxDeepNesting}}
+func addTestData(t *check.C){ 
+	var err error
+{{- range $i := Iterate $MaxDeepNesting}}
+	{{- range $modelName, $model := $.Models}}
+		{{- if eq $model.DeepNesting $i}}
+		{{if $model.IDIsUUID}}test{{$modelName}}1.ID{{else}}_{{end}}, err = testApp.add{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profID1, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}1)
+		t.Nil(err)
+		{{if $model.IDIsUUID}}test{{$modelName}}2.ID{{else}}_{{end}}, err = testApp.add{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profID2, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}2)
+		t.Nil(err)
+		{{- end}}
+	{{- end}}
+{{- end}}
 }

@@ -31,7 +31,7 @@ var goTmplFuncs = template.FuncMap{
 		var keys []string
 		iter := reflect.ValueOf(in).MapRange()
 		for iter.Next() {
-			keys = append(keys, iter.Key().String()+"s")
+			keys = append(keys, parser.NameSQL(iter.Key().String()+"s"))
 		}
 		return strings.Join(keys, ", ")
 	},
