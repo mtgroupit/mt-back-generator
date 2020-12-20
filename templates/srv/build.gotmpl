@@ -11,6 +11,7 @@ if ! [ -x "$(command -v docker)" ]; then
 fi
 
 go fmt ./...
+go get ./...
 
 
 echo "Swagger API generate started"

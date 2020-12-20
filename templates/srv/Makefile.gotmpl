@@ -2,9 +2,10 @@ DB_CONTAINER_NAME=test-postgres
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=test
+POSTGRES_PORT=5432
 
-DOCKER_IMAGE_NAME={{FormatName .Name}}_service
-DOCKER_CONTAINER_NAME={{FormatName .Name}}
+DOCKER_IMAGE_NAME=FrenchBack_service
+DOCKER_CONTAINER_NAME=FrenchBack
 
 build:
 	env GOOS=linux GOARCH=amd64 go build
@@ -12,8 +13,12 @@ build:
 test:
 	go test  ./...
 
+test-i:
+	MSRV_DB_USER=$(POSTGRES_USER) MSRV_DB_PASS=$(POSTGRES_PASSWORD) MSRV_DB_PORT=$(POSTGRES_PORT) MSRV_DB_NAME=$(POSTGRES_DB) \
+		go test --tags=integration ./...
+
 db_start:
-	docker run --name $(DB_CONTAINER_NAME) -e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) -e POSTGRES_DB=$(POSTGRES_DB) -d -p 5432:5432 --rm postgres
+	docker run --name $(DB_CONTAINER_NAME) -e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) -e POSTGRES_DB=$(POSTGRES_DB) -d -p $(POSTGRES_PORT):5432 --rm postgres
 
 db_stop:
 	docker stop $(DB_CONTAINER_NAME)

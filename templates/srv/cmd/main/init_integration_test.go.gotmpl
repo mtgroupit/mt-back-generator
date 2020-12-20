@@ -19,7 +19,7 @@ import (
 func init() { testinit.Setup(2, setupIntegration) }
 
 var (
-	extClient *client.Snouki
+	extClient *client.{{FormatName .Name}}
 )
 
 func setupIntegration() {
