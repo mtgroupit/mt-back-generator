@@ -6,8 +6,22 @@ import (
 	"strings"{{end}}{{if $haveNestedSorts}}
 	"sort"{{end}}{{if or $model.HaveCreatedAt $model.HaveModifiedAt}}
 	"time"{{end}}{{if $model.HaveListMethod}}
-	"fmt"{{end}}{{if $model.HaveArrayOfStandatrType}}
-	"encoding/json"{{end}}
+	"fmt"{{end}}
+	{{- $haveMarshalJSON := false}}
+	{{- range $modelName2, $model2 := $.Models}}
+		{{- range $column, $options := $model.Columns}}
+			{{- if eq $modelName2 $options.GoType}}
+				{{- range $column2, $options2 := $model2.Columns}}
+					{{- if and $options2.IsArray (not $options2.IsStruct)}}
+					{{- $haveMarshalJSON = true}}
+					{{- end}}
+				{{- end}}
+			{{- end}}
+		{{- end}}
+	{{- end}}
+	{{- if or $model.HaveArrayOfStandatrType $haveMarshalJSON}}
+	"encoding/json"
+	{{- end}}
 
 	"{{.Module}}/internal/app"
 
@@ -312,35 +326,63 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 {{end}}{{end}}
 {{end}}{{end}}
 
-{{if $model.HaveLazyLoading}}
-func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID string, {{end}}a *App) (err error) { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if and $options.IsArray $options.IsStruct}}
-	slice{{$options.TitleName}} := []{{$modelName}}{{$options.GoType}}{}
-	if err = a.db.Select(&slice{{$options.TitleName}}, `SELECT {{NameSQL $modelName}}_id, {{NameSQL $options.TitleName}}_id FROM {{NameSQL $modelName}}_{{NameSQL $options.TitleName}} WHERE {{NameSQL $modelName}}_id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, m.ID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
-		return
-	}
-	for _, cd := range slice{{$options.TitleName}} {
-		var {{$column}} {{$options.GoType}}
-		if err = a.db.Get(&{{$column}}, `SELECT {{$model2.SQLSelectStr}} FROM {{NameSQL $options.GoType}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, cd.{{$options.GoType}}ID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
-			return
-		}{{if $model2.HaveLazyLoading}}
-		if err == nil {
-			if err = {{$column}}.LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
-				return
-			}
-		}{{end}}
-		m.{{$options.TitleName}} = append(m.{{$options.TitleName}}, {{$column}})
-	}{{else}}
-	if err = a.db.Get(&m.{{$options.TitleName}}, `SELECT {{$model2.SQLSelectStr}} FROM {{NameSQL $modelName2}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`,  m.{{$options.TitleName}}ID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil && err.Error() != "sql: no rows in result set" {
-		return
-	}{{if $model2.HaveLazyLoading}}
-	if err == nil {
-		if err = m.{{$options.TitleName}}.LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
-			return
-		}
-	}{{end}}{{end}}{{end}}{{end}}{{end}}
+{{- if $model.HaveLazyLoading}}
+func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID string, {{end}}a *App) (err error) { 
+{{- range $modelName2, $model2 := $.Models}}
+	{{- range $column, $options := $model.Columns}}
+		{{- if eq $modelName2 $options.GoType}}
+			{{- if and $options.IsArray $options.IsStruct}}
+				slice{{$options.TitleName}} := []{{$modelName}}{{$options.GoType}}{}
+				if err = a.db.Select(&slice{{$options.TitleName}}, `SELECT {{NameSQL $modelName}}_id, {{NameSQL $options.TitleName}}_id FROM {{NameSQL $modelName}}_{{NameSQL $options.TitleName}} WHERE {{NameSQL $modelName}}_id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, m.ID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+					return
+				}
+				for _, cd := range slice{{$options.TitleName}} {
+					var {{$column}} {{$options.GoType}}
+					if err = a.db.Get(&{{$column}}, `SELECT {{$model2.SQLSelectStr}} FROM {{NameSQL $options.GoType}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, cd.{{$options.GoType}}ID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+						return
+					}
+					{{- range $column2, $options2 := $model2.Columns}}
+						{{- if and $options2.IsArray (not $options2.IsStruct)}}
+							if err = json.Unmarshal({{$column}}.{{$options2.TitleName}}JSON, &{{$column}}.{{$options2.TitleName}}); err != nil {
+								return
+							}
+						{{- end}}
+					{{- end}}
+					{{- if $model2.HaveLazyLoading}}
+						if err == nil {
+							if err = {{$column}}.LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
+								return
+							}
+						}
+					{{- end}}
+					m.{{$options.TitleName}} = append(m.{{$options.TitleName}}, {{$column}})
+				}
+			{{- else}}
+				if err = a.db.Get(&m.{{$options.TitleName}}, `SELECT {{$model2.SQLSelectStr}} FROM {{NameSQL $modelName2}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`,  m.{{$options.TitleName}}ID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil && err.Error() != "sql: no rows in result set" {
+					return
+				}
+				{{- range $column2, $options2 := $model2.Columns}}
+					{{- if and $options2.IsArray (not $options2.IsStruct)}}
+						if err = json.Unmarshal(m.{{$options.TitleName}}.{{$options2.TitleName}}JSON, &m.{{$options.TitleName}}.{{$options2.TitleName}}); err != nil {
+							return
+						}
+					{{- end}}
+				{{- end}}
+				{{- if $model2.HaveLazyLoading}}
+					if err == nil {
+						if err = m.{{$options.TitleName}}.LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
+							return
+						}
+					}
+				{{- end}}
+			{{- end}}
+		{{- end}}
+	{{- end}}
+{{- end}}
 	return nil
 }
-{{end}}
+{{- end}}
+
 {{range $column, $options := $model.Columns}} {{if  and $options.IsArray $options.IsStruct}}
 func (a *App) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*app.{{$options.GoType}}) error {
 	for _, item := range items {
