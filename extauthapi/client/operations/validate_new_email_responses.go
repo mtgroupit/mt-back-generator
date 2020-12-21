@@ -73,7 +73,7 @@ func NewValidateNewEmailDefault(code int) *ValidateNewEmailDefault {
 
 /*ValidateNewEmailDefault handles this case with default header values.
 
-- 409.700: email is not available
+- 404.2003: email is not available
 - 403.710: invalid password
 
 */

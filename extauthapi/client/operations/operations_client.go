@@ -43,7 +43,9 @@ type ClientService interface {
 
 	Register(params *RegisterParams) (*RegisterOK, error)
 
-	RegisterLoginOAuth(params *RegisterLoginOAuthParams) (*RegisterLoginOAuthOK, error)
+	RegisterResendEmail(params *RegisterActivateResendEmailParams) (*RegisterActivateResendEmailOK, error)
+
+	RequestRegistration(params *RequestRegistrationParams) (*RequestRegistrationNoContent, error)
 
 	ResetPassword(params *ResetPasswordParams) (*ResetPasswordNoContent, error)
 
@@ -60,8 +62,6 @@ type ClientService interface {
 	SetUsername(params *SetUsernameParams, authInfo runtime.ClientAuthInfoWriter) (*SetUsernameNoContent, error)
 
 	ValidateNewEmail(params *ValidateNewEmailParams, authInfo runtime.ClientAuthInfoWriter) (*ValidateNewEmailNoContent, error)
-
-	ValidateRegistrationEmail(params *ValidateRegistrationEmailParams) (*ValidateRegistrationEmailNoContent, error)
 
 	SetTransport(transport runtime.ClientTransport)
 }
@@ -81,7 +81,7 @@ func (a *Client) ChangePassword(params *ChangePasswordParams, authInfo runtime.C
 		PathPattern:        "/change-password",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &ChangePasswordReader{formats: a.formats},
 		AuthInfo:           authInfo,
@@ -115,7 +115,7 @@ func (a *Client) DeleteUser(params *DeleteUserParams, authInfo runtime.ClientAut
 		PathPattern:        "/delete-user",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &DeleteUserReader{formats: a.formats},
 		AuthInfo:           authInfo,
@@ -149,7 +149,7 @@ func (a *Client) GetUserProfile(params *GetUserProfileParams, authInfo runtime.C
 		PathPattern:        "/get-user-profile",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &GetUserProfileReader{formats: a.formats},
 		AuthInfo:           authInfo,
@@ -183,7 +183,7 @@ func (a *Client) GetUserProfileByID(params *GetUserProfileByIDParams) (*GetUserP
 		PathPattern:        "/get-user-profile-by-id",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &GetUserProfileByIDReader{formats: a.formats},
 		Context:            params.Context,
@@ -216,7 +216,7 @@ func (a *Client) IsEmailAvailable(params *IsEmailAvailableParams) (*IsEmailAvail
 		PathPattern:        "/is-email-available",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &IsEmailAvailableReader{formats: a.formats},
 		Context:            params.Context,
@@ -249,7 +249,7 @@ func (a *Client) IsUsernameAvailable(params *IsUsernameAvailableParams, authInfo
 		PathPattern:        "/is-username-available",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &IsUsernameAvailableReader{formats: a.formats},
 		AuthInfo:           authInfo,
@@ -283,7 +283,7 @@ func (a *Client) Login(params *LoginParams) (*LoginNoContent, error) {
 		PathPattern:        "/login",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &LoginReader{formats: a.formats},
 		Context:            params.Context,
@@ -316,7 +316,7 @@ func (a *Client) Logout(params *LogoutParams, authInfo runtime.ClientAuthInfoWri
 		PathPattern:        "/logout",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &LogoutReader{formats: a.formats},
 		AuthInfo:           authInfo,
@@ -347,10 +347,10 @@ func (a *Client) Register(params *RegisterParams) (*RegisterOK, error) {
 	result, err := a.transport.Submit(&runtime.ClientOperation{
 		ID:                 "register",
 		Method:             "POST",
-		PathPattern:        "/register",
+		PathPattern:        "/register-activate",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &RegisterReader{formats: a.formats},
 		Context:            params.Context,
@@ -369,35 +369,68 @@ func (a *Client) Register(params *RegisterParams) (*RegisterOK, error) {
 }
 
 /*
-  RegisterLoginOAuth register login o auth API
+  RegisterResendEmail Resend new email if old token is not valid.
 */
-func (a *Client) RegisterLoginOAuth(params *RegisterLoginOAuthParams) (*RegisterLoginOAuthOK, error) {
+func (a *Client) RegisterResendEmail(params *RegisterActivateResendEmailParams) (*RegisterActivateResendEmailOK, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
-		params = NewRegisterLoginOAuthParams()
+		params = NewRegisterActivateResendEmailParams()
 	}
 
 	result, err := a.transport.Submit(&runtime.ClientOperation{
-		ID:                 "registerLoginOAuth",
+		ID:                 "registerActivateResendEmail",
 		Method:             "POST",
-		PathPattern:        "/register-login-oauth",
+		PathPattern:        "/register-activate-resend-email",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
-		Reader:             &RegisterLoginOAuthReader{formats: a.formats},
+		Reader:             &RegisterActivateResendEmailReader{formats: a.formats},
 		Context:            params.Context,
 		Client:             params.HTTPClient,
 	})
 	if err != nil {
 		return nil, err
 	}
-	success, ok := result.(*RegisterLoginOAuthOK)
+	success, ok := result.(*RegisterActivateResendEmailOK)
 	if ok {
 		return success, nil
 	}
 	// unexpected success response
-	unexpectedSuccess := result.(*RegisterLoginOAuthDefault)
+	unexpectedSuccess := result.(*RegisterActivateResendEmailDefault)
+	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
+}
+
+/*
+  RequestRegistration Sends email with validation token.
+*/
+func (a *Client) RequestRegistration(params *RequestRegistrationParams) (*RequestRegistrationNoContent, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewRequestRegistrationParams()
+	}
+
+	result, err := a.transport.Submit(&runtime.ClientOperation{
+		ID:                 "requestRegistration",
+		Method:             "POST",
+		PathPattern:        "/request-registration",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &RequestRegistrationReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	})
+	if err != nil {
+		return nil, err
+	}
+	success, ok := result.(*RequestRegistrationNoContent)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	unexpectedSuccess := result.(*RequestRegistrationDefault)
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 
@@ -416,7 +449,7 @@ func (a *Client) ResetPassword(params *ResetPasswordParams) (*ResetPasswordNoCon
 		PathPattern:        "/reset-password",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &ResetPasswordReader{formats: a.formats},
 		Context:            params.Context,
@@ -450,7 +483,7 @@ func (a *Client) SearchUsersByUsername(params *SearchUsersByUsernameParams, auth
 		PathPattern:        "/search-users-by-username",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &SearchUsersByUsernameReader{formats: a.formats},
 		AuthInfo:           authInfo,
@@ -484,7 +517,7 @@ func (a *Client) SetBlocked(params *SetBlockedParams, authInfo runtime.ClientAut
 		PathPattern:        "/set-blocked",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &SetBlockedReader{formats: a.formats},
 		AuthInfo:           authInfo,
@@ -518,7 +551,7 @@ func (a *Client) SetEmail(params *SetEmailParams) (*SetEmailNoContent, error) {
 		PathPattern:        "/set-email",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &SetEmailReader{formats: a.formats},
 		Context:            params.Context,
@@ -551,7 +584,7 @@ func (a *Client) SetNewPassword(params *SetNewPasswordParams) (*SetNewPasswordNo
 		PathPattern:        "/set-new-password",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &SetNewPasswordReader{formats: a.formats},
 		Context:            params.Context,
@@ -584,7 +617,7 @@ func (a *Client) SetPersDataRegion(params *SetPersDataRegionParams, authInfo run
 		PathPattern:        "/set-persdata-region",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &SetPersDataRegionReader{formats: a.formats},
 		AuthInfo:           authInfo,
@@ -618,7 +651,7 @@ func (a *Client) SetUsername(params *SetUsernameParams, authInfo runtime.ClientA
 		PathPattern:        "/set-username",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &SetUsernameReader{formats: a.formats},
 		AuthInfo:           authInfo,
@@ -652,7 +685,7 @@ func (a *Client) ValidateNewEmail(params *ValidateNewEmailParams, authInfo runti
 		PathPattern:        "/validate-new-email",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
+		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &ValidateNewEmailReader{formats: a.formats},
 		AuthInfo:           authInfo,
@@ -668,39 +701,6 @@ func (a *Client) ValidateNewEmail(params *ValidateNewEmailParams, authInfo runti
 	}
 	// unexpected success response
 	unexpectedSuccess := result.(*ValidateNewEmailDefault)
-	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
-}
-
-/*
-  ValidateRegistrationEmail Sends email with validation token.
-*/
-func (a *Client) ValidateRegistrationEmail(params *ValidateRegistrationEmailParams) (*ValidateRegistrationEmailNoContent, error) {
-	// TODO: Validate the params before sending
-	if params == nil {
-		params = NewValidateRegistrationEmailParams()
-	}
-
-	result, err := a.transport.Submit(&runtime.ClientOperation{
-		ID:                 "validateRegistrationEmail",
-		Method:             "POST",
-		PathPattern:        "/validate-registration-email",
-		ProducesMediaTypes: []string{"application/json"},
-		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"https"},
-		Params:             params,
-		Reader:             &ValidateRegistrationEmailReader{formats: a.formats},
-		Context:            params.Context,
-		Client:             params.HTTPClient,
-	})
-	if err != nil {
-		return nil, err
-	}
-	success, ok := result.(*ValidateRegistrationEmailNoContent)
-	if ok {
-		return success, nil
-	}
-	// unexpected success response
-	unexpectedSuccess := result.(*ValidateRegistrationEmailDefault)
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 

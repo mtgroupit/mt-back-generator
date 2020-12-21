@@ -73,9 +73,8 @@ func NewSetNewPasswordDefault(code int) *SetNewPasswordDefault {
 
 /*SetNewPasswordDefault handles this case with default header values.
 
-- 404.102: organisation not found
-- 422.103: password is too weak
-- 403.104: invalid password reset token
+- 404.2004: password is too weak
+- 404.2005: invalid password reset token
 
 */
 type SetNewPasswordDefault struct {

@@ -80,7 +80,7 @@ func NewLoginDefault(code int) *LoginDefault {
 /*LoginDefault handles this case with default header values.
 
 - 404.101: invalid credentials
-- 404.102: organisation not found
+- 404.707: no such email
 
 */
 type LoginDefault struct {

@@ -14,18 +14,18 @@ import (
 	"github.com/go-openapi/runtime/middleware"
 )
 
-// NewValidateRegistrationEmailParams creates a new ValidateRegistrationEmailParams object
+// NewRegisterActivateResendEmailParams creates a new RegisterActivateResendEmailParams object
 // no default values defined in spec.
-func NewValidateRegistrationEmailParams() ValidateRegistrationEmailParams {
+func NewRegisterActivateResendEmailParams() RegisterActivateResendEmailParams {
 
-	return ValidateRegistrationEmailParams{}
+	return RegisterActivateResendEmailParams{}
 }
 
-// ValidateRegistrationEmailParams contains all the bound params for the validate registration email operation
+// RegisterActivateResendEmailParams contains all the bound params for the register activate resend email operation
 // typically these are obtained from a http.Request
 //
-// swagger:parameters validateRegistrationEmail
-type ValidateRegistrationEmailParams struct {
+// swagger:parameters registerActivateResendEmail
+type RegisterActivateResendEmailParams struct {
 
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
@@ -34,21 +34,21 @@ type ValidateRegistrationEmailParams struct {
 	  Required: true
 	  In: body
 	*/
-	Args ValidateRegistrationEmailBody
+	Args RegisterActivateResendEmailBody
 }
 
 // BindRequest both binds and validates a request, it assumes that complex things implement a Validatable(strfmt.Registry) error interface
 // for simple values it will use straight method calls.
 //
-// To ensure default values, the struct must have been initialized with NewValidateRegistrationEmailParams() beforehand.
-func (o *ValidateRegistrationEmailParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
+// To ensure default values, the struct must have been initialized with NewRegisterActivateResendEmailParams() beforehand.
+func (o *RegisterActivateResendEmailParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
 	var res []error
 
 	o.HTTPRequest = r
 
 	if runtime.HasBody(r) {
 		defer r.Body.Close()
-		var body ValidateRegistrationEmailBody
+		var body RegisterActivateResendEmailBody
 		if err := route.Consumer.Consume(r.Body, &body); err != nil {
 			if err == io.EOF {
 				res = append(res, errors.Required("args", "body", ""))

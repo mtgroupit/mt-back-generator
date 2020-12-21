@@ -37,8 +37,8 @@ func (o *SetEmailNoContent) WriteResponse(rw http.ResponseWriter, producer runti
 	rw.WriteHeader(204)
 }
 
-/*SetEmailDefault - 409.700: email is not available
-- 409.709: invalid email validation token
+/*SetEmailDefault - 404.2003: email is not available
+- 404.2001: invalid email validation token
 
 
 swagger:response setEmailDefault

@@ -35,7 +35,7 @@ func (o *RegisterURL) SetBasePath(bp string) {
 func (o *RegisterURL) Build() (*url.URL, error) {
 	var _result url.URL
 
-	var _path = "/register"
+	var _path = "/register-activate"
 
 	_basePath := o._basePath
 	if _basePath == "" {

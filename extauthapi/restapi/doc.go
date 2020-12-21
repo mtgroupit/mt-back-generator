@@ -4,11 +4,10 @@
 //
 //  ## List of all custom errors
 //  First number is HTTP Status code, second is value of "code" field in returned JSON object, text description may or may not match "message" field in returned JSON object.
-//  - 409.100: email is not available
 //  - 404.101: invalid credentials
 //
 //  Schemes:
-//    https
+//    http
 //  Host: localhost
 //  BasePath: /api/v1/
 //  Version: 1.0.0

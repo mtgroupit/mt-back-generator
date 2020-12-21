@@ -69,8 +69,11 @@ func NewAuthenticationAPI(spec *loads.Document) *AuthenticationAPI {
 		RegisterHandler: RegisterHandlerFunc(func(params RegisterParams) middleware.Responder {
 			return middleware.NotImplemented("operation Register has not yet been implemented")
 		}),
-		RegisterLoginOAuthHandler: RegisterLoginOAuthHandlerFunc(func(params RegisterLoginOAuthParams) middleware.Responder {
-			return middleware.NotImplemented("operation RegisterLoginOAuth has not yet been implemented")
+		RegisterActivateResendEmailHandler: RegisterActivateResendEmailHandlerFunc(func(params RegisterActivateResendEmailParams) middleware.Responder {
+			return middleware.NotImplemented("operation RegisterResendEmail has not yet been implemented")
+		}),
+		RequestRegistrationHandler: RequestRegistrationHandlerFunc(func(params RequestRegistrationParams) middleware.Responder {
+			return middleware.NotImplemented("operation RequestRegistration has not yet been implemented")
 		}),
 		ResetPasswordHandler: ResetPasswordHandlerFunc(func(params ResetPasswordParams) middleware.Responder {
 			return middleware.NotImplemented("operation ResetPassword has not yet been implemented")
@@ -96,9 +99,6 @@ func NewAuthenticationAPI(spec *loads.Document) *AuthenticationAPI {
 		ValidateNewEmailHandler: ValidateNewEmailHandlerFunc(func(params ValidateNewEmailParams, principal interface{}) middleware.Responder {
 			return middleware.NotImplemented("operation ValidateNewEmail has not yet been implemented")
 		}),
-		ValidateRegistrationEmailHandler: ValidateRegistrationEmailHandlerFunc(func(params ValidateRegistrationEmailParams) middleware.Responder {
-			return middleware.NotImplemented("operation ValidateRegistrationEmail has not yet been implemented")
-		}),
 
 		// Applies when the "Cookie" header is set
 		CookieKeyAuth: func(token string) (interface{}, error) {
@@ -115,7 +115,6 @@ func NewAuthenticationAPI(spec *loads.Document) *AuthenticationAPI {
 
 /*AuthenticationAPI ## List of all custom errors
 First number is HTTP Status code, second is value of "code" field in returned JSON object, text description may or may not match "message" field in returned JSON object.
-- 409.100: email is not available
 - 404.101: invalid credentials
 */
 type AuthenticationAPI struct {
@@ -177,8 +176,10 @@ type AuthenticationAPI struct {
 	LogoutHandler LogoutHandler
 	// RegisterHandler sets the operation handler for the register operation
 	RegisterHandler RegisterHandler
-	// RegisterLoginOAuthHandler sets the operation handler for the register login o auth operation
-	RegisterLoginOAuthHandler RegisterLoginOAuthHandler
+	// RegisterActivateResendEmailHandler sets the operation handler for the register activate resend email operation
+	RegisterActivateResendEmailHandler RegisterActivateResendEmailHandler
+	// RequestRegistrationHandler sets the operation handler for the request registration operation
+	RequestRegistrationHandler RequestRegistrationHandler
 	// ResetPasswordHandler sets the operation handler for the reset password operation
 	ResetPasswordHandler ResetPasswordHandler
 	// SearchUsersByUsernameHandler sets the operation handler for the search users by username operation
@@ -195,8 +196,6 @@ type AuthenticationAPI struct {
 	SetUsernameHandler SetUsernameHandler
 	// ValidateNewEmailHandler sets the operation handler for the validate new email operation
 	ValidateNewEmailHandler ValidateNewEmailHandler
-	// ValidateRegistrationEmailHandler sets the operation handler for the validate registration email operation
-	ValidateRegistrationEmailHandler ValidateRegistrationEmailHandler
 	// ServeError is called when an error is received, there is a default handler
 	// but you can set your own with this
 	ServeError func(http.ResponseWriter, *http.Request, error)
@@ -307,8 +306,11 @@ func (o *AuthenticationAPI) Validate() error {
 	if o.RegisterHandler == nil {
 		unregistered = append(unregistered, "RegisterHandler")
 	}
-	if o.RegisterLoginOAuthHandler == nil {
-		unregistered = append(unregistered, "RegisterLoginOAuthHandler")
+	if o.RegisterActivateResendEmailHandler == nil {
+		unregistered = append(unregistered, "RegisterActivateResendEmailHandler")
+	}
+	if o.RequestRegistrationHandler == nil {
+		unregistered = append(unregistered, "RequestRegistrationHandler")
 	}
 	if o.ResetPasswordHandler == nil {
 		unregistered = append(unregistered, "ResetPasswordHandler")
@@ -333,9 +335,6 @@ func (o *AuthenticationAPI) Validate() error {
 	}
 	if o.ValidateNewEmailHandler == nil {
 		unregistered = append(unregistered, "ValidateNewEmailHandler")
-	}
-	if o.ValidateRegistrationEmailHandler == nil {
-		unregistered = append(unregistered, "ValidateRegistrationEmailHandler")
 	}
 
 	if len(unregistered) > 0 {
@@ -473,11 +472,15 @@ func (o *AuthenticationAPI) initHandlerCache() {
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
-	o.handlers["POST"]["/register"] = NewRegister(o.context, o.RegisterHandler)
+	o.handlers["POST"]["/register-activate"] = NewRegister(o.context, o.RegisterHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
-	o.handlers["POST"]["/register-login-oauth"] = NewRegisterLoginOAuth(o.context, o.RegisterLoginOAuthHandler)
+	o.handlers["POST"]["/register-activate-resend-email"] = NewRegisterActivateResendEmail(o.context, o.RegisterActivateResendEmailHandler)
+	if o.handlers["POST"] == nil {
+		o.handlers["POST"] = make(map[string]http.Handler)
+	}
+	o.handlers["POST"]["/request-registration"] = NewRequestRegistration(o.context, o.RequestRegistrationHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
@@ -510,10 +513,6 @@ func (o *AuthenticationAPI) initHandlerCache() {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
 	o.handlers["POST"]["/validate-new-email"] = NewValidateNewEmail(o.context, o.ValidateNewEmailHandler)
-	if o.handlers["POST"] == nil {
-		o.handlers["POST"] = make(map[string]http.Handler)
-	}
-	o.handlers["POST"]["/validate-registration-email"] = NewValidateRegistrationEmail(o.context, o.ValidateRegistrationEmailHandler)
 }
 
 // Serve creates a http handler to serve the API over HTTP

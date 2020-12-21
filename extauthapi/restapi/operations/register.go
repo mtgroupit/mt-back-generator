@@ -34,7 +34,7 @@ func NewRegister(ctx *middleware.Context, handler RegisterHandler) *Register {
 	return &Register{Context: ctx, Handler: handler}
 }
 
-/*Register swagger:route POST /register register
+/*Register swagger:route POST /register-activate register
 
 Register new user by validated email.
 
@@ -70,10 +70,6 @@ type RegisterBody struct {
 	// email token
 	// Required: true
 	EmailToken models.JWT `json:"emailToken"`
-
-	// password
-	// Required: true
-	Password models.Password `json:"password"`
 }
 
 // Validate validates this register body
@@ -81,10 +77,6 @@ func (o *RegisterBody) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := o.validateEmailToken(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := o.validatePassword(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -99,18 +91,6 @@ func (o *RegisterBody) validateEmailToken(formats strfmt.Registry) error {
 	if err := o.EmailToken.Validate(formats); err != nil {
 		if ve, ok := err.(*errors.Validation); ok {
 			return ve.ValidateName("args" + "." + "emailToken")
-		}
-		return err
-	}
-
-	return nil
-}
-
-func (o *RegisterBody) validatePassword(formats strfmt.Registry) error {
-
-	if err := o.Password.Validate(formats); err != nil {
-		if ve, ok := err.(*errors.Validation); ok {
-			return ve.ValidateName("args" + "." + "password")
 		}
 		return err
 	}

@@ -38,7 +38,7 @@ func (o *ResetPasswordNoContent) WriteResponse(rw http.ResponseWriter, producer 
 }
 
 /*ResetPasswordDefault - 404.101: invalid credentials
-- 404.102: organisation not found
+- 404.707: no such email
 
 
 swagger:response resetPasswordDefault

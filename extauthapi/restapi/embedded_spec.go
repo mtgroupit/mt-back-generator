@@ -25,11 +25,11 @@ func init() {
     "application/json"
   ],
   "schemes": [
-    "https"
+    "http"
   ],
   "swagger": "2.0",
   "info": {
-    "description": "## List of all custom errors\nFirst number is HTTP Status code, second is value of \"code\" field in returned JSON object, text description may or may not match \"message\" field in returned JSON object.\n- 409.100: email is not available\n- 404.101: invalid credentials\n",
+    "description": "## List of all custom errors\nFirst number is HTTP Status code, second is value of \"code\" field in returned JSON object, text description may or may not match \"message\" field in returned JSON object.\n- 404.101: invalid credentials\n",
     "title": "Authentication",
     "version": "1.0.0"
   },
@@ -65,7 +65,7 @@ func init() {
             "$ref": "#/responses/NoContentWithAuth"
           },
           "default": {
-            "description": "- 422.702: password is too weak\n- 403.710: invalid password\n",
+            "description": "- 404.2004: password is too weak\n- 403.710: invalid password\n",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -292,7 +292,7 @@ func init() {
             "$ref": "#/responses/NoContentWithAuth"
           },
           "default": {
-            "description": "- 404.101: invalid credentials\n- 404.102: organisation not found\n",
+            "description": "- 404.101: invalid credentials\n- 404.707: no such email\n",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -314,7 +314,7 @@ func init() {
         }
       }
     },
-    "/register": {
+    "/register-activate": {
       "post": {
         "security": [],
         "description": "Register new user by validated email.",
@@ -327,12 +327,104 @@ func init() {
             "schema": {
               "type": "object",
               "required": [
-                "emailToken",
-                "password"
+                "emailToken"
               ],
               "properties": {
                 "emailToken": {
                   "$ref": "#/definitions/JWT"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "required": [
+                "userID"
+              ],
+              "properties": {
+                "userID": {
+                  "$ref": "#/definitions/UserID"
+                }
+              }
+            },
+            "headers": {
+              "Set-Cookie": {
+                "type": "string",
+                "description": "Session token."
+              }
+            }
+          },
+          "default": {
+            "description": "- 404.2003: email is not available\n- 404.2001: invalid email validation token\n",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/register-activate-resend-email": {
+      "post": {
+        "security": [],
+        "description": "Resend new email if old token is not valid.",
+        "operationId": "registerActivateResendEmail",
+        "parameters": [
+          {
+            "name": "args",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "emailToken"
+              ],
+              "properties": {
+                "emailToken": {
+                  "$ref": "#/definitions/JWT"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "description": "- 404.2001: invalid email validation token\n",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/request-registration": {
+      "post": {
+        "security": [],
+        "description": "Sends email with validation token.",
+        "operationId": "requestRegistration",
+        "parameters": [
+          {
+            "name": "args",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "email",
+                "password"
+              ],
+              "properties": {
+                "email": {
+                  "$ref": "#/definitions/Email"
+                },
+                "language": {
+                  "$ref": "#/definitions/Language"
                 },
                 "password": {
                   "$ref": "#/definitions/Password"
@@ -342,92 +434,11 @@ func init() {
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "type": "object",
-              "required": [
-                "userID"
-              ],
-              "properties": {
-                "userID": {
-                  "$ref": "#/definitions/UserID"
-                }
-              }
-            },
-            "headers": {
-              "Set-Cookie": {
-                "type": "string",
-                "description": "Session token."
-              }
-            }
+          "204": {
+            "$ref": "#/responses/NoContent"
           },
           "default": {
-            "description": "- 409.700: email is not available\n- 422.702: password is too weak\n- 409.709: invalid email validation token\n",
-            "schema": {
-              "$ref": "#/definitions/Error"
-            }
-          }
-        }
-      }
-    },
-    "/register-login-oauth": {
-      "post": {
-        "security": [],
-        "operationId": "registerLoginOAuth",
-        "parameters": [
-          {
-            "name": "args",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "required": [
-                "server",
-                "code",
-                "sentState",
-                "recvState"
-              ],
-              "properties": {
-                "code": {
-                  "$ref": "#/definitions/OAuthCode"
-                },
-                "recvState": {
-                  "$ref": "#/definitions/OAuthState"
-                },
-                "sentState": {
-                  "$ref": "#/definitions/OAuthState"
-                },
-                "server": {
-                  "$ref": "#/definitions/OAuthServer"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "type": "object",
-              "required": [
-                "userID"
-              ],
-              "properties": {
-                "userID": {
-                  "$ref": "#/definitions/UserID"
-                }
-              }
-            },
-            "headers": {
-              "Set-Cookie": {
-                "type": "string",
-                "description": "Session token."
-              }
-            }
-          },
-          "default": {
-            "description": "- 502.713: failed to get user profile from oauth server\n- 403.714: state does not match\n- 403.715: user is blocked\n",
+            "description": "- 404.2003: email is not available\n- 404.2004: password is too weak\n",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -463,7 +474,7 @@ func init() {
             "$ref": "#/responses/NoContent"
           },
           "default": {
-            "description": "- 404.101: invalid credentials\n- 404.102: organisation not found\n",
+            "description": "- 404.101: invalid credentials\n- 404.707: no such email\n",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -583,7 +594,7 @@ func init() {
             "$ref": "#/responses/NoContent"
           },
           "default": {
-            "description": "- 409.700: email is not available\n- 409.709: invalid email validation token\n",
+            "description": "- 404.2003: email is not available\n- 404.2001: invalid email validation token\n",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -623,7 +634,7 @@ func init() {
             "$ref": "#/responses/NoContent"
           },
           "default": {
-            "description": "- 404.102: organisation not found\n- 422.103: password is too weak\n- 403.104: invalid password reset token\n",
+            "description": "- 404.2004: password is too weak\n- 404.2005: invalid password reset token\n",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -740,43 +751,7 @@ func init() {
             "$ref": "#/responses/NoContent"
           },
           "default": {
-            "description": "- 409.700: email is not available\n- 403.710: invalid password\n",
-            "schema": {
-              "$ref": "#/definitions/Error"
-            }
-          }
-        }
-      }
-    },
-    "/validate-registration-email": {
-      "post": {
-        "security": [],
-        "description": "Sends email with validation token.",
-        "operationId": "validateRegistrationEmail",
-        "parameters": [
-          {
-            "name": "args",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "required": [
-                "email"
-              ],
-              "properties": {
-                "email": {
-                  "$ref": "#/definitions/Email"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "$ref": "#/responses/NoContent"
-          },
-          "default": {
-            "description": "- 409.700: email is not available\n- 422.703: wrong captcha answer\n",
+            "description": "- 404.2003: email is not available\n- 403.710: invalid password\n",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -1079,32 +1054,20 @@ func init() {
       "maxLength": 1000,
       "minLength": 1
     },
+    "Language": {
+      "type": "string",
+      "maxLength": 2,
+      "minLength": 2,
+      "enum": [
+        "en",
+        "fr"
+      ]
+    },
     "Name": {
       "description": "Full user name.",
       "type": "string",
       "maxLength": 100,
       "minLength": 1
-    },
-    "OAuthCode": {
-      "description": "Code for authorization through OAuth2.",
-      "type": "string",
-      "maxLength": 200,
-      "minLength": 1
-    },
-    "OAuthServer": {
-      "description": "OAuth server for login or registration.",
-      "type": "string",
-      "enum": [
-        "google",
-        "vk",
-        "facebook",
-        "yandex"
-      ]
-    },
-    "OAuthState": {
-      "description": "Code sent and received by OAuth to the server.",
-      "type": "string",
-      "maxLength": 200
     },
     "Password": {
       "type": "string"
@@ -1153,6 +1116,9 @@ func init() {
           "$ref": "#/definitions/Email"
         },
         "id": {
+          "$ref": "#/definitions/UserID"
+        },
+        "isolatedEntityId": {
           "$ref": "#/definitions/UserID"
         },
         "persdataEndpoint": {
@@ -1236,11 +1202,11 @@ func init() {
     "application/json"
   ],
   "schemes": [
-    "https"
+    "http"
   ],
   "swagger": "2.0",
   "info": {
-    "description": "## List of all custom errors\nFirst number is HTTP Status code, second is value of \"code\" field in returned JSON object, text description may or may not match \"message\" field in returned JSON object.\n- 409.100: email is not available\n- 404.101: invalid credentials\n",
+    "description": "## List of all custom errors\nFirst number is HTTP Status code, second is value of \"code\" field in returned JSON object, text description may or may not match \"message\" field in returned JSON object.\n- 404.101: invalid credentials\n",
     "title": "Authentication",
     "version": "1.0.0"
   },
@@ -1282,7 +1248,7 @@ func init() {
             }
           },
           "default": {
-            "description": "- 422.702: password is too weak\n- 403.710: invalid password\n",
+            "description": "- 404.2004: password is too weak\n- 403.710: invalid password\n",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -1533,7 +1499,7 @@ func init() {
             }
           },
           "default": {
-            "description": "- 404.101: invalid credentials\n- 404.102: organisation not found\n",
+            "description": "- 404.101: invalid credentials\n- 404.707: no such email\n",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -1564,7 +1530,7 @@ func init() {
         }
       }
     },
-    "/register": {
+    "/register-activate": {
       "post": {
         "security": [],
         "description": "Register new user by validated email.",
@@ -1577,12 +1543,104 @@ func init() {
             "schema": {
               "type": "object",
               "required": [
-                "emailToken",
-                "password"
+                "emailToken"
               ],
               "properties": {
                 "emailToken": {
                   "$ref": "#/definitions/JWT"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "required": [
+                "userID"
+              ],
+              "properties": {
+                "userID": {
+                  "$ref": "#/definitions/UserID"
+                }
+              }
+            },
+            "headers": {
+              "Set-Cookie": {
+                "type": "string",
+                "description": "Session token."
+              }
+            }
+          },
+          "default": {
+            "description": "- 404.2003: email is not available\n- 404.2001: invalid email validation token\n",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/register-activate-resend-email": {
+      "post": {
+        "security": [],
+        "description": "Resend new email if old token is not valid.",
+        "operationId": "registerActivateResendEmail",
+        "parameters": [
+          {
+            "name": "args",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "emailToken"
+              ],
+              "properties": {
+                "emailToken": {
+                  "$ref": "#/definitions/JWT"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "description": "- 404.2001: invalid email validation token\n",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/request-registration": {
+      "post": {
+        "security": [],
+        "description": "Sends email with validation token.",
+        "operationId": "requestRegistration",
+        "parameters": [
+          {
+            "name": "args",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "email",
+                "password"
+              ],
+              "properties": {
+                "email": {
+                  "$ref": "#/definitions/Email"
+                },
+                "language": {
+                  "$ref": "#/definitions/Language"
                 },
                 "password": {
                   "$ref": "#/definitions/Password"
@@ -1592,92 +1650,11 @@ func init() {
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "type": "object",
-              "required": [
-                "userID"
-              ],
-              "properties": {
-                "userID": {
-                  "$ref": "#/definitions/UserID"
-                }
-              }
-            },
-            "headers": {
-              "Set-Cookie": {
-                "type": "string",
-                "description": "Session token."
-              }
-            }
+          "204": {
+            "description": "The server successfully processed the request and is not returning any content."
           },
           "default": {
-            "description": "- 409.700: email is not available\n- 422.702: password is too weak\n- 409.709: invalid email validation token\n",
-            "schema": {
-              "$ref": "#/definitions/Error"
-            }
-          }
-        }
-      }
-    },
-    "/register-login-oauth": {
-      "post": {
-        "security": [],
-        "operationId": "registerLoginOAuth",
-        "parameters": [
-          {
-            "name": "args",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "required": [
-                "server",
-                "code",
-                "sentState",
-                "recvState"
-              ],
-              "properties": {
-                "code": {
-                  "$ref": "#/definitions/OAuthCode"
-                },
-                "recvState": {
-                  "$ref": "#/definitions/OAuthState"
-                },
-                "sentState": {
-                  "$ref": "#/definitions/OAuthState"
-                },
-                "server": {
-                  "$ref": "#/definitions/OAuthServer"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "type": "object",
-              "required": [
-                "userID"
-              ],
-              "properties": {
-                "userID": {
-                  "$ref": "#/definitions/UserID"
-                }
-              }
-            },
-            "headers": {
-              "Set-Cookie": {
-                "type": "string",
-                "description": "Session token."
-              }
-            }
-          },
-          "default": {
-            "description": "- 502.713: failed to get user profile from oauth server\n- 403.714: state does not match\n- 403.715: user is blocked\n",
+            "description": "- 404.2003: email is not available\n- 404.2004: password is too weak\n",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -1713,7 +1690,7 @@ func init() {
             "description": "The server successfully processed the request and is not returning any content."
           },
           "default": {
-            "description": "- 404.101: invalid credentials\n- 404.102: organisation not found\n",
+            "description": "- 404.101: invalid credentials\n- 404.707: no such email\n",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -1840,7 +1817,7 @@ func init() {
             "description": "The server successfully processed the request and is not returning any content."
           },
           "default": {
-            "description": "- 409.700: email is not available\n- 409.709: invalid email validation token\n",
+            "description": "- 404.2003: email is not available\n- 404.2001: invalid email validation token\n",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -1880,7 +1857,7 @@ func init() {
             "description": "The server successfully processed the request and is not returning any content."
           },
           "default": {
-            "description": "- 404.102: organisation not found\n- 422.103: password is too weak\n- 403.104: invalid password reset token\n",
+            "description": "- 404.2004: password is too weak\n- 404.2005: invalid password reset token\n",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -2000,43 +1977,7 @@ func init() {
             "description": "The server successfully processed the request and is not returning any content."
           },
           "default": {
-            "description": "- 409.700: email is not available\n- 403.710: invalid password\n",
-            "schema": {
-              "$ref": "#/definitions/Error"
-            }
-          }
-        }
-      }
-    },
-    "/validate-registration-email": {
-      "post": {
-        "security": [],
-        "description": "Sends email with validation token.",
-        "operationId": "validateRegistrationEmail",
-        "parameters": [
-          {
-            "name": "args",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "required": [
-                "email"
-              ],
-              "properties": {
-                "email": {
-                  "$ref": "#/definitions/Email"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "The server successfully processed the request and is not returning any content."
-          },
-          "default": {
-            "description": "- 409.700: email is not available\n- 422.703: wrong captcha answer\n",
+            "description": "- 404.2003: email is not available\n- 403.710: invalid password\n",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -2339,32 +2280,20 @@ func init() {
       "maxLength": 1000,
       "minLength": 1
     },
+    "Language": {
+      "type": "string",
+      "maxLength": 2,
+      "minLength": 2,
+      "enum": [
+        "en",
+        "fr"
+      ]
+    },
     "Name": {
       "description": "Full user name.",
       "type": "string",
       "maxLength": 100,
       "minLength": 1
-    },
-    "OAuthCode": {
-      "description": "Code for authorization through OAuth2.",
-      "type": "string",
-      "maxLength": 200,
-      "minLength": 1
-    },
-    "OAuthServer": {
-      "description": "OAuth server for login or registration.",
-      "type": "string",
-      "enum": [
-        "google",
-        "vk",
-        "facebook",
-        "yandex"
-      ]
-    },
-    "OAuthState": {
-      "description": "Code sent and received by OAuth to the server.",
-      "type": "string",
-      "maxLength": 200
     },
     "Password": {
       "type": "string"
@@ -2413,6 +2342,9 @@ func init() {
           "$ref": "#/definitions/Email"
         },
         "id": {
+          "$ref": "#/definitions/UserID"
+        },
+        "isolatedEntityId": {
           "$ref": "#/definitions/UserID"
         },
         "persdataEndpoint": {

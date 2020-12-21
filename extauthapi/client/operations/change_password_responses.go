@@ -79,7 +79,7 @@ func NewChangePasswordDefault(code int) *ChangePasswordDefault {
 
 /*ChangePasswordDefault handles this case with default header values.
 
-- 422.702: password is too weak
+- 404.2004: password is too weak
 - 403.710: invalid password
 
 */
