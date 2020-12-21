@@ -49,7 +49,9 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 		})
 	{{- end}}
 	{{- if eq $method "Delete"}}
-		params.Body.ID = test{{$modelName}}1.ID
+		{{- if not $model.IDFromProfile}}
+			params.Body.ID = test{{$modelName}}1.ID
+		{{- end}}
 		mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any(){{if not $model.Shared}}, gomock.Any(){{end}}).Return(nil)
 
 		t.Run("", func(tt *testing.T) {
@@ -60,11 +62,11 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 	{{- end}}
 	{{- if or (eq $method "Edit") (IsCustomEdit $method)}}
 		{{- if IsCustomEdit $method}}
-			params.Body = {{LowerTitle (index $model.Tags 0)}}.{{$method}}{{$model.TitleName}}Body{
+			params.Body = {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}Body{
 				{{- if not $model.IDFromProfile}}
 					ID: {{if $model.IDFromProfile}}profID{{else}}test{{$modelName}}1.ID{{end}},
 				{{- end}}
-				Data: &{{LowerTitle (index $model.Tags 0)}}.{{$method}}{{$model.TitleName}}ParamsBodyData{
+				Data: &{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}ParamsBodyData{
 					{{- range $name, $options := $model.Columns}}
 						{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}
 							{{$options.TitleName}}: test{{$modelName}}1.{{$options.TitleName}}{{if $options.IsStruct}}.ID{{end}},

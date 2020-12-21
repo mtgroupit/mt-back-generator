@@ -35,7 +35,7 @@ models:
       - get
       - add
       - delete
-      - edit(occupation, locations)
+      # - edit(occupation, locations)
       - list
   employe:
     description: "employe object"
@@ -61,8 +61,8 @@ models:
           - occupation
           - headOfficeLocation.name
     methods:
-      - add
-      - edit
+      # - add
+      # - edit
       - list
-      - list(id, name*, company*(name, locations(id, name)))
+      # - list(id, name*, company*(name, locations(id, name)))
       - custom
