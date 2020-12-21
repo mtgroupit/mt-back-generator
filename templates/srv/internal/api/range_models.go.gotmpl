@@ -13,72 +13,112 @@ import (
 
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
 
-{{range $i, $method := $model.Methods}}{{if not (IsCustomMethod $method)}}
+{{- range $i, $method := $model.Methods}}
+{{- if not (IsCustomMethod $method)}}
 func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
-	{{if eq $method "Get"}}{{if or $model.IDFromProfile (not $model.Shared)}}prof := profile.(*extauthapi.Profile)
-	{{end}}c, err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}{{if not $model.Shared}}, prof.ID.String(){{end}})
-	if err != nil {
-		log.Err("{{$method}}{{$modelName}} error", err)
-	} else {
-		log.Info("{{$method}}{{$modelName}} ok", "id", {{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
-	}
-	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c)){{end}}
-	{{if eq $method "Add"}}{{if or $model.IDFromProfile $model.HaveCreatedBy (not $model.Shared)}}prof := profile.(*extauthapi.Profile)
-	{{end}}c, err := svc.app.{{$method}}{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.ID.String(), {{end}}app{{$modelName}}Add(params.Body))
-	if err != nil {
-		log.Err("{{$method}}{{$modelName}} error", err)
-	} else {
-		log.Info("{{$method}}{{$modelName}} ok")
-	}
-	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}Created().WithPayload(api{{$modelName}}(c)){{end}}
-	{{if eq $method "Delete"}}{{if or $model.IDFromProfile (not $model.Shared)}}prof := profile.(*extauthapi.Profile)
-	{{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}{{if not $model.Shared}}, prof.ID.String(){{end}})
-	if err != nil {
-		log.Err("{{$method}}{{$modelName}} error", err)
-	} else {
-		log.Info("{{$method}}{{$modelName}} ok", "id", {{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
-	}
-	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}NoContent(){{end}}
-	{{if or (eq $method "Edit") (IsCustomEdit $method)}}{{if or $model.IDFromProfile $model.HaveModifiedBy (not $model.Shared)}}prof := profile.(*extauthapi.Profile)
-	{{end}}{{if IsCustomEdit $method}}in := &app.{{$modelName}}{}{{range $name, $options := $model.Columns}}{{if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}{{if and (not $options.IsStruct) (ne $name "id")}}
-	in.{{$options.TitleName}} = params.Body.Data.{{$options.TitleName}}{{if or (eq $options.Format "date-time") (eq $options.Format "email")}}.String(){{end}}{{end}}
-	{{end}}{{end}}{{range $name, $options := $model.Columns}}{{if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}{{if and $options.IsStruct (not $options.IsArray)}}
-	if params.Body.Data.{{$options.TitleName}} != "" {
-		in.{{$options.TitleName}} = &app.{{$options.GoType}}{ID: params.Body.Data.{{$options.TitleName}}}
-	}{{end}}
-	{{end}}{{end}}{{range $name, $options := $model.Columns}}{{if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}{{if and $options.IsArray $options.IsStruct}}
-	if len(params.Body.Data.{{$options.TitleName}}) > 0 {
-		for _, id := range params.Body.Data.{{$options.TitleName}} {
-			in.{{$options.TitleName}} = append(in.{{$options.TitleName}}, &app.{{$options.GoType}}{
-				ID: id,
-			})
+	{{- if eq $method "Get"}}
+		{{- if or $model.IDFromProfile (not $model.Shared)}}
+			prof := profile.(*extauthapi.Profile)
+		{{- end}}
+		c, err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}{{if not $model.Shared}}, prof.IsolatedEntityID.String(){{end}})
+		if err != nil {
+			log.Err("{{$method}}{{$modelName}} error", err)
+		} else {
+			log.Info("{{$method}}{{$modelName}} ok", "id", {{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
 		}
-	}{{end}}
-	{{end}}{{end}}{{end}}{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.ID.String(), {{end}}{{if IsCustomEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
-	if err != nil {
-		log.Err("{{$method}}{{$modelName}} error", err)
-	} else {
-		log.Info("{{$method}}{{$modelName}} ok")
-	}
-	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK(){{if $model.ReturnWhenEdit}}.WithPayload(api{{$modelName}}(c)){{end}}{{end}}
-	{{if  or (eq $method "List") (IsCustomList $method)}}{{if not $model.Shared}}prof := profile.(*extauthapi.Profile)
-	{{end}}c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}({{if not $model.Shared}}prof.ID.String(), {{end}}params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters), params.Body.LogicFilter, params.Body.SortBy, params.Body.OrderBy)
-	if err != nil {
-		log.Err("{{$method}}{{$modelName}} error", err)
-	} else {
-		log.Info("{{$method}}{{$modelName}} ok")
-	}
-	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(&{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}OKBody{
-		Items: api{{$modelName}}s(c),
-		Warnings: warnings,{{if $model.DetailedPagination}}
-		Count: int32(count),{{end}}
-	}){{end}}
+		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c))
+	{{- end}}
+	{{- if eq $method "Add"}}
+		{{- if or $model.IDFromProfile $model.HaveCreatedBy (not $model.Shared)}}
+			prof := profile.(*extauthapi.Profile)
+		{{- end}}
+		c, err := svc.app.{{$method}}{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}app{{$modelName}}Add(params.Body))
+		if err != nil {
+			log.Err("{{$method}}{{$modelName}} error", err)
+		} else {
+			log.Info("{{$method}}{{$modelName}} ok")
+		}
+		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}Created().WithPayload(api{{$modelName}}(c))
+	{{- end}}
+	{{- if eq $method "Delete"}}
+		{{- if or $model.IDFromProfile (not $model.Shared)}}
+			prof := profile.(*extauthapi.Profile)
+		{{- end}}
+		err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}{{if not $model.Shared}}, prof.IsolatedEntityID.String(){{end}})
+		if err != nil {
+			log.Err("{{$method}}{{$modelName}} error", err)
+		} else {
+			log.Info("{{$method}}{{$modelName}} ok", "id", {{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
+		}
+		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}NoContent()
+	{{- end}}
+	{{- if or (eq $method "Edit") (IsCustomEdit $method)}}
+		{{- if or $model.IDFromProfile $model.HaveModifiedBy (not $model.Shared)}}
+			prof := profile.(*extauthapi.Profile)
+		{{- end}}
+		{{- if IsCustomEdit $method}}
+			in := &app.{{$modelName}}{}
+			{{- range $name, $options := $model.Columns}}
+				{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}
+					{{- if and (not $options.IsStruct) (ne $name "id")}}
+						in.{{$options.TitleName}} = params.Body.Data.{{$options.TitleName}}{{if or (eq $options.Format "date-time") (eq $options.Format "email")}}.String(){{end}}
+					{{- end}}
+				{{- end}}
+			{{- end}}
+			{{- range $name, $options := $model.Columns}}
+				{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}
+					{{- if and $options.IsStruct (not $options.IsArray)}}
+						if params.Body.Data.{{$options.TitleName}} != "" {
+							in.{{$options.TitleName}} = &app.{{$options.GoType}}{ID: params.Body.Data.{{$options.TitleName}}}
+						}
+					{{- end}}
+				{{- end}}
+			{{- end}}
+			{{- range $name, $options := $model.Columns}}
+				{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}
+					{{- if and $options.IsArray $options.IsStruct}}
+						if len(params.Body.Data.{{$options.TitleName}}) > 0 {
+							for _, id := range params.Body.Data.{{$options.TitleName}} {
+								in.{{$options.TitleName}} = append(in.{{$options.TitleName}}, &app.{{$options.GoType}}{
+									ID: id,
+								})
+							}
+						}
+					{{- end}}
+				{{- end}}
+			{{- end}}
+		{{- end}}
+		{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}{{if IsCustomEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
+		if err != nil {
+			log.Err("{{$method}}{{$modelName}} error", err)
+		} else {
+			log.Info("{{$method}}{{$modelName}} ok")
+		}
+		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK(){{if $model.ReturnWhenEdit}}.WithPayload(api{{$modelName}}(c)){{end}}
+	{{- end}}
+	{{- if  or (eq $method "List") (IsCustomList $method)}}
+		{{- if not $model.Shared}}
+			prof := profile.(*extauthapi.Profile)
+		{{- end}}
+		c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}({{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters), params.Body.LogicFilter, params.Body.SortBy, params.Body.OrderBy)
+		if err != nil {
+			log.Err("{{$method}}{{$modelName}} error", err)
+		} else {
+			log.Info("{{$method}}{{$modelName}} ok")
+		}
+		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(&{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}OKBody{
+			Items: api{{$modelName}}s(c),
+			Warnings: warnings,{{if $model.DetailedPagination}}
+			Count: int32(count),{{end}}
+		})
+	{{- end}}
 }
-{{end}}{{end}}
+{{- end}}
+{{- end}}
 {{range $column, $options := $model.Columns}} {{if and $options.IsArray $options.IsStruct}}
 func (svc *service) Add{{Title $column}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.Add{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
 	{{if or $model.HaveModifiedBy (not $model.Shared)}}prof := profile.(*extauthapi.Profile)
-	{{end}}err := svc.app.Add{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.ID.String(), {{end}}params.Body.ItemsID, app{{$options.GoType}}sAdd(params.Body.Items))
+	{{end}}err := svc.app.Add{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}params.Body.ItemsID, app{{$options.GoType}}sAdd(params.Body.Items))
 	if err != nil {
 		log.Err("Add{{Title $column}}{{$modelName}} error", err)
 	} else {
@@ -89,7 +129,7 @@ func (svc *service) Add{{Title $column}}{{$modelName}}(params {{if $model.Tags}}
 
 func (svc *service) Delete{{Title $column}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.Delete{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
 	{{if or $model.HaveModifiedBy (not $model.Shared)}}prof := profile.(*extauthapi.Profile)
-	{{end}}err := svc.app.Delete{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.ID.String(), {{end}}params.Body.Items)
+	{{end}}err := svc.app.Delete{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}params.Body.Items)
 	if err != nil {
 		log.Err("Delete{{Title $column}}{{$modelName}} error", err)
 	} else {
