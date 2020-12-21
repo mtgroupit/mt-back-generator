@@ -287,7 +287,7 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 				sort.Slice({{if $model.HaveLazyLoading}}result{{else}}ms{{end}}, func(i, j int) bool { return {{if $model.HaveLazyLoading}}result{{else}}ms{{end}}[i]{{index $options.NestedSorts $j}} >= {{if $model.HaveLazyLoading}}result{{else}}ms{{end}}[j]{{index $options.NestedSorts $j}} })
 			}{{end}}{{end}}
 		default:
-			warnings = append(warnings, fmt.Sprintf("sorting by '%s' is not avaliable or '%s' is not a valid sort key", sortBy))
+			warnings = append(warnings, fmt.Sprintf("sorting by '%s' is not avaliable or '%s' is not a valid sort key", sortBy, sortBy))
 		}
 	}{{end}}
 
