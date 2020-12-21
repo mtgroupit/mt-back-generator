@@ -33,6 +33,10 @@ type Profile struct {
 	// Format: uuid4
 	ID UserID `json:"id,omitempty"`
 
+	// isolated entity Id
+	// Format: uuid4
+	IsolatedEntityID UserID `json:"isolatedEntityId,omitempty"`
+
 	// persdata endpoint
 	// Required: true
 	// Format: uri
@@ -59,6 +63,10 @@ func (m *Profile) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateID(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateIsolatedEntityID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -128,6 +136,22 @@ func (m *Profile) validateID(formats strfmt.Registry) error {
 	if err := m.ID.Validate(formats); err != nil {
 		if ve, ok := err.(*errors.Validation); ok {
 			return ve.ValidateName("id")
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (m *Profile) validateIsolatedEntityID(formats strfmt.Registry) error {
+
+	if swag.IsZero(m.IsolatedEntityID) { // not required
+		return nil
+	}
+
+	if err := m.IsolatedEntityID.Validate(formats); err != nil {
+		if ve, ok := err.(*errors.Validation); ok {
+			return ve.ValidateName("isolatedEntityId")
 		}
 		return err
 	}

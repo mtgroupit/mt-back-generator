@@ -11,15 +11,15 @@ import (
 	golangswaggerpaths "path"
 )
 
-// ValidateRegistrationEmailURL generates an URL for the validate registration email operation
-type ValidateRegistrationEmailURL struct {
+// RegisterActivateResendEmailURL generates an URL for the register activate resend email operation
+type RegisterActivateResendEmailURL struct {
 	_basePath string
 }
 
 // WithBasePath sets the base path for this url builder, only required when it's different from the
 // base path specified in the swagger spec.
 // When the value of the base path is an empty string
-func (o *ValidateRegistrationEmailURL) WithBasePath(bp string) *ValidateRegistrationEmailURL {
+func (o *RegisterActivateResendEmailURL) WithBasePath(bp string) *RegisterActivateResendEmailURL {
 	o.SetBasePath(bp)
 	return o
 }
@@ -27,15 +27,15 @@ func (o *ValidateRegistrationEmailURL) WithBasePath(bp string) *ValidateRegistra
 // SetBasePath sets the base path for this url builder, only required when it's different from the
 // base path specified in the swagger spec.
 // When the value of the base path is an empty string
-func (o *ValidateRegistrationEmailURL) SetBasePath(bp string) {
+func (o *RegisterActivateResendEmailURL) SetBasePath(bp string) {
 	o._basePath = bp
 }
 
 // Build a url path and query string
-func (o *ValidateRegistrationEmailURL) Build() (*url.URL, error) {
+func (o *RegisterActivateResendEmailURL) Build() (*url.URL, error) {
 	var _result url.URL
 
-	var _path = "/validate-registration-email"
+	var _path = "/register-activate-resend-email"
 
 	_basePath := o._basePath
 	if _basePath == "" {
@@ -47,7 +47,7 @@ func (o *ValidateRegistrationEmailURL) Build() (*url.URL, error) {
 }
 
 // Must is a helper function to panic when the url builder returns an error
-func (o *ValidateRegistrationEmailURL) Must(u *url.URL, err error) *url.URL {
+func (o *RegisterActivateResendEmailURL) Must(u *url.URL, err error) *url.URL {
 	if err != nil {
 		panic(err)
 	}
@@ -58,17 +58,17 @@ func (o *ValidateRegistrationEmailURL) Must(u *url.URL, err error) *url.URL {
 }
 
 // String returns the string representation of the path with query string
-func (o *ValidateRegistrationEmailURL) String() string {
+func (o *RegisterActivateResendEmailURL) String() string {
 	return o.Must(o.Build()).String()
 }
 
 // BuildFull builds a full url with scheme, host, path and query string
-func (o *ValidateRegistrationEmailURL) BuildFull(scheme, host string) (*url.URL, error) {
+func (o *RegisterActivateResendEmailURL) BuildFull(scheme, host string) (*url.URL, error) {
 	if scheme == "" {
-		return nil, errors.New("scheme is required for a full url on ValidateRegistrationEmailURL")
+		return nil, errors.New("scheme is required for a full url on RegisterActivateResendEmailURL")
 	}
 	if host == "" {
-		return nil, errors.New("host is required for a full url on ValidateRegistrationEmailURL")
+		return nil, errors.New("host is required for a full url on RegisterActivateResendEmailURL")
 	}
 
 	base, err := o.Build()
@@ -82,6 +82,6 @@ func (o *ValidateRegistrationEmailURL) BuildFull(scheme, host string) (*url.URL,
 }
 
 // StringFull returns the string representation of a complete url
-func (o *ValidateRegistrationEmailURL) StringFull(scheme, host string) string {
+func (o *RegisterActivateResendEmailURL) StringFull(scheme, host string) string {
 	return o.Must(o.BuildFull(scheme, host)).String()
 }

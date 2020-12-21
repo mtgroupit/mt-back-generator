@@ -61,7 +61,7 @@ type RegisterOK struct {
 }
 
 func (o *RegisterOK) Error() string {
-	return fmt.Sprintf("[POST /register][%d] registerOK  %+v", 200, o.Payload)
+	return fmt.Sprintf("[POST /register-activate][%d] registerOK  %+v", 200, o.Payload)
 }
 
 func (o *RegisterOK) GetPayload() *RegisterOKBody {
@@ -92,9 +92,8 @@ func NewRegisterDefault(code int) *RegisterDefault {
 
 /*RegisterDefault handles this case with default header values.
 
-- 409.700: email is not available
-- 422.702: password is too weak
-- 409.709: invalid email validation token
+- 404.2003: email is not available
+- 404.2001: invalid email validation token
 
 */
 type RegisterDefault struct {
@@ -109,7 +108,7 @@ func (o *RegisterDefault) Code() int {
 }
 
 func (o *RegisterDefault) Error() string {
-	return fmt.Sprintf("[POST /register][%d] register default  %+v", o._statusCode, o.Payload)
+	return fmt.Sprintf("[POST /register-activate][%d] register default  %+v", o._statusCode, o.Payload)
 }
 
 func (o *RegisterDefault) GetPayload() *models.Error {
@@ -136,10 +135,6 @@ type RegisterBody struct {
 	// email token
 	// Required: true
 	EmailToken models.JWT `json:"emailToken"`
-
-	// password
-	// Required: true
-	Password models.Password `json:"password"`
 }
 
 // Validate validates this register body
@@ -147,10 +142,6 @@ func (o *RegisterBody) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := o.validateEmailToken(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := o.validatePassword(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -165,18 +156,6 @@ func (o *RegisterBody) validateEmailToken(formats strfmt.Registry) error {
 	if err := o.EmailToken.Validate(formats); err != nil {
 		if ve, ok := err.(*errors.Validation); ok {
 			return ve.ValidateName("args" + "." + "emailToken")
-		}
-		return err
-	}
-
-	return nil
-}
-
-func (o *RegisterBody) validatePassword(formats strfmt.Registry) error {
-
-	if err := o.Password.Validate(formats); err != nil {
-		if ve, ok := err.(*errors.Validation); ok {
-			return ve.ValidateName("args" + "." + "password")
 		}
 		return err
 	}

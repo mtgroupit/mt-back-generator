@@ -59,7 +59,7 @@ func (o *ChangePasswordNoContent) WriteResponse(rw http.ResponseWriter, producer
 	rw.WriteHeader(204)
 }
 
-/*ChangePasswordDefault - 422.702: password is too weak
+/*ChangePasswordDefault - 404.2004: password is too weak
 - 403.710: invalid password
 
 

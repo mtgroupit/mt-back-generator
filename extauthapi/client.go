@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mtgroupit/mt-back-generator/extauthapi/client/operations"
 	oapierrors "github.com/go-openapi/errors"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/swag"
+	"github.com/mtgroupit/mt-back-generator/extauthapi/client/operations"
 	"github.com/pkg/errors"
 
 	"github.com/mtgroupit/mt-back-generator/extauthapi/client"
@@ -123,9 +123,9 @@ func (tr *csrfTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 // Authz describes user roles/permissions.
 type Authz struct {
-	User     bool // true if user has validated email
-	Admin    bool // true if user is an admin
-	Manager   bool // true if user is an manager
+	User    bool // true if user has validated email
+	Admin   bool // true if user is an admin
+	Manager bool // true if user is an manager
 }
 
 // Profile describes user profile returned by /get-user-profile.
@@ -136,9 +136,11 @@ type Profile struct {
 	PersdataEndpoint string // Required.
 	Authn            bool   // true if user authenticated by credentials provided in request.
 	Authz            Authz
+	IsolatedEntityID UserID // May be empty if !Authn.
 }
 
 func newProfile(id UserID, m *models.Profile) *Profile {
+
 	return &Profile{
 		ID:               id,
 		Username:         string(m.Username),
@@ -146,10 +148,11 @@ func newProfile(id UserID, m *models.Profile) *Profile {
 		PersdataEndpoint: string(m.PersdataEndpoint),
 		Authn:            swag.BoolValue(m.Authn),
 		Authz: Authz{
-			User:     swag.BoolValue(m.Authz.User),
-			Admin:    swag.BoolValue(m.Authz.Admin),
-			Manager:   swag.BoolValue(m.Authz.Manager),
+			User:    swag.BoolValue(m.Authz.User),
+			Admin:   swag.BoolValue(m.Authz.Admin),
+			Manager: swag.BoolValue(m.Authz.Manager),
 		},
+		IsolatedEntityID: MustParseUserID(string(m.IsolatedEntityID)),
 	}
 }
 

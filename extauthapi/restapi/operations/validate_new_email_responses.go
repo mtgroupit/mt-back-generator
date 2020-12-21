@@ -37,7 +37,7 @@ func (o *ValidateNewEmailNoContent) WriteResponse(rw http.ResponseWriter, produc
 	rw.WriteHeader(204)
 }
 
-/*ValidateNewEmailDefault - 409.700: email is not available
+/*ValidateNewEmailDefault - 404.2003: email is not available
 - 403.710: invalid password
 
 

@@ -79,9 +79,8 @@ func (o *RegisterOK) WriteResponse(rw http.ResponseWriter, producer runtime.Prod
 	}
 }
 
-/*RegisterDefault - 409.700: email is not available
-- 422.702: password is too weak
-- 409.709: invalid email validation token
+/*RegisterDefault - 404.2003: email is not available
+- 404.2001: invalid email validation token
 
 
 swagger:response registerDefault

@@ -73,8 +73,8 @@ func NewSetEmailDefault(code int) *SetEmailDefault {
 
 /*SetEmailDefault handles this case with default header values.
 
-- 409.700: email is not available
-- 409.709: invalid email validation token
+- 404.2003: email is not available
+- 404.2001: invalid email validation token
 
 */
 type SetEmailDefault struct {

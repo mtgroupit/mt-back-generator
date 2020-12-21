@@ -100,9 +100,14 @@ func configureAPI(api *operations.AuthenticationAPI) http.Handler {
 			return middleware.NotImplemented("operation operations.Register has not yet been implemented")
 		})
 	}
-	if api.RegisterLoginOAuthHandler == nil {
-		api.RegisterLoginOAuthHandler = operations.RegisterLoginOAuthHandlerFunc(func(params operations.RegisterLoginOAuthParams) middleware.Responder {
-			return middleware.NotImplemented("operation operations.RegisterLoginOAuth has not yet been implemented")
+	if api.RegisterActivateResendEmailHandler == nil {
+		api.RegisterActivateResendEmailHandler = operations.RegisterActivateResendEmailHandlerFunc(func(params operations.RegisterActivateResendEmailParams) middleware.Responder {
+			return middleware.NotImplemented("operation operations.RegisterResendEmail has not yet been implemented")
+		})
+	}
+	if api.RequestRegistrationHandler == nil {
+		api.RequestRegistrationHandler = operations.RequestRegistrationHandlerFunc(func(params operations.RequestRegistrationParams) middleware.Responder {
+			return middleware.NotImplemented("operation operations.RequestRegistration has not yet been implemented")
 		})
 	}
 	if api.ResetPasswordHandler == nil {
@@ -143,11 +148,6 @@ func configureAPI(api *operations.AuthenticationAPI) http.Handler {
 	if api.ValidateNewEmailHandler == nil {
 		api.ValidateNewEmailHandler = operations.ValidateNewEmailHandlerFunc(func(params operations.ValidateNewEmailParams, principal interface{}) middleware.Responder {
 			return middleware.NotImplemented("operation operations.ValidateNewEmail has not yet been implemented")
-		})
-	}
-	if api.ValidateRegistrationEmailHandler == nil {
-		api.ValidateRegistrationEmailHandler = operations.ValidateRegistrationEmailHandlerFunc(func(params operations.ValidateRegistrationEmailParams) middleware.Responder {
-			return middleware.NotImplemented("operation operations.ValidateRegistrationEmail has not yet been implemented")
 		})
 	}
 

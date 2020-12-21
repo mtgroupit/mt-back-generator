@@ -1,4 +1,4 @@
-swagger: '2.0'
+swagger: "2.0"
 
 info:
   title: Authentication
@@ -6,18 +6,17 @@ info:
   description: |
     ## List of all custom errors
     First number is HTTP Status code, second is value of "code" field in returned JSON object, text description may or may not match "message" field in returned JSON object.
-    - 409.100: email is not available
     - 404.101: invalid credentials
 
 basePath: /api/v1/
 schemes:
-  - https
+  - http
 
 security:
   - cookieKey: []
   - cookieKey: []
     csrfToken: []
-    
+
 consumes:
   - application/json
 produces:
@@ -67,7 +66,264 @@ definitions:
     type: string
     minLength: 2
     maxLength: 2
-    enum: ['AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AW', 'AX', 'AZ', 'BA', 'BB', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BL', 'BM', 'BN', 'BO', 'BQ', 'BR', 'BS', 'BT', 'BV', 'BW', 'BY', 'BZ', 'CA', 'CC', 'CD', 'CF', 'CG', 'CH', 'CI', 'CK', 'CL', 'CM', 'CN', 'CO', 'CR', 'CU', 'CV', 'CW', 'CX', 'CY', 'CZ', 'DE', 'DJ', 'DK', 'DM', 'DO', 'DZ', 'EC', 'EE', 'EG', 'EH', 'ER', 'ES', 'ET', 'FI', 'FJ', 'FK', 'FM', 'FO', 'FR', 'GA', 'GB', 'GD', 'GE', 'GF', 'GG', 'GH', 'GI', 'GL', 'GM', 'GN', 'GP', 'GQ', 'GR', 'GS', 'GT', 'GU', 'GW', 'GY', 'HK', 'HM', 'HN', 'HR', 'HT', 'HU', 'ID', 'IE', 'IL', 'IM', 'IN', 'IO', 'IQ', 'IR', 'IS', 'IT', 'JE', 'JM', 'JO', 'JP', 'KE', 'KG', 'KH', 'KI', 'KM', 'KN', 'KP', 'KR', 'KW', 'KY', 'KZ', 'LA', 'LB', 'LC', 'LI', 'LK', 'LR', 'LS', 'LT', 'LU', 'LV', 'LY', 'MA', 'MC', 'MD', 'ME', 'MF', 'MG', 'MH', 'MK', 'ML', 'MM', 'MN', 'MO', 'MP', 'MQ', 'MR', 'MS', 'MT', 'MU', 'MV', 'MW', 'MX', 'MY', 'MZ', 'NA', 'NC', 'NE', 'NF', 'NG', 'NI', 'NL', 'NO', 'NP', 'NR', 'NU', 'NZ', 'OM', 'PA', 'PE', 'PF', 'PG', 'PH', 'PK', 'PL', 'PM', 'PN', 'PR', 'PS', 'PT', 'PW', 'PY', 'QA', 'RE', 'RO', 'RS', 'RU', 'RW', 'SA', 'SB', 'SC', 'SD', 'SE', 'SG', 'SH', 'SI', 'SJ', 'SK', 'SL', 'SM', 'SN', 'SO', 'SR', 'SS', 'ST', 'SV', 'SX', 'SY', 'SZ', 'TC', 'TD', 'TF', 'TG', 'TH', 'TJ', 'TK', 'TL', 'TM', 'TN', 'TO', 'TR', 'TT', 'TV', 'TW', 'TZ', 'UA', 'UG', 'UM', 'US', 'UY', 'UZ', 'VA', 'VC', 'VE', 'VG', 'VI', 'VN', 'VU', 'WF', 'WS', 'YE', 'YT', 'ZA', 'ZM', 'ZW']
+    enum:
+      [
+        "AD",
+        "AE",
+        "AF",
+        "AG",
+        "AI",
+        "AL",
+        "AM",
+        "AO",
+        "AQ",
+        "AR",
+        "AS",
+        "AT",
+        "AU",
+        "AW",
+        "AX",
+        "AZ",
+        "BA",
+        "BB",
+        "BD",
+        "BE",
+        "BF",
+        "BG",
+        "BH",
+        "BI",
+        "BJ",
+        "BL",
+        "BM",
+        "BN",
+        "BO",
+        "BQ",
+        "BR",
+        "BS",
+        "BT",
+        "BV",
+        "BW",
+        "BY",
+        "BZ",
+        "CA",
+        "CC",
+        "CD",
+        "CF",
+        "CG",
+        "CH",
+        "CI",
+        "CK",
+        "CL",
+        "CM",
+        "CN",
+        "CO",
+        "CR",
+        "CU",
+        "CV",
+        "CW",
+        "CX",
+        "CY",
+        "CZ",
+        "DE",
+        "DJ",
+        "DK",
+        "DM",
+        "DO",
+        "DZ",
+        "EC",
+        "EE",
+        "EG",
+        "EH",
+        "ER",
+        "ES",
+        "ET",
+        "FI",
+        "FJ",
+        "FK",
+        "FM",
+        "FO",
+        "FR",
+        "GA",
+        "GB",
+        "GD",
+        "GE",
+        "GF",
+        "GG",
+        "GH",
+        "GI",
+        "GL",
+        "GM",
+        "GN",
+        "GP",
+        "GQ",
+        "GR",
+        "GS",
+        "GT",
+        "GU",
+        "GW",
+        "GY",
+        "HK",
+        "HM",
+        "HN",
+        "HR",
+        "HT",
+        "HU",
+        "ID",
+        "IE",
+        "IL",
+        "IM",
+        "IN",
+        "IO",
+        "IQ",
+        "IR",
+        "IS",
+        "IT",
+        "JE",
+        "JM",
+        "JO",
+        "JP",
+        "KE",
+        "KG",
+        "KH",
+        "KI",
+        "KM",
+        "KN",
+        "KP",
+        "KR",
+        "KW",
+        "KY",
+        "KZ",
+        "LA",
+        "LB",
+        "LC",
+        "LI",
+        "LK",
+        "LR",
+        "LS",
+        "LT",
+        "LU",
+        "LV",
+        "LY",
+        "MA",
+        "MC",
+        "MD",
+        "ME",
+        "MF",
+        "MG",
+        "MH",
+        "MK",
+        "ML",
+        "MM",
+        "MN",
+        "MO",
+        "MP",
+        "MQ",
+        "MR",
+        "MS",
+        "MT",
+        "MU",
+        "MV",
+        "MW",
+        "MX",
+        "MY",
+        "MZ",
+        "NA",
+        "NC",
+        "NE",
+        "NF",
+        "NG",
+        "NI",
+        "NL",
+        "NO",
+        "NP",
+        "NR",
+        "NU",
+        "NZ",
+        "OM",
+        "PA",
+        "PE",
+        "PF",
+        "PG",
+        "PH",
+        "PK",
+        "PL",
+        "PM",
+        "PN",
+        "PR",
+        "PS",
+        "PT",
+        "PW",
+        "PY",
+        "QA",
+        "RE",
+        "RO",
+        "RS",
+        "RU",
+        "RW",
+        "SA",
+        "SB",
+        "SC",
+        "SD",
+        "SE",
+        "SG",
+        "SH",
+        "SI",
+        "SJ",
+        "SK",
+        "SL",
+        "SM",
+        "SN",
+        "SO",
+        "SR",
+        "SS",
+        "ST",
+        "SV",
+        "SX",
+        "SY",
+        "SZ",
+        "TC",
+        "TD",
+        "TF",
+        "TG",
+        "TH",
+        "TJ",
+        "TK",
+        "TL",
+        "TM",
+        "TN",
+        "TO",
+        "TR",
+        "TT",
+        "TV",
+        "TW",
+        "TZ",
+        "UA",
+        "UG",
+        "UM",
+        "US",
+        "UY",
+        "UZ",
+        "VA",
+        "VC",
+        "VE",
+        "VG",
+        "VI",
+        "VN",
+        "VU",
+        "WF",
+        "WS",
+        "YE",
+        "YT",
+        "ZA",
+        "ZM",
+        "ZW",
+      ]
+
+  Language:
+    type: string
+    minLength: 2
+    maxLength: 2
+    enum: ["en", "fr"]
 
   Email:
     type: string
@@ -75,7 +331,7 @@ definitions:
 
   Username:
     type: string
-    pattern: '^[A-Za-z0-9]+$'
+    pattern: "^[A-Za-z0-9]+$"
     minLength: 1
     maxLength: 63
 
@@ -86,33 +342,6 @@ definitions:
 
   Password:
     type: string
-
-  # Recaptcha:
-  #   description: Answer from recaptcha service.
-  #   type: string
-  #   minLength: 1
-  #   maxLength: 1000
-
-  # RecaptchaVersion:
-  #   description: Version of Google recaptcha service to use.
-  #   type: string
-  #   enum: ['v2', 'v3']
-
-  OAuthServer:
-    description: OAuth server for login or registration.
-    type: string
-    enum: ['google', 'vk', 'facebook', 'yandex']
-
-  OAuthCode:
-    description: Code for authorization through OAuth2.
-    type: string
-    maxLength: 200
-    minLength: 1
-
-  OAuthState:
-    description: Code sent and received by OAuth to the server.
-    type: string
-    maxLength: 200
 
   Endpoint:
     type: string
@@ -134,13 +363,15 @@ definitions:
       - authz
     properties:
       id: # required if authn
-        $ref: '#/definitions/UserID'
+        $ref: "#/definitions/UserID"
       username:
-        $ref: '#/definitions/Username'
+        $ref: "#/definitions/Username"
       email: # not required even if authz.user
-        $ref: '#/definitions/Email'
+        $ref: "#/definitions/Email"
       persdataEndpoint:
-        $ref: '#/definitions/Endpoint'
+        $ref: "#/definitions/Endpoint"
+      isolatedEntityId:
+        $ref: "#/definitions/UserID"
       authn:
         description: Is user authenticated by credentials provided in request.
         type: boolean
@@ -176,7 +407,7 @@ responses:
   GenericError:
     description: Generic error response.
     schema:
-      $ref: '#/definitions/Error'
+      $ref: "#/definitions/Error"
 
   NoContent:
     description: The server successfully processed the request and is not returning any content.
@@ -189,33 +420,6 @@ responses:
         type: string
 
 paths:
-  # /check-recaptcha:
-  #   post:
-  #     operationId: checkRecaptcha
-  #     description: Check captcha validity
-  #     security: []
-  #     parameters:
-  #       - name: args
-  #         required: true
-  #         in: body
-  #         schema:
-  #           type: object
-  #           required:
-  #             - recaptcha
-  #             - recaptchaVersion
-  #           properties:
-  #             recaptcha:
-  #               $ref: '#/definitions/Recaptcha'
-  #             recaptchaVersion:
-  #               $ref: '#/definitions/RecaptchaVersion'
-  #     responses:
-  #       '204': {$ref: '#/responses/NoContent'}
-  #       default:
-  #         description: |
-  #           - 422.703: wrong captcha answer
-  #         schema:
-  #           $ref: '#/definitions/Error'
-
   /is-email-available:
     post:
       operationId: isEmailAvailable
@@ -231,9 +435,9 @@ paths:
               - email
             properties:
               email:
-                $ref: '#/definitions/Email'
+                $ref: "#/definitions/Email"
       responses:
-        '200':
+        "200":
           description: OK
           schema:
             type: object
@@ -243,11 +447,11 @@ paths:
               available:
                 description: True if email is available.
                 type: boolean
-        default: {$ref: '#/responses/GenericError'}
+        default: { $ref: "#/responses/GenericError" }
 
-  /validate-registration-email:
+  /request-registration:
     post:
-      operationId: validateRegistrationEmail
+      operationId: requestRegistration
       description: Sends email with validation token.
       security: []
       parameters:
@@ -258,25 +462,25 @@ paths:
             type: object
             required:
               - email
-              # - recaptcha
-              # - recaptchaVersion
+              - password
             properties:
               email:
-                $ref: '#/definitions/Email'
-              # recaptcha:
-              #   $ref: '#/definitions/Recaptcha'
-              # recaptchaVersion:
-              #   $ref: '#/definitions/RecaptchaVersion'
+                $ref: "#/definitions/Email"
+              password:
+                $ref: "#/definitions/Password"
+              language:
+                $ref: "#/definitions/Language"
       responses:
-        '204': {$ref: '#/responses/NoContent'}
+        "204": { $ref: "#/responses/NoContent" }
         default:
           description: |
-            - 409.700: email is not available
-            - 422.703: wrong captcha answer
+            - 404.2003: email is not available
+            - 404.2014: registation request by this email already exist  
+            - 404.2004: password is too weak
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
 
-  /register:
+  /register-activate:
     post:
       operationId: register
       description: Register new user by validated email.
@@ -289,14 +493,11 @@ paths:
             type: object
             required:
               - emailToken
-              - password
             properties:
               emailToken:
-                $ref: '#/definitions/JWT'
-              password:
-                $ref: '#/definitions/Password'
+                $ref: "#/definitions/JWT"
       responses:
-        '200':
+        "200":
           description: OK
           headers: *session-token
           schema:
@@ -305,18 +506,18 @@ paths:
               - userID
             properties:
               userID:
-                $ref: '#/definitions/UserID'
+                $ref: "#/definitions/UserID"
         default:
           description: |
-            - 409.700: email is not available
-            - 422.702: password is too weak
-            - 409.709: invalid email validation token
+            - 404.2003: email is not available
+            - 404.2001: invalid email validation token
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
 
-  /register-login-oauth:
+  /register-activate-resend-email:
     post:
-      operationId: registerLoginOAuth
+      operationId: registerActivateResendEmail
+      description: Resend new email if old token is not valid.
       security: []
       parameters:
         - name: args
@@ -325,37 +526,18 @@ paths:
           schema:
             type: object
             required:
-              - server
-              - code
-              - sentState
-              - recvState
+              - emailToken
             properties:
-              server:
-                $ref: '#/definitions/OAuthServer'
-              code:
-                $ref: '#/definitions/OAuthCode'
-              sentState:
-                $ref: '#/definitions/OAuthState'
-              recvState:
-                $ref: '#/definitions/OAuthState'
+              emailToken:
+                $ref: "#/definitions/JWT"
       responses:
-        '200':
+        "200":
           description: OK
-          headers: *session-token
-          schema:
-            type: object
-            required:
-              - userID
-            properties:
-              userID:
-                $ref: '#/definitions/UserID'
         default:
           description: |
-            - 502.713: failed to get user profile from oauth server
-            - 403.714: state does not match
-            - 403.715: user is blocked
+            - 404.2001: invalid email validation token
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
 
   /reset-password:
     post:
@@ -369,27 +551,18 @@ paths:
           schema:
             type: object
             required:
-              # - organisationId
               - email
-              # - recaptcha
-              # - recaptchaVersion
             properties:
-              # organisationId:
-              #   $ref: "#/definitions/ID"
               email:
-                $ref: '#/definitions/Email'
-              # recaptcha:
-              #   $ref: '#/definitions/Recaptcha'
-              # recaptchaVersion:
-              #   $ref: '#/definitions/RecaptchaVersion'
+                $ref: "#/definitions/Email"
       responses:
-        '204': {$ref: '#/responses/NoContent'}
+        "204": { $ref: "#/responses/NoContent" }
         default:
           description: |
             - 404.101: invalid credentials
-            - 404.102: organisation not found
+            - 404.707: no such email
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
 
   /set-new-password:
     post:
@@ -405,26 +578,19 @@ paths:
             required:
               - token
               - password
-              # - recaptcha
-              # - recaptchaVersion
             properties:
               token:
-                $ref: '#/definitions/ResetPassToken'
+                $ref: "#/definitions/ResetPassToken"
               password:
-                $ref: '#/definitions/Password'
-              # recaptcha:
-              #   $ref: '#/definitions/Recaptcha'
-              # recaptchaVersion:
-              #   $ref: '#/definitions/RecaptchaVersion'
+                $ref: "#/definitions/Password"
       responses:
-        '204': {$ref: '#/responses/NoContent'}
+        "204": { $ref: "#/responses/NoContent" }
         default:
           description: |
-            - 404.102: organisation not found
-            - 422.103: password is too weak
-            - 403.104: invalid password reset token
+            - 404.2004: password is too weak
+            - 404.2005: invalid password reset token
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
 
   /login:
     post:
@@ -440,34 +606,27 @@ paths:
             required:
               - email
               - password
-              # - organisationId
-              # - recaptcha
-              # - recaptchaVersion
             properties:
               email:
-                $ref: '#/definitions/Email'
+                $ref: "#/definitions/Email"
               password:
-                $ref: '#/definitions/Password'
-              # recaptcha:
-              #   $ref: '#/definitions/Recaptcha'
-              # recaptchaVersion:
-              #   $ref: '#/definitions/RecaptchaVersion'
+                $ref: "#/definitions/Password"
       responses:
-        '204': {$ref: '#/responses/NoContentWithAuth'}
+        "204": { $ref: "#/responses/NoContentWithAuth" }
         default:
           description: |
-            - 404.101: invalid credentials
-            - 404.102: organisation not found
+            - 404.2015: email not activated
+            - 404.2016: invalid credentials
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
 
   /logout:
     post:
       operationId: logout
       description: Sign out user.
       responses:
-        '204': {$ref: '#/responses/NoContentWithAuth'}
-        default: {$ref: '#/responses/GenericError'}
+        "204": { $ref: "#/responses/NoContentWithAuth" }
+        default: { $ref: "#/responses/GenericError" }
 
   /delete-user:
     post:
@@ -483,14 +642,14 @@ paths:
               - password
             properties:
               password:
-                $ref: '#/definitions/Password'
+                $ref: "#/definitions/Password"
       responses:
-        '204': {$ref: '#/responses/NoContentWithAuth'}
+        "204": { $ref: "#/responses/NoContentWithAuth" }
         default:
           description: |
             - 403.710: invalid password
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
 
   /change-password:
     post:
@@ -506,17 +665,17 @@ paths:
               - newPassword
             properties:
               oldPassword:
-                $ref: '#/definitions/Password'
+                $ref: "#/definitions/Password"
               newPassword:
-                $ref: '#/definitions/Password'
+                $ref: "#/definitions/Password"
       responses:
-        '204': {$ref: '#/responses/NoContentWithAuth'}
+        "204": { $ref: "#/responses/NoContentWithAuth" }
         default:
           description: |
-            - 422.702: password is too weak
+            - 404.2004: password is too weak
             - 403.710: invalid password
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
 
   /is-username-available:
     post:
@@ -532,9 +691,9 @@ paths:
               - username
             properties:
               username:
-                $ref: '#/definitions/Username'
+                $ref: "#/definitions/Username"
       responses:
-        '200':
+        "200":
           description: OK
           schema:
             type: object
@@ -544,7 +703,7 @@ paths:
               available:
                 description: True if username is available.
                 type: boolean
-        default: {$ref: '#/responses/GenericError'}
+        default: { $ref: "#/responses/GenericError" }
 
   /set-username:
     post:
@@ -560,14 +719,14 @@ paths:
               - username
             properties:
               username:
-                $ref: '#/definitions/Username'
+                $ref: "#/definitions/Username"
       responses:
-        '204': {$ref: '#/responses/NoContent'}
+        "204": { $ref: "#/responses/NoContent" }
         default:
           description: |
             - 409.701: username is not available
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
 
   /set-persdata-region:
     post:
@@ -583,9 +742,9 @@ paths:
               - countryCode
             properties:
               countryCode:
-                $ref: '#/definitions/CountryCode'
+                $ref: "#/definitions/CountryCode"
       responses:
-        '200':
+        "200":
           description: OK
           schema:
             type: object
@@ -593,68 +752,8 @@ paths:
               - persdataEndpoint
             properties:
               persdataEndpoint:
-                $ref: '#/definitions/Endpoint'
-        default: {$ref: '#/responses/GenericError'}
-
-  # /become-expert:
-  #   post:
-  #     operationId: becomeExpert
-  #     description: Add Expert role to the user.
-  #     responses:
-  #       '204': {$ref: '#/responses/NoContent'}
-  #       default: {$ref: '#/responses/GenericError'}
-
-  # /become-label:
-  #   post:
-  #     operationId: becomeLabel
-  #     description: Add Label role to the user. This method is only for admins.
-  #     parameters:
-  #       - name: args
-  #         required: true
-  #         in: body
-  #         schema:
-  #           type: object
-  #           required:
-  #             - userID
-  #           properties:
-  #             userID:
-  #               $ref: '#/definitions/UserID'
-  #     responses:
-  #       '204': {$ref: '#/responses/NoContent'}
-  #       default:
-  #         description: |
-  #           - 422.716: require musician role
-  #         schema:
-  #           $ref: '#/definitions/Error'
-
-  # /request-label-accreditation:
-  #   post:
-  #     operationId: requestLabelAccreditation
-  #     description: Send email to our support with request to get accreditation as a Label.
-  #     parameters:
-  #       - name: args
-  #         required: true
-  #         in: body
-  #         schema:
-  #           type: object
-  #           required:
-  #             - phone
-  #             - email
-  #             - name
-  #           properties:
-  #             phone:
-  #               $ref: '#/definitions/Phone'
-  #             email:
-  #               $ref: '#/definitions/Email'
-  #             name:
-  #               $ref: '#/definitions/Name'
-  #     responses:
-  #       '204': {$ref: '#/responses/NoContent'}
-  #       default:
-  #         description: |
-  #           - 422.716: require musician role
-  #         schema:
-  #           $ref: '#/definitions/Error'
+                $ref: "#/definitions/Endpoint"
+        default: { $ref: "#/responses/GenericError" }
 
   /get-user-profile:
     post:
@@ -666,11 +765,11 @@ paths:
           csrfToken: []
         - {} # XXX Auth is required, but front asks to return empty profile instead of 401 here.
       responses:
-        '200':
+        "200":
           description: OK
           schema:
-            $ref: '#/definitions/Profile'
-        default: {$ref: '#/responses/GenericError'}
+            $ref: "#/definitions/Profile"
+        default: { $ref: "#/responses/GenericError" }
 
   /get-user-profile-by-id:
     post:
@@ -687,13 +786,13 @@ paths:
               - id
             properties:
               id:
-                $ref: '#/definitions/UserID'
+                $ref: "#/definitions/UserID"
       responses:
-        '200':
+        "200":
           description: OK
           schema:
-            $ref: '#/definitions/Profile'
-        default: {$ref: '#/responses/GenericError'}
+            $ref: "#/definitions/Profile"
+        default: { $ref: "#/responses/GenericError" }
 
   /search-users-by-username:
     post:
@@ -712,9 +811,9 @@ paths:
               - username
             properties:
               username:
-                $ref: '#/definitions/Username'
+                $ref: "#/definitions/Username"
       responses:
-        '200':
+        "200":
           description: OK
           schema:
             type: object
@@ -726,28 +825,8 @@ paths:
                 minItems: 0
                 maxItems: 10
                 items:
-                  $ref: '#/definitions/Profile'
-        default: {$ref: '#/responses/GenericError'}
-
-  # /list-label-users:
-  #   post:
-  #     operationId: listLabelUsers
-  #     description: >
-  #       Get public part of profile for all users with Label role.
-  #       Ordered by username.
-  #     responses:
-  #       '200':
-  #         description: OK
-  #         schema:
-  #           type: object
-  #           required:
-  #             - profiles
-  #           properties:
-  #             profiles:
-  #               type: array
-  #               items:
-  #                 $ref: '#/definitions/Profile'
-  #       default: {$ref: '#/responses/GenericError'}
+                  $ref: "#/definitions/Profile"
+        default: { $ref: "#/responses/GenericError" }
 
   /validate-new-email:
     post:
@@ -764,17 +843,17 @@ paths:
               - password
             properties:
               email:
-                $ref: '#/definitions/Email'
+                $ref: "#/definitions/Email"
               password:
-                $ref: '#/definitions/Password'
+                $ref: "#/definitions/Password"
       responses:
-        '204': {$ref: '#/responses/NoContent'}
+        "204": { $ref: "#/responses/NoContent" }
         default:
           description: |
-            - 409.700: email is not available
+            - 404.2003: email is not available
             - 403.710: invalid password
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
 
   /set-email:
     post:
@@ -791,16 +870,16 @@ paths:
               - emailToken
             properties:
               emailToken:
-                $ref: '#/definitions/JWT'
+                $ref: "#/definitions/JWT"
       responses:
-        '204': {$ref: '#/responses/NoContent'}
+        "204": { $ref: "#/responses/NoContent" }
         default:
           description: |
-            - 409.700: email is not available
-            - 409.709: invalid email validation token
+            - 404.2003: email is not available
+            - 404.2001: invalid email validation token
           schema:
-            $ref: '#/definitions/Error'
-  
+            $ref: "#/definitions/Error"
+
   /set-blocked:
     post:
       operationId: setBlocked
@@ -816,10 +895,10 @@ paths:
               - blocked
             properties:
               id:
-                $ref: '#/definitions/UserID'
+                $ref: "#/definitions/UserID"
               blocked:
                 description: True to block user, False to unblock.
                 type: boolean
       responses:
-        '204': {$ref: '#/responses/NoContent'}
-        default: {$ref: '#/responses/GenericError'}
+        "204": { $ref: "#/responses/NoContent" }
+        default: { $ref: "#/responses/GenericError" }

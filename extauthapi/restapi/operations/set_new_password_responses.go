@@ -37,9 +37,8 @@ func (o *SetNewPasswordNoContent) WriteResponse(rw http.ResponseWriter, producer
 	rw.WriteHeader(204)
 }
 
-/*SetNewPasswordDefault - 404.102: organisation not found
-- 422.103: password is too weak
-- 403.104: invalid password reset token
+/*SetNewPasswordDefault - 404.2004: password is too weak
+- 404.2005: invalid password reset token
 
 
 swagger:response setNewPasswordDefault

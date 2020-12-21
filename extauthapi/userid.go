@@ -16,7 +16,7 @@ var NoUserID = UserID(uuid.Nil) //nolint:gochecknoglobals
 
 // NewUserID returns new user ID.
 func NewUserID() UserID {
-	id:= uuid.NewV4()
+	id := uuid.NewV4()
 	return UserID(id)
 }
 
