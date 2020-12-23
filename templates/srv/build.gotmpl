@@ -23,7 +23,7 @@ sudo chown -R "$USER:$USER" ./internal/api/restapi/*
 echo "Swagger API generate stopped"
 
 echo "Mock generate started"
-GO111MODULE=on go get github.com/golang/mock/mockgen
+go get github.com/golang/mock/mockgen
 export PATH=$PATH:$(go env GOPATH)/bin
 mockgen -source=./internal/app/app.go -destination=./internal/app/app_mock.generated.go -package=app
 {{- if .HaveCustomMethod}}

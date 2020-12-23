@@ -12,7 +12,7 @@ RUN printf "machine github.com\n\tlogin %s\n\tpassword %s" ${GITHUB_USER} ${GITH
 COPY . /app/
 WORKDIR /app
 
-RUN GO111MODULE=on go get github.com/golang/mock/mockgen && \
+RUN go get github.com/golang/mock/mockgen && \
     bash ./install
 
 RUN mt-gen -dir=./generated/ -config=./samples/config_mini_demo.yaml
