@@ -68,7 +68,7 @@ var goTmplFuncs = template.FuncMap{
 		return true
 	},
 	// HaveColumnWithModelThatIsStructAndIsArray is function for finding model in columns with column that struct or/and array
-	// For withStruct=true, withArray=true "HaveColumnWithModelThatIsStructAndIsArray" will return true only if columns have column that is  model with column that is struct AND array 
+	// For withStruct=true, withArray=true "HaveColumnWithModelThatIsStructAndIsArray" will return true only if columns have column that is  model with column that is struct AND array
 	"HaveColumnWithModelThatIsStructAndIsArray": func(columns map[string]models.Options, models map[string]models.Model, isStruct, isArray bool) bool {
 		for _, options := range columns {
 			for modelName2, model2 := range models {
