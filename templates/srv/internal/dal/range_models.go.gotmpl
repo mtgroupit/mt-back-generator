@@ -7,19 +7,7 @@ import (
 	"sort"{{end}}{{if or $model.HaveCreatedAt $model.HaveModifiedAt}}
 	"time"{{end}}{{if $model.HaveListMethod}}
 	"fmt"{{end}}
-	{{- $haveMarshalJSON := false}}
-	{{- range $modelName2, $model2 := $.Models}}
-		{{- range $column, $options := $model.Columns}}
-			{{- if eq $modelName2 $options.GoType}}
-				{{- range $column2, $options2 := $model2.Columns}}
-					{{- if and $options2.IsArray (not $options2.IsStruct)}}
-					{{- $haveMarshalJSON = true}}
-					{{- end}}
-				{{- end}}
-			{{- end}}
-		{{- end}}
-	{{- end}}
-	{{- if or $model.HaveArrayOfStandatrType $haveMarshalJSON}}
+	{{- if or $model.HaveArrayOfStandatrType (HaveColumnWithModelThatIsStructAndIsArray $model.Columns $.Models false true)}}
 	"encoding/json"
 	{{- end}}
 
