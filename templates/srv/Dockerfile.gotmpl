@@ -6,8 +6,8 @@ ADD /migration/*.sql ./
 
 WORKDIR /app/cmd/main
 
-ADD /bin/{{.Name}} .
+ADD /bin/{{FormatName .Name}} .
 
 EXPOSE 5432
 
-CMD ["./{{.Name}}"]
+CMD ["./{{FormatName .Name}}"]
