@@ -24,24 +24,24 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 
 	a := New(mockApp{{if $haveCustomMethod}}, mockCust{{end}})
 
-	{{- if eq $method "Get"}}
+	{{- if IsGet $method}}
 	mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any(){{if not $model.Shared}}, gomock.Any(){{end}}).Return(test{{$modelName}}1, nil)
 	b, err := a.{{$method}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.Shared}}, isolatedEntityID{{end}})
 	t.Nil(err)
 	t.DeepEqual(test{{$modelName}}1, b)
 	{{- end}}
-	{{- if eq $method "Add"}}
-	mockApp.EXPECT().{{$method}}{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return(test{{$modelName}}1, nil)
-	b, err := a.{{$method}}{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}1)
+	{{- if IsAdd $method}}
+	mockApp.EXPECT().{{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return(test{{$modelName}}1, nil)
+	b, err := a.{{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}profID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}1)
 	t.Nil(err)
 	t.DeepEqual(test{{$modelName}}1, b)
 	{{- end}}
-	{{- if eq $method "Delete"}}
+	{{- if IsDelete $method}}
 	mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any(){{if not $model.Shared}}, gomock.Any(){{end}}).Return(nil)
 	err := a.{{$method}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.Shared}}, isolatedEntityID{{end}})
 	t.Nil(err)
 	{{- end}}
-	{{- if or (eq $method "Edit") (IsCustomEdit $method)}}
+	{{- if IsEdit $method}}
 	mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any(), {{if $model.HaveModifiedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}test{{$modelName}}2, {{end}}nil)
 	{{if $model.ReturnWhenEdit}}b, {{end}}err := a.{{$method}}{{$modelName}}(test{{$modelName}}1.ID, {{if $model.HaveModifiedBy}}profID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}1)
 	t.Nil(err)
@@ -50,7 +50,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 	{{- end}}
 	{{- end}}
 
-	{{- if or (eq $method "List") (IsCustomList $method)}}
+	{{- if IsList $method}}
 	mockApp.EXPECT().{{$method}}{{$modelName}}({{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(test{{$modelName}}s, {{if $model.DetailedPagination}}2, {{end}}[]string{}, nil)
 	b, {{if $model.DetailedPagination}}count, {{end}}_, err := a.{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}offset, limit, filters, logicFilter, sortBy, orderBy)
 	t.Nil(err)

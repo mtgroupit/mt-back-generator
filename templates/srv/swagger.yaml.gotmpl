@@ -49,7 +49,7 @@ paths:
       {{- end}}
     {{- end}}
       operationId: {{LowerTitle $method}}{{$model.TitleName}}
-    {{- if not (and (or (eq $method "Get") (eq $method "Delete")) ($model.IDFromProfile))}}
+    {{- if not (or (eq $method "GetMy") (eq $method "DeleteMy"))}}
       parameters:
         - name: body
           in: body
@@ -60,13 +60,13 @@ paths:
               id:
                 type: {{if $model.IDIsUUID}}string{{else}}{{(index $model.Columns "id").Type}}{{end}}
       {{- else}}
-        {{- if or (eq $method "List") (IsCustomList $method)}}
+        {{- if IsList $method}}
             $ref: "#/definitions/listParams" 
         {{- else}}
-          {{- if or (eq $method "Edit") (IsCustomEdit $method)}}
+          {{- if IsEdit $method}}
             type: object
             properties:
-            {{- if not $model.IDFromProfile}}
+            {{- if not (and (IsEdit $method) (IsMyMethod $method))}}
               id:
                 type: {{if $model.IDIsUUID}}string{{else}}int64{{end}} 
             {{- end}}
@@ -113,11 +113,11 @@ paths:
       {{- end}}
     {{- end}} 
       responses:        
-    {{- if eq $method "Delete"}}
+    {{- if IsDelete $method}}
         204:
           description: Deleted
     {{- else}}
-      {{- if eq $method "Add"}}
+      {{- if IsAdd $method}}
         201:
           description: Created 
           schema:
@@ -127,7 +127,7 @@ paths:
           description: OK        
       {{- end}}
     {{- end}}        
-    {{- if or (eq $method "List") (IsCustomList $method) (eq $method "Get") (and (or (eq $method "Edit") (IsCustomEdit $method)) $model.ReturnWhenEdit)}}
+    {{- if or (IsList $method) (IsGet $method) (and (IsEdit $method) $model.ReturnWhenEdit)}}
           schema:          
           {{- if or (eq $method "List") (IsCustomList $method)}}
             type: object

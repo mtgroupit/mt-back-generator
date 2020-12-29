@@ -13,7 +13,7 @@ import (
 
 	"{{.Module}}/internal/app"
 
-	{{if $model.IDIsUUID}}"github.com/google/uuid"{{else}}{{$inputed := false}}{{range $name, $options := $model.Columns}}{{$model2 := (index $.Models $options.GoType)}}{{if and $model2.IDIsUUID (not $inputed) (not $options.IsArray)}}"github.com/google/uuid"{{$inputed = true}}{{end}}{{end}}{{end}}
+	{{if or $model.IDIsUUID (ContainsStr $model.Methods "AddMy")}}"github.com/google/uuid"{{else}}{{$inputed := false}}{{range $name, $options := $model.Columns}}{{$model2 := (index $.Models $options.GoType)}}{{if and $model2.IDIsUUID (not $inputed) (not $options.IsArray)}}"github.com/google/uuid"{{$inputed = true}}{{end}}{{end}}{{end}}
 )
 
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
@@ -27,17 +27,22 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 }
 
 {{range $i, $method := $model.Methods}}{{if not (IsCustomMethod $method)}}
-{{if eq $method "Get"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
+{{- if IsGet $method}}
+func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
 	return a.get{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}})
-}{{end}}
-{{if eq $method "Add"}}func (a *App) {{$method}}{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) (*app.{{$modelName}}, error) {
-	id, err := a.add{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profileID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
+}
+{{- end}}
+{{- if IsAdd $method}}
+func (a *App) {{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) (*app.{{$modelName}}, error) {
+	id, err := a.add{{$modelName}}({{if $model.IDIsUUID}}{{if IsMyMethod $method}}profileID{{else}}uuid.New().String(){{end}}, {{end}}{{if $model.HaveCreatedBy}}profileID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
 	if err != nil {
 		return nil, err
 	}
 	return a.get{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}})
-}{{end}}
-{{if eq $method "Delete"}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) error { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if and $options.IsArray $options.IsStruct}}
+}
+{{- end}}
+{{- if IsDelete $method}}
+func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) error { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if and $options.IsArray $options.IsStruct}}
 	if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
 		return err
 	}{{end}}{{end}}{{end}}{{end}} {{range $_, $bind := $model.Binds}}{{if $bind.IsArray}}
@@ -51,8 +56,10 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		return err
 	}
 	return nil
-}{{end}}
-{{if or (eq $method "Edit") (IsCustomEdit $method)}}func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  { {{range $column, $options := $model.Columns}}{{if or (not (IsCustomEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsCustomEdit $method))}}{{if and $options.IsStruct (not $options.IsArray)}}
+}
+{{- end}}
+{{- if IsEdit $method}}
+func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  { {{range $column, $options := $model.Columns}}{{if or (not (IsCustomEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsCustomEdit $method))}}{{if and $options.IsStruct (not $options.IsArray)}}
 	var {{$column}}ID interface{}
 	if m.{{$options.TitleName}} != nil {
 		{{$column}}ID = m.{{$options.TitleName}}.ID
@@ -72,9 +79,10 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 		return nil, err
 	}{{end}}{{end}}
 	return {{if $model.ReturnWhenEdit}}app{{$modelName}}(edited), {{end}}nil
-}{{end}}
-
-{{if or (eq $method "List") (IsCustomList $method)}}func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*app.Filter, logicFilter bool, sortBy, orderBy string) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
+}
+{{- end}}
+{{- if IsList $method}}
+func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*app.Filter, logicFilter bool, sortBy, orderBy string) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
 	ms := []{{$modelName}}{}
 	warnings := []string{}
 
@@ -280,7 +288,8 @@ type {{$modelName}} struct { {{range $i, $psqlParams := $model.Psql}}{{if $psqlP
 	}{{end}}
 
 	return app{{$modelName}}s(result),{{if $model.DetailedPagination}} count,{{end}} warnings, nil
-}{{end}}
+}
+{{- end}}
 
 {{- if and (IsCustomList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}
 	{{- range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
@@ -388,7 +397,7 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 {{range $column, $options := $model.Columns}} {{if  and $options.IsArray $options.IsStruct}}
 func (a *App) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*app.{{$options.GoType}}) error {
 	for _, item := range items {
-		id, err := a.add{{$options.GoType}}({{if not $model.Shared}}isolatedEntityID, {{end}}item)
+		id, err := a.add{{$options.GoType}}({{if $model.IDIsUUID}}uuid.New().String(), {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}item)
 		if err != nil {
 			return err
 		}
@@ -438,8 +447,12 @@ func (a *App) get{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{en
 	return app{{$modelName}}(m), nil
 }
 
-func (a *App) add{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) ({{if $model.IDIsUUID}}string{{else}}int64{{end}}, error) {
-	{{if $model.IDIsUUID}}{{$modelName}}ID := {{if $model.IDFromProfile}}profileID{{else}}uuid.New(){{end}}{{else}}var {{$modelName}}ID int64{{end}}	
+func (a *App) add{{$modelName}}({{if $model.IDIsUUID}}id string, {{end}}{{if $model.HaveCreatedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) ({{if $model.IDIsUUID}}string{{else}}int64{{end}}, error) {
+	{{- if $model.IDIsUUID}}
+		{{$modelName}}ID := id
+	{{- else}}
+		var {{$modelName}}ID int64
+	{{- end}}	
 	{{if $model.HaveCreatedBy}}m.CreatedBy = profileID
 	{{end}}
 	{{if $model.HaveCreatedAt}}m.CreatedAt = time.Now().Format(time.RFC3339)
@@ -457,7 +470,7 @@ func (a *App) add{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedB
 			return {{if $model.IDIsUUID}}""{{else}}0{{end}}, err
 		}
 	}{{end}}{{end}}{{end}}{{end}}
-	return {{$modelName}}ID{{if $model.IDIsUUID}}{{if not $model.IDFromProfile}}.String(){{end}}{{end}}, nil
+	return {{$modelName}}ID{{if $model.IDIsUUID}}{{end}}, nil
 }
 {{range $functionName, $function := $.Functions}}
 func (a *App) {{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$function.OutStrType}}, error){

@@ -24,8 +24,8 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 	mockExtAuthSvc.EXPECT().GetUserProfile(gomock.Any(), matchCookie(sess)).Return(profile, nil)
 
 	params := {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Params()
-	{{- if eq $method "Get"}}
-		{{- if not $model.IDFromProfile}}
+	{{- if IsGet $method}}
+		{{- if not (IsMyMethod $method)}}
 			params.Body.ID = test{{$modelName}}ID1
 		{{- end}}
 		mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any(){{if not $model.Shared}}, gomock.Any(){{end}}).Return(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}}), nil)
@@ -37,9 +37,9 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 			t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}})))
 		})
 	{{- end}}
-	{{- if eq $method "Add"}}	
+	{{- if IsAdd $method}}	
 		params.Body = testAdd{{$modelName}}1
-		mockApp.EXPECT().{{$method}}{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}}), nil)
+		mockApp.EXPECT().{{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}}), nil)
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
@@ -48,8 +48,8 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 			t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}})))
 		})
 	{{- end}}
-	{{- if eq $method "Delete"}}
-		{{- if not $model.IDFromProfile}}
+	{{- if IsDelete $method}}
+		{{- if not (IsMyMethod $method)}}
 			params.Body.ID = test{{$modelName}}1.ID
 		{{- end}}
 		mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any(){{if not $model.Shared}}, gomock.Any(){{end}}).Return(nil)
@@ -60,11 +60,11 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 			t.Nil(err)
 		})
 	{{- end}}
-	{{- if or (eq $method "Edit") (IsCustomEdit $method)}}
+	{{- if IsEdit $method}}
 		{{- if IsCustomEdit $method}}
 			params.Body = {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}Body{
-				{{- if not $model.IDFromProfile}}
-					ID: {{if $model.IDFromProfile}}profID{{else}}test{{$modelName}}1.ID{{end}},
+				{{- if not (IsMyMethod $method)}}
+					ID: test{{$modelName}}1.ID,
 				{{- end}}
 				Data: &{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}ParamsBodyData{
 					{{- range $name, $options := $model.Columns}}
@@ -85,7 +85,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 		{{- else}}
 			params.Body = test{{$modelName}}1
 		{{- end}}
-		mockApp.EXPECT().{{$method}}{{$modelName}}({{if $model.IDFromProfile}}gomock.Any(){{else}}gomock.Any(){{end}}, {{if $model.HaveModifiedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}app{{$modelName}}(&test{{$modelName}}1Edited{{if $model.HaveLazyLoading}}, true{{end}}), {{end}}nil)
+		mockApp.EXPECT().{{$method}}{{$modelName}}({{if IsMyMethod $method}}gomock.Any(){{else}}gomock.Any(){{end}}, {{if $model.HaveModifiedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}app{{$modelName}}(&test{{$modelName}}1Edited{{if $model.HaveLazyLoading}}, true{{end}}), {{end}}nil)
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
 			{{if $model.ReturnWhenEdit}}geted{{else}}_{{end}}, err := c.{{if $model.Tags}}{{index $model.Tags 0}}{{else}}Operations{{end}}.{{$method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
@@ -95,7 +95,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 			{{- end}}
 		})
 	{{- end}}
-	{{- if or (eq $method "List") (IsCustomList $method)}}
+	{{- if IsList $method}}
 	params.Body = testList
 	mockApp.EXPECT().{{$method}}{{$modelName}}({{if not $model.Shared}}gomock.Any(), {{end}}params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters), params.Body.LogicFilter, params.Body.SortBy, params.Body.OrderBy).Return(app{{$modelName}}s(test{{$modelName}}s{{if $model.HaveLazyLoading}}, true{{end}}), {{if $model.DetailedPagination}}2, {{end}}[]string{}, nil)
 

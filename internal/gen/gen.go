@@ -38,15 +38,11 @@ var goTmplFuncs = template.FuncMap{
 	"ToLower": func(in string) string {
 		return strings.ToLower(in)
 	},
-	"LowerTitle": parser.LowerTitle,
-	"Title":      strings.Title,
-	"NameSQL":    parser.NameSQL,
-	"IsCustomList": func(method string) bool {
-		return regexp.MustCompile(`^(L|l)ist.+`).Match([]byte(method))
-	},
-	"IsCustomEdit": func(method string) bool {
-		return regexp.MustCompile(`^(E|e)dit.+`).Match([]byte(method))
-	},
+	"LowerTitle":   parser.LowerTitle,
+	"Title":        strings.Title,
+	"NameSQL":      parser.NameSQL,
+	"IsCustomList": isCustomList,
+	"IsCustomEdit": isCustomEdit,
 	"HaveField": func(method, modelName string) bool {
 		return strings.Contains(method, modelName)
 	},
@@ -54,6 +50,15 @@ var goTmplFuncs = template.FuncMap{
 	"ContainsStr": func(slice []string, str string) bool {
 		for i := range slice {
 			if slice[i] == str {
+				return true
+			}
+		}
+		return false
+	},
+	"IsMyMethod": parser.IsMyMethod,
+	"HaveMyMethod": func(methods []string) bool {
+		for _, method := range methods {
+			if parser.IsMyMethod(method) {
 				return true
 			}
 		}
@@ -80,6 +85,41 @@ var goTmplFuncs = template.FuncMap{
 					}
 				}
 			}
+		}
+		return false
+	},
+	"IsGet": func(method string) bool {
+		method = strings.ToLower(method)
+		if method == "get" || method == "getmy" {
+			return true
+		}
+		return false
+	},
+	"IsAdd": func(method string) bool {
+		method = strings.ToLower(method)
+		if method == "add" || method == "addmy" {
+			return true
+		}
+		return false
+	},
+	"IsDelete": func(method string) bool {
+		method = strings.ToLower(method)
+		if method == "delete" || method == "deletemy" {
+			return true
+		}
+		return false
+	},
+	"IsEdit": func(method string) bool {
+		method = strings.ToLower(method)
+		if method == "edit" || method == "editmy" || isCustomEdit(method) {
+			return true
+		}
+		return false
+	},
+	"IsList": func(method string) bool {
+		method = strings.ToLower(method)
+		if method == "list" || isCustomList(method) {
+			return true
 		}
 		return false
 	},
@@ -313,10 +353,18 @@ func checkExistenseFile(file string) bool {
 
 func isCustomMethod(method string) bool {
 	method = strings.ToLower(method)
-	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || strings.HasPrefix(method, "edit") || strings.HasPrefix(method, "list") {
+	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isCustomEdit(method) || isCustomList(method) || parser.IsMyMethod(method) {
 		return false
 	}
 	return true
+}
+
+func isCustomList(method string) bool {
+	return regexp.MustCompile(`^(L|l)ist.+`).Match([]byte(method)) && !parser.IsMyMethod(method)
+}
+
+func isCustomEdit(method string) bool {
+	return regexp.MustCompile(`^(E|e)dit((M|m)y)?.+`).Match([]byte(method))
 }
 
 func formatName(name string) string {

@@ -6,7 +6,7 @@ import (
 	{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}} {{end}}"{{.Module}}/internal/api/restapi/restapi/operations{{if $model.Tags}}/{{NameSQL (index $model.Tags 0)}}{{end}}"
 	"{{.Module}}/internal/app"
 
-	{{if or $model.IDFromProfile $model.HaveCreatedBy $model.HaveModifiedBy (and (not $model.Shared) ($model.Methods))}}extauthapi "{{.AuthSrv}}"{{end}}
+	{{if or (HaveMyMethod $model.Methods) $model.HaveCreatedBy $model.HaveModifiedBy (and (not $model.Shared) ($model.Methods))}}extauthapi "{{.AuthSrv}}"{{end}}
 	{{if $model.HaveEmail}}"github.com/go-openapi/strfmt"{{end}}
 	"github.com/go-openapi/runtime/middleware" 
 )
@@ -16,23 +16,23 @@ import (
 {{- range $i, $method := $model.Methods}}
 {{- if not (IsCustomMethod $method)}}
 func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
-	{{- if eq $method "Get"}}
-		{{- if or $model.IDFromProfile (not $model.Shared)}}
+	{{- if IsGet $method}}
+		{{- if or (IsMyMethod $method) (not $model.Shared)}}
 			prof := profile.(*extauthapi.Profile)
 		{{- end}}
-		c, err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}{{if not $model.Shared}}, prof.IsolatedEntityID.String(){{end}})
+		c, err := svc.app.{{$method}}{{$modelName}}({{if IsMyMethod $method}}prof.ID.String(){{else}}params.Body.ID{{end}}{{if not $model.Shared}}, prof.IsolatedEntityID.String(){{end}})
 		if err != nil {
 			log.Err("{{$method}}{{$modelName}} error", err)
 		} else {
-			log.Info("{{$method}}{{$modelName}} ok", "id", {{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
+			log.Info("{{$method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}prof.ID.String(){{else}}params.Body.ID{{end}})
 		}
 		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c))
 	{{- end}}
-	{{- if eq $method "Add"}}
-		{{- if or $model.IDFromProfile $model.HaveCreatedBy (not $model.Shared)}}
+	{{- if IsAdd $method}}
+		{{- if or (IsMyMethod $method) $model.HaveCreatedBy (not $model.Shared)}}
 			prof := profile.(*extauthapi.Profile)
 		{{- end}}
-		c, err := svc.app.{{$method}}{{$modelName}}({{if or $model.IDFromProfile $model.HaveCreatedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}app{{$modelName}}Add(params.Body))
+		c, err := svc.app.{{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}app{{$modelName}}Add(params.Body))
 		if err != nil {
 			log.Err("{{$method}}{{$modelName}} error", err)
 		} else {
@@ -40,20 +40,20 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 		}
 		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}Created().WithPayload(api{{$modelName}}(c))
 	{{- end}}
-	{{- if eq $method "Delete"}}
-		{{- if or $model.IDFromProfile (not $model.Shared)}}
+	{{- if IsDelete $method}}
+		{{- if or (IsMyMethod $method) (not $model.Shared)}}
 			prof := profile.(*extauthapi.Profile)
 		{{- end}}
-		err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}{{if not $model.Shared}}, prof.IsolatedEntityID.String(){{end}})
+		err := svc.app.{{$method}}{{$modelName}}({{if IsMyMethod $method}}prof.ID.String(){{else}}params.Body.ID{{end}}{{if not $model.Shared}}, prof.IsolatedEntityID.String(){{end}})
 		if err != nil {
 			log.Err("{{$method}}{{$modelName}} error", err)
 		} else {
-			log.Info("{{$method}}{{$modelName}} ok", "id", {{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}})
+			log.Info("{{$method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}prof.ID.String(){{else}}params.Body.ID{{end}})
 		}
 		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}NoContent()
 	{{- end}}
-	{{- if or (eq $method "Edit") (IsCustomEdit $method)}}
-		{{- if or $model.IDFromProfile $model.HaveModifiedBy (not $model.Shared)}}
+	{{- if IsEdit $method}}
+		{{- if or (IsMyMethod $method) $model.HaveModifiedBy (not $model.Shared)}}
 			prof := profile.(*extauthapi.Profile)
 		{{- end}}
 		{{- if IsCustomEdit $method}}
@@ -88,7 +88,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 				{{- end}}
 			{{- end}}
 		{{- end}}
-		{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if $model.IDFromProfile}}prof.ID.String(){{else}}params.Body.ID{{end}}, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}{{if IsCustomEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
+		{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if IsMyMethod $method}}prof.ID.String(){{else}}params.Body.ID{{end}}, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}{{if IsCustomEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
 		if err != nil {
 			log.Err("{{$method}}{{$modelName}} error", err)
 		} else {
@@ -96,7 +96,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 		}
 		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK(){{if $model.ReturnWhenEdit}}.WithPayload(api{{$modelName}}(c)){{end}}
 	{{- end}}
-	{{- if  or (eq $method "List") (IsCustomList $method)}}
+	{{- if  IsList $method}}
 		{{- if not $model.Shared}}
 			prof := profile.(*extauthapi.Profile)
 		{{- end}}
