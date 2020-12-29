@@ -15,21 +15,21 @@ func Test{{$method}}{{$modelName}}Smoke(tt *testing.T) {
 
 	addTestData(t)
 
-	{{- if eq $method "Get"}}
+	{{- if IsGet $method}}
 	getted, err := testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.Shared}}, isolatedEntityID{{end}})
 	t.Nil(err)
 	t.DeepEqual(getted, test{{$modelName}}1)
 	{{- end}}
-	{{- if eq $method "Add"}}{{end}}
-	{{- if eq $method "Delete"}}
+	{{- if IsAdd $method}}{{end}}
+	{{- if IsDelete $method}}
 	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.Shared}}, isolatedEntityID{{end}}))
 	{{- end}}
-	{{- if eq $method "Edit"}}
+	{{- if IsEdit $method}}
 	addTestData(t)
 	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID, {{if $model.HaveModifiedBy}}profID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}2))
 	{{- end}}
 
-	{{- if or (eq $method "List") (IsCustomList $method)}}	
+	{{- if IsList $method}}	
 	filters[0].Value = test{{$modelName}}1.ID
 	filters[1].Value = test{{$modelName}}2.ID
 

@@ -563,7 +563,7 @@ func isCustomList(method string) bool {
 }
 
 func isCustomEdit(method string) bool {
-	return regexp.MustCompile(`^edit\(.+\)$`).Match([]byte(method))
+	return regexp.MustCompile(`^edit(My)?\(.+\)$`).Match([]byte(method))
 }
 
 func expandStrNestedFields(method string) (string, string) {
@@ -876,7 +876,7 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 		if isCustomEdit(method) {
 			var sqlEdit, sqlAddExecParams, editableFields []string
 			count := 1
-			_, fieldsStr := expandStrNestedFields(method)
+			methodName, fieldsStr := expandStrNestedFields(method)
 			fields := splitFields(fieldsStr)
 			for j := range fields {
 				if IsStandartColumn(fields[j]) {
@@ -913,7 +913,7 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 					}
 				}
 			}
-			result.Methods[i] = "edit" + strings.Join(fields, "")
+			result.Methods[i] = methodName + strings.Join(fields, "")
 			result.MethodsProps[i].CustomSQLEditStr = strings.Join(sqlEdit, ", ")
 			result.MethodsProps[i].CustomSQLExecParams = strings.Join(sqlAddExecParams, ", ")
 			result.MethodsProps[i].EditableFields = editableFields
@@ -935,12 +935,22 @@ func LowerTitle(in string) string {
 	}
 }
 
+// isCustomMethod return true if method is custom
 func isCustomMethod(method string) bool {
 	method = strings.ToLower(method)
-	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isCustomList(method) || isCustomEdit(method) {
+	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isCustomList(method) || isCustomEdit(method) || IsMyMethod(method) {
 		return false
 	}
 	return true
+}
+
+// IsMyMethod return true if method is standart my method
+func IsMyMethod(method string) bool {
+	method = strings.ToLower(method)
+	if method == "getmy" || method == "addmy" || method == "deletemy" || method == "editmy" || regexp.MustCompile(`^editmy.+`).Match([]byte(method)) {
+		return true
+	}
+	return false
 }
 
 // IsStandartColumn check if column is one of column which description column with auto substituted when model is created or modified
