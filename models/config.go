@@ -76,7 +76,6 @@ type Model struct {
 	Description        string
 	Shared             bool
 	DetailedPagination bool `yaml:"detailed-pagination"`
-	IDFromProfile      bool `yaml:"id-from-profile"`
 	ReturnWhenEdit     bool `yaml:"return-when-edit"`
 	Tags               []string
 	Columns            map[string]Options
