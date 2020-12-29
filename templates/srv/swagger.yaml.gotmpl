@@ -106,9 +106,9 @@ paths:
               {{- end}}
             {{- end}}
           {{- end}}
-                {{- if not (IsCustomEdit $method)}}
-                  $ref: "#/definitions/{{LowerTitle $modelName}}Add"
-                {{- end}}
+          {{- if not (IsCustomEdit $method)}}
+            $ref: "#/definitions/{{LowerTitle $modelName}}Add"
+          {{- end}}
         {{- end}}
       {{- end}}
     {{- end}} 
@@ -265,7 +265,7 @@ definitions:  {{range $modelName, $model := $.Models}}
   {{LowerTitle $modelName}}Add:
     type: object
     description: "{{LowerTitle $modelName}} model for add and edit methods"
-    properties:      {{range $name, $options := $model.Columns}}{{if and (ne $name "id") (not (IsStandartColumn $name))}}{{if $options.IsStruct}}{{if $options.IsArray}}  
+    properties:      {{range $name, $options := $model.Columns}}{{if and (ne $name "id") (not (IsStandardColumn $name))}}{{if $options.IsStruct}}{{if $options.IsArray}}  
       {{$name}}:
         type: array
         items:

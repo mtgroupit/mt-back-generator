@@ -17,11 +17,11 @@ import (
 
 var isCorectName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]+$`).MatchString
 
-var standartTypes = []string{"string", "int", "int32", "int64"}
+var standardTypes = []string{"string", "int", "int32", "int64"}
 
-func isStandartTypes(t string) bool {
-	for i := range standartTypes {
-		if t == standartTypes[i] {
+func isStandardTypes(t string) bool {
+	for i := range standardTypes {
+		if t == standardTypes[i] {
 			return true
 		}
 	}
@@ -188,7 +188,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			}
 
 			if options.Enum != "" {
-				if isStandartTypes(options.Type) && column != "id" {
+				if isStandardTypes(options.Type) && column != "id" {
 					if options.Type == "string" {
 						if !regexp.MustCompile(`^\[\s*('.+'\s*,\s*)*'.+'+\s*\]$`).Match([]byte(options.Enum)) {
 							return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum for strings must be in this format: ['asc', 'desc'] and inputed as string`, name, column)
@@ -199,7 +199,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 						}
 					}
 				} else {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum available only for non id and types: %s`, name, column, standartTypes)
+					return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum available only for non id and types: %s`, name, column, standardTypes)
 				}
 			}
 
@@ -360,7 +360,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					sqlAddExecParams = append(sqlAddExecParams, titleName)
 					countFields = append(countFields, fmt.Sprintf("$%d", count))
 					count++
-					if isCreatedStandartColumn(column) {
+					if isCreatedStandardColumn(column) {
 						countCreatedColumns++
 					} else {
 						if model.Shared {
@@ -532,10 +532,10 @@ func checkColumn(columnType string, cfg *models.Config) (bool, bool, string, err
 	case strings.HasPrefix(columnType, "[]") && !strings.HasPrefix(columnType, "[]model."):
 		t := columnType[2:]
 		switch {
-		case isStandartTypes(t):
+		case isStandardTypes(t):
 			return false, true, t, nil
 		default:
-			return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarat types %s or refers to any other model`, t, standartTypes)
+			return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarat types %s or refers to any other model`, t, standardTypes)
 		}
 
 	}
@@ -879,7 +879,7 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 			methodName, fieldsStr := expandStrNestedFields(method)
 			fields := splitFields(fieldsStr)
 			for j := range fields {
-				if IsStandartColumn(fields[j]) {
+				if IsStandardColumn(fields[j]) {
 					return errors.Errorf(`Model "%s". Method: "%s". "%s" can not be used in custom edit method, it edits automatically`, modelName, method, fields[j])
 				}
 
@@ -944,7 +944,7 @@ func isCustomMethod(method string) bool {
 	return true
 }
 
-// IsMyMethod return true if method is standart my method
+// IsMyMethod return true if method is standard my method
 func IsMyMethod(method string) bool {
 	method = strings.ToLower(method)
 	if method == "getmy" || method == "addmy" || method == "deletemy" || method == "editmy" || regexp.MustCompile(`^editmy.+`).Match([]byte(method)) {
@@ -953,22 +953,22 @@ func IsMyMethod(method string) bool {
 	return false
 }
 
-// IsStandartColumn check if column is one of column which description column with auto substituted when model is created or modified
-func IsStandartColumn(column string) bool {
-	if isCreatedStandartColumn(column) || isModifiedStandartColumn(column) {
+// IsStandardColumn check if column is one of column which description column with auto substituted when model is created or modified
+func IsStandardColumn(column string) bool {
+	if isCreatedStandardColumn(column) || isModifiedStandardColumn(column) {
 		return true
 	}
 	return false
 }
 
-func isCreatedStandartColumn(column string) bool {
+func isCreatedStandardColumn(column string) bool {
 	if column == "createdAt" || column == "createdBy" {
 		return true
 	}
 	return false
 }
 
-func isModifiedStandartColumn(column string) bool {
+func isModifiedStandardColumn(column string) bool {
 	if column == "modifiedAt" || column == "modifiedBy" {
 		return true
 	}

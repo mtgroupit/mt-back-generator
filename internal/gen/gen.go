@@ -65,7 +65,7 @@ var goTmplFuncs = template.FuncMap{
 		return false
 	},
 	"FormatName":       formatName,
-	"IsStandartColumn": parser.IsStandartColumn,
+	"IsStandardColumn": parser.IsStandardColumn,
 	"IsNotStrictFilter": func(model models.Model, column string) bool {
 		if model.Columns[column].Type != "string" || model.Columns[column].StrictFilter {
 			return false
