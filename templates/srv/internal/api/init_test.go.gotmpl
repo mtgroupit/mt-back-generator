@@ -25,7 +25,7 @@ var (
 	profID           = uuid.New().String()
 	sess             = extauthapi.SessionCookieName + "=sess"
 	profile          = &extauthapi.Profile{
-		ID:    extauthapi.MustParseUserID(profID),
+		ID:    extauthapi.MustParseID(profID),
 		Authn: true,
 	}
 
