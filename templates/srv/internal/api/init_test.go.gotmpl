@@ -46,14 +46,14 @@ var (
 		test{{$modelName}}s = []*models.{{$modelName}}{test{{$modelName}}1, test{{$modelName}}2}
 		testAdd{{$modelName}}1 = &models.{{$modelName}}Add{  
 			{{- range $column, $options := $model.Columns}}
-			{{- if and (ne $column "id") (not (IsStandartColumn $column))}}
+			{{- if and (ne $column "id") (not (IsStandardColumn $column))}}
 			{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}[]{{if eq $idType "uuid"}}string{{else}}int64{{end}}{test{{$options.GoType}}ID1, test{{$options.GoType}}ID2}{{else}}test{{$options.GoType}}1.ID{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}1{{end}}{{if eq $options.GoType "string"}}{{if $options.IsArray}}[]string{ {{end}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://127.0.0.1:34763"{{end}}{{if eq $options.Format "date-time"}}toDateTime("1970-01-01T00:00:00.000Z"){{end}}{{if eq $options.Format "email"}}strfmt.Email("test1@test.com"){{end}}{{if eq $options.Format "phone"}}"+79998887766"{{end}}{{else}}"test1"{{end}}{{if $options.IsArray}} }{{end}}{{end}}{{if eq $options.GoType "bool"}}true{{end}}{{end}},
 			{{- end}}
 			{{- end}}
 		}
 		testAdd{{$modelName}}2 = &models.{{$modelName}}Add{  
 			{{- range $column, $options := $model.Columns}}
-			{{- if and (ne $column "id") (not (IsStandartColumn $column))}}
+			{{- if and (ne $column "id") (not (IsStandardColumn $column))}}
 			{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}[]{{if eq $idType "uuid"}}string{{else}}int64{{end}}{test{{$options.GoType}}ID1, test{{$options.GoType}}ID2}{{else}}test{{$options.GoType}}2.ID{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}2{{end}}{{if eq $options.GoType "string"}}{{if $options.IsArray}}[]string{ {{end}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://localhost:34764"{{end}}{{if eq $options.Format "date-time"}}toDateTime("1980-02-01T02:00:00.000Z"){{end}}{{if eq $options.Format "email"}}strfmt.Email("test2@test.com"){{end}}{{if eq $options.Format "phone"}}"8(999)888-77-66"{{end}}{{else}}"test2"{{end}}{{if $options.IsArray}} }{{end}}{{end}}{{if eq $options.GoType "bool"}}false{{end}}{{end}},
 			{{- end}}
 			{{- end}}
