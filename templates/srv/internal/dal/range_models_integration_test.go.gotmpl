@@ -16,26 +16,25 @@ func Test{{$method}}{{$modelName}}Smoke(tt *testing.T) {
 	addTestData(t)
 
 	{{- if IsGet $method}}
-	getted, err := testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.Shared}}, isolatedEntityID{{end}})
-	t.Nil(err)
-	t.DeepEqual(getted, test{{$modelName}}1)
+		getted, err := testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.Shared}}, isolatedEntityID{{end}})
+		t.Nil(err)
+		t.DeepEqual(getted, test{{$modelName}}1)
 	{{- end}}
-	{{- if IsAdd $method}}{{end}}
 	{{- if IsDelete $method}}
-	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.Shared}}, isolatedEntityID{{end}}))
+		t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.Shared}}, isolatedEntityID{{end}}))
 	{{- end}}
 	{{- if IsEdit $method}}
-	addTestData(t)
-	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID, {{if $model.HaveModifiedBy}}profID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}2))
+		addTestData(t)
+		t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID, {{if $model.HaveModifiedBy}}profID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}{{if $model.IDFromIsolatedEntity}}1{{else}}2{{end}}))
 	{{- end}}
 
 	{{- if IsList $method}}	
-	filters[0].Value = test{{$modelName}}1.ID
-	filters[1].Value = test{{$modelName}}2.ID
+		filters[0].Value = test{{$modelName}}1.ID
+		filters[1].Value = test{{$modelName}}2.ID
 
-	list, {{if $model.DetailedPagination}}_, {{end}}_,  err := testApp.{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}offset, limit, filters, logicFilter, sortBy, orderBy)
-	t.Nil(err)
-	t.DeepEqual(list, test{{$modelName}}s)
+		list, {{if $model.DetailedPagination}}_, {{end}}_,  err := testApp.{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}offset, limit, filters, logicFilter, sortBy, orderBy)
+		t.Nil(err)
+		t.DeepEqual(list, test{{$modelName}}s)
 	{{- end}}
 	{{/* {{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
 	t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1)){{end}} */}}

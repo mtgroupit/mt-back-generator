@@ -10,10 +10,6 @@ if ! [ -x "$(command -v docker)" ]; then
   exit 1
 fi
 
-go fmt ./...
-go get ./...
-
-
 echo "Swagger API generate started"
 shopt -s expand_aliases
 alias swagger="docker run --rm -it -e GOPATH=$HOME/go:/go -v $HOME:$HOME -w $(pwd) quay.io/goswagger/swagger"
@@ -31,6 +27,9 @@ mockgen -source=./internal/app/app_custom.go -destination=./internal/app/custom_
 {{- end}}
 mockgen -source=./internal/api/auth.go -destination=./internal/api/auth_mock.generated.go -package=api
 echo "Mock generate stopped"
+
+go fmt ./...
+go get ./...
 
 rm -rf bin/
 mkdir bin/

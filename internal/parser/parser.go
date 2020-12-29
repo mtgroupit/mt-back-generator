@@ -68,6 +68,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 	binds := map[string]models.Bind{}
 	for name, model := range cfg.Models {
+		if model.IDFromIsolatedEntity && model.Shared {
+			return nil, errors.Errorf(`Model: "%s". Id from isolated entity available only for not shared models`, name)
+		}
 		if name == strings.Title(name) {
 			return nil, errors.Errorf(`Model "%s" starts with captial letter, please rename it to "%s" starting with small letter`, name, LowerTitle(name))
 		}
@@ -100,6 +103,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 				cfg.HaveCustomMethod = true
 				model.HaveCustomMethod = true
+			}
+			if model.IDFromIsolatedEntity && !IsMyMethod(method) {
+				return nil, errors.Errorf(`Model: "%s". "%s"  is invalid method for model with id from isolated entity. For model with id from isolated entity available only methods with "My" postfix`, name, method)
 			}
 
 			var prop models.MethodProps
