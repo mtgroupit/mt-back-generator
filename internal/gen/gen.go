@@ -364,7 +364,7 @@ func isCustomList(method string) bool {
 }
 
 func isCustomEdit(method string) bool {
-	return regexp.MustCompile(`^(E|e)dit((M|m)y)?.+`).Match([]byte(method))
+	return regexp.MustCompile(`^(E|e)dit.+`).Match([]byte(method)) && strings.ToLower(method) != "editmy"
 }
 
 func formatName(name string) string {
