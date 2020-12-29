@@ -14,8 +14,8 @@ type {{$modelName}} struct { {{range $name, $options := $model.Columns}}
 		}
 	{{- end}}
 	{{- if IsAdd $method}}
-		func (a *app) {{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}profID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) (*{{$modelName}}, error) {
-			return a.appl.{{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}profID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
+		func (a *app) {{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}id string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) (*{{$modelName}}, error) {
+			return a.appl.{{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}id, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
 		}
 	{{- end}}
 	{{- if IsDelete $method}}

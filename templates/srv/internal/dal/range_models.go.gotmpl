@@ -33,8 +33,8 @@ func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}i
 }
 {{- end}}
 {{- if IsAdd $method}}
-func (a *App) {{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) (*app.{{$modelName}}, error) {
-	id, err := a.add{{$modelName}}({{if $model.IDIsUUID}}{{if IsMyMethod $method}}profileID{{else}}uuid.New().String(){{end}}, {{end}}{{if $model.HaveCreatedBy}}profileID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
+func (a *App) {{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}id string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) (*app.{{$modelName}}, error) {
+	id, err := a.add{{$modelName}}({{if $model.IDIsUUID}}{{if IsMyMethod $method}}id{{else}}uuid.New().String(){{end}}, {{end}}{{if $model.HaveCreatedBy}}id, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
 	if err != nil {
 		return nil, err
 	}
