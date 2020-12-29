@@ -106,9 +106,9 @@ paths:
               {{- end}}
             {{- end}}
           {{- end}}
-          {{- if not (IsCustomEdit $method)}}
-            $ref: "#/definitions/{{LowerTitle $modelName}}Add"
-          {{- end}}
+              {{- if not (IsCustomEdit $method)}}
+                $ref: "#/definitions/{{LowerTitle $modelName}}Add"
+              {{- end}}
         {{- end}}
       {{- end}}
     {{- end}} 
