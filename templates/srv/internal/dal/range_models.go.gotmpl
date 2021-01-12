@@ -2,18 +2,37 @@
 package dal
 
 import (
-	"database/sql"	{{if $model.HaveLazyLoading }}
-	"strings"{{end}}{{if $haveNestedSorts}}
-	"sort"{{end}}{{if or $model.HaveCreatedAt $model.HaveModifiedAt}}
-	"time"{{end}}{{if $model.HaveListMethod}}
-	"fmt"{{end}}
-	{{- if or $model.HaveArrayOfStandatrType (HaveColumnWithModelThatIsStructAndIsArray $model.Columns $.Models false true)}}
+	"database/sql"
+{{- if $model.HaveLazyLoading }}
+	"strings"
+{{- end}}
+{{- if $haveNestedSorts}}
+	"sort"
+{{- end}}
+{{- if or $model.HaveCreatedAt $model.HaveModifiedAt}}
+	"time"
+{{- end}}
+{{- if $model.HaveListMethod}}
+	"fmt"
+{{- end}}
+{{- if or $model.HaveArrayOfStandatrType (HaveColumnWithModelThatIsStructAndIsArray $model.Columns $.Models false true)}}
 	"encoding/json"
-	{{- end}}
+{{- end}}
 
 	"{{.Module}}/internal/app"
 
-	{{if or $model.IDIsUUID (ContainsStr $model.Methods "AddMy")}}"github.com/google/uuid"{{else}}{{$inputed := false}}{{range $name, $options := $model.Columns}}{{$model2 := (index $.Models $options.GoType)}}{{if and $model2.IDIsUUID (not $inputed) (not $options.IsArray)}}"github.com/google/uuid"{{$inputed = true}}{{end}}{{end}}{{end}}
+{{- if or $model.IDIsUUID (ContainsStr $model.Methods "AddMy")}}
+	"github.com/google/uuid"
+{{- else}}
+	{{- $inputed := false}}
+	{{- range $name, $options := $model.Columns}}
+		{{- $model2 := (index $.Models $options.GoType)}}
+		{{- if and $model2.IDIsUUID (not $inputed) (not $options.IsArray)}}
+	"github.com/google/uuid"
+			{{- $inputed = true}}
+		{{- end}}
+	{{- end}}
+{{- end}}
 )
 
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
@@ -192,100 +211,121 @@ func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID
 	}{{end}}
 	
 	result := []{{$modelName}}{}
-	{{if $model.HaveLazyLoading}}
-	{{if (IsCustomList $method)}}{{if ((index $model.MethodsProps $i).NeedLazyLoading)}}
-	for i := range ms {
-		if err := ms[i].LazyLoading{{$method}}({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
-			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
-		}
-		ok := true
-		for j := 0; j < len(customFilters); j++ {
-			var validFilter bool
-			filterKey := customFilters[j].Key
-			{{if $model.HaveLazyLoading}}if !logicFilter && !strings.Contains(customFilters[j].Key, ".") {
+	{{- if $model.HaveLazyLoading}}
+		{{- if (IsCustomList $method)}}
+			{{- if ((index $model.MethodsProps $i).NeedLazyLoading)}}
+				for i := range ms {
+					if err := ms[i].LazyLoading{{$method}}({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
+						return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
+					}
+					ok := true
+					for j := 0; j < len(customFilters); j++ {
+						var validFilter bool
+						filterKey := customFilters[j].Key
+					{{- if $model.HaveLazyLoading}}
+						if !logicFilter && !strings.Contains(customFilters[j].Key, ".") {
+							ok, validFilter = ms[i].Filter(customFilters[j])
+						} else {
+							ok, validFilter = ms[i].NestedFilter(customFilters[j])
+						}
+					{{- else}}
+						ok, validFilter = ms[i].Filter(customFilters[j])
+					{{- end}}
+						customFilters[j].Key = filterKey
+						if !validFilter {
+							warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
+							customFilters = append(customFilters[:j], customFilters[j+1:]...)
+							j--
+						}
+						if (!ok && logicFilter) || (ok && !logicFilter) {
+							break
+						}
+					}
+					if ok {
+						result = append(result, ms[i])
+					}
+				}
+			{{- else}}
+				result = ms
+			{{- end}}
+		{{- else}}
+			for i := range ms {
+				if err := ms[i].LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
+					return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
+				}
+				ok := true
+				for j := 0; j < len(customFilters); j++ {
+					var validFilter bool
+					filterKey := customFilters[j].Key
+				{{- if $model.HaveLazyLoading}}
+					if !logicFilter && !strings.Contains(customFilters[j].Key, ".") {
+						ok, validFilter = ms[i].Filter(customFilters[j])
+					} else {
+						ok, validFilter = ms[i].NestedFilter(customFilters[j])
+					}
+				{{- else}}
+					ok, validFilter = ms[i].Filter(customFilters[j])
+				{{- end}}
+					customFilters[j].Key = filterKey
+					if !validFilter {
+						warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
+						customFilters = append(customFilters[:j], customFilters[j+1:]...)
+						j--
+					}
+					if (!ok && logicFilter) || (ok && !logicFilter) {
+						break
+					}
+				}
+				if ok {
+					result = append(result, ms[i])
+				}
+			}
+		{{- end}}
+	{{- else}}
+		for i := range ms {
+			ok := true
+			for j := 0; j < len(customFilters); j++ {
+				var validFilter bool
 				ok, validFilter = ms[i].Filter(customFilters[j])
-			} else {
-				ok, validFilter = ms[i].NestedFilter(customFilters[j])
-			}{{else}}ok, validFilter = ms[i].Filter(customFilters[j]){{end}}
-			customFilters[j].Key = filterKey
-			if !validFilter {
-				warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
-				customFilters = append(customFilters[:j], customFilters[j+1:]...)
-				j--
+				if !validFilter {
+					warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
+					customFilters = append(customFilters[:j], customFilters[j+1:]...)
+					j--
+				}
+				if (!ok && logicFilter) || (ok && !logicFilter) {
+					break
+				}
 			}
-			if (!ok && logicFilter) || (ok && !logicFilter) {
-				break
-			}
-		}
-		if ok {
-			result = append(result, ms[i])
-		}
-	}{{end}}{{else}}
-	for i := range ms {
-		if err := ms[i].LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
-			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
-		}
-		ok := true
-		for j := 0; j < len(customFilters); j++ {
-			var validFilter bool
-			filterKey := customFilters[j].Key
-			{{if $model.HaveLazyLoading}}if !logicFilter && !strings.Contains(customFilters[j].Key, ".") {
-				ok, validFilter = ms[i].Filter(customFilters[j])
-			} else {
-				ok, validFilter = ms[i].NestedFilter(customFilters[j])
-			}{{else}}ok, validFilter = ms[i].Filter(customFilters[j]){{end}}
-			customFilters[j].Key = filterKey
-			if !validFilter {
-				warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
-				customFilters = append(customFilters[:j], customFilters[j+1:]...)
-				j--
-			}
-			if (!ok && logicFilter) || (ok && !logicFilter) {
-				break
+			if ok {
+				result = append(result, ms[i])
 			}
 		}
-		if ok {
-			result = append(result, ms[i])
-		}
-	}{{end}}{{else}}
-	for i := range ms {
-		ok := true
-		for j := 0; j < len(customFilters); j++ {
-			var validFilter bool
-			ok, validFilter = ms[i].Filter(customFilters[j])
-			if !validFilter {
-				warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
-				customFilters = append(customFilters[:j], customFilters[j+1:]...)
-				j--
+	{{- end}}
+	{{- if $haveNestedSorts}}
+		if nestedSort {
+			var orderByASC bool
+			switch orderBy {
+			case "ASC", "":
+				orderByASC = true
+			case "DESC":
+				orderByASC = false
 			}
-			if (!ok && logicFilter) || (ok && !logicFilter) {
-				break
+			switch sortBy { 
+		{{- range $column, $options := $model.Columns}}
+			{{- range $j, $sort := $options.SortBy}}
+			case "{{$column}}.{{$sort}}":
+				if orderByASC {
+					sort.Slice({{if $model.HaveLazyLoading}}result{{else}}ms{{end}}, func(i, j int) bool { return {{if $model.HaveLazyLoading}}result{{else}}ms{{end}}[i]{{index $options.NestedSorts $j}} < {{if $model.HaveLazyLoading}}result{{else}}ms{{end}}[j]{{index $options.NestedSorts $j}} })
+				} else {
+					sort.Slice({{if $model.HaveLazyLoading}}result{{else}}ms{{end}}, func(i, j int) bool { return {{if $model.HaveLazyLoading}}result{{else}}ms{{end}}[i]{{index $options.NestedSorts $j}} >= {{if $model.HaveLazyLoading}}result{{else}}ms{{end}}[j]{{index $options.NestedSorts $j}} })
+				}
+			{{- end}}
+		{{- end}}
+			default:
+				warnings = append(warnings, fmt.Sprintf("sorting by '%s' is not avaliable or '%s' is not a valid sort key", sortBy, sortBy))
 			}
 		}
-		if ok {
-			result = append(result, ms[i])
-		}
-	}{{end}}
-	{{if $haveNestedSorts}}
-	if nestedSort {
-		var orderByASC bool
-		switch orderBy {
-		case "ASC", "":
-			orderByASC = true
-		case "DESC":
-			orderByASC = false
-		}
-		switch sortBy { {{range $column, $options := $model.Columns}}{{range $j, $sort := $options.SortBy}}
-		case "{{$column}}.{{$sort}}":
-			if orderByASC {
-				sort.Slice({{if $model.HaveLazyLoading}}result{{else}}ms{{end}}, func(i, j int) bool { return {{if $model.HaveLazyLoading}}result{{else}}ms{{end}}[i]{{index $options.NestedSorts $j}} < {{if $model.HaveLazyLoading}}result{{else}}ms{{end}}[j]{{index $options.NestedSorts $j}} })
-			} else {
-				sort.Slice({{if $model.HaveLazyLoading}}result{{else}}ms{{end}}, func(i, j int) bool { return {{if $model.HaveLazyLoading}}result{{else}}ms{{end}}[i]{{index $options.NestedSorts $j}} >= {{if $model.HaveLazyLoading}}result{{else}}ms{{end}}[j]{{index $options.NestedSorts $j}} })
-			}{{end}}{{end}}
-		default:
-			warnings = append(warnings, fmt.Sprintf("sorting by '%s' is not avaliable or '%s' is not a valid sort key", sortBy, sortBy))
-		}
-	}{{end}}
+	{{- end}}
 
 	return app{{$modelName}}s(result),{{if $model.DetailedPagination}} count,{{end}} warnings, nil
 }
