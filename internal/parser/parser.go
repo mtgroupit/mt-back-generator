@@ -906,9 +906,17 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 				for column, options := range result.Columns {
 					if fields[j] == options.TitleName {
 						if !options.IsStruct {
-							sqlAddExecParams = append(sqlAddExecParams, "m."+options.TitleName)
+							sqlName := NameSQL(options.TitleName)
+							titleName := options.TitleName
+							if options.IsArray {
+								sqlName += "_json"
+								titleName += "JSON"
+							} else {
+								titleName = "m." + titleName
+							}
+							sqlAddExecParams = append(sqlAddExecParams, titleName)
 							count++
-							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", NameSQL(options.TitleName), count))
+							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", sqlName, count))
 						} else {
 							if !options.IsArray {
 								sqlAddExecParams = append(sqlAddExecParams, column+"ID")
