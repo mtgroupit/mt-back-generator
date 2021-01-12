@@ -116,10 +116,39 @@ var goTmplFuncs = template.FuncMap{
 		}
 		return false
 	},
-	"IsList": func(method string) bool {
-		method = strings.ToLower(method)
-		if method == "list" || isCustomList(method) {
-			return true
+	"IsList": isList,
+	"HaveListWithWarn": func(model models.Model) bool {
+		for i, method := range model.Methods {
+			if isList(method) {
+				if model.HaveLazyLoading {
+					if isCustomList(method) {
+						if model.MethodsProps[i].NeedLazyLoading {
+							return true
+						}
+					} else {
+						return true
+					}
+				} else {
+					return true
+				}
+			}
+		}
+		return false
+	},
+	"NeedCustomFilter": func(model models.Model, method string) bool {
+		if isList(method) {
+			for i, method2 := range model.Methods {
+				if method == method2 {
+					if model.HaveLazyLoading {
+						if isCustomList(method) {
+							if !model.MethodsProps[i].NeedLazyLoading {
+								return false
+							}
+						}
+					}
+					return true
+				}
+			}
 		}
 		return false
 	},
@@ -373,6 +402,14 @@ func formatName(name string) string {
 		splitedName[i] = strings.Title(splitedName[i])
 	}
 	return strings.Join(splitedName, "")
+}
+
+func isList(method string) bool {
+	method = strings.ToLower(method)
+	if method == "list" || isCustomList(method) {
+		return true
+	}
+	return false
 }
 
 const (

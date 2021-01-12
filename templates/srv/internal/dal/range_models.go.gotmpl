@@ -12,7 +12,7 @@ import (
 {{- if or $model.HaveCreatedAt $model.HaveModifiedAt}}
 	"time"
 {{- end}}
-{{- if $model.HaveListMethod}}
+{{- if HaveListWithWarn $model}}
 	"fmt"
 {{- end}}
 {{- if or $model.HaveArrayOfStandatrType (HaveColumnWithModelThatIsStructAndIsArray $model.Columns $.Models false true)}}
@@ -158,7 +158,9 @@ func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID
 		"isolated_entity_id": isolatedEntityID,
 	}
 
-	customFilters := []*app.Filter{}
+	{{- if NeedCustomFilter $model $method}}
+		customFilters := []*app.Filter{}
+	{{- end}}
 	{{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}
 	if logicFilter {
 		for _, filter := range filters {
