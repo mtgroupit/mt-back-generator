@@ -166,7 +166,9 @@ func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID
 	{{- end}}
 			"offset": offset,
 			"limit": limit,
+		{{- if not $model.Shared}}
 			"isolated_entity_id": isolatedEntityID,
+		{{- end}}
 	}
 
 	{{- if NeedCustomFilter $model $method}}
