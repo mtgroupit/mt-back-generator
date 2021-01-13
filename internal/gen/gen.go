@@ -141,6 +141,9 @@ var goTmplFuncs = template.FuncMap{
 				if method == method2 {
 					if model.HaveLazyLoading {
 						if isCustomList(method) {
+							if len(model.MethodsProps[i].FilteredFields) != 0 || model.MethodsProps[i].HaveArrayOfStandatrType {
+								return true
+							}
 							if !model.MethodsProps[i].NeedLazyLoading {
 								return false
 							}

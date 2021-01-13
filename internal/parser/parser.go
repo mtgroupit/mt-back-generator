@@ -775,6 +775,7 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 			fields := trimFieldsSuffix(fieldsFull)
 			haveID := false
 			haveArr := false
+			result.MethodsProps[i].ArrayColumns = map[string]bool{}
 			for j := range fields {
 				var needFilter bool
 				if strings.HasSuffix(fields[j], "*") {
@@ -805,12 +806,17 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 				for column, options := range result.Columns {
 					if fields[j] == options.TitleName {
 						if !options.IsStruct {
-							SQLSelect = append(SQLSelect, NameSQL(column))
-							if needFilter {
+							sqlName := NameSQL(options.TitleName)
+							if options.IsArray {
+								result.MethodsProps[i].HaveArrayOfStandatrType = true
+								sqlName += "_json"
+							}
+							SQLSelect = append(SQLSelect, sqlName)
+							if needFilter && !options.IsArray {
 								if options.Type != "string" || options.StrictFilter {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName), column, "not_"+column, "not_"+column, NameSQL(options.TitleName), "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, sqlName, column, "not_"+column, "not_"+column, sqlName, "not_"+column))
 								} else {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) LIKE LOWER(:%s)) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, column, NameSQL(options.TitleName), column, "not_"+column, "not_"+column, NameSQL(options.TitleName), "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) LIKE LOWER(:%s)) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, column, sqlName, column, "not_"+column, "not_"+column, sqlName, "not_"+column))
 								}
 							}
 						} else {
@@ -828,6 +834,7 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 								structIsArr = true
 							}
 						}
+						result.MethodsProps[i].ArrayColumns[column] = options.IsArray
 					}
 				}
 

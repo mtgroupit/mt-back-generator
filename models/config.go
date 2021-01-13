@@ -62,6 +62,8 @@ type MethodProps struct {
 	HTTPMethod              string
 	IsCustomList            bool
 	NeedLazyLoading         bool
+	HaveArrayOfStandatrType bool
+	ArrayColumns            map[string]bool
 	CustomListSQLSelect     string
 	CustomListSQLWhereProps string
 	CustomSQLEditStr        string

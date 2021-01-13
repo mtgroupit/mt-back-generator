@@ -148,14 +148,25 @@ func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID
 		}
 	}
 
-	mapQuery := map[string]interface{}{ {{if IsCustomList $method}}{{range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
-		"{{$column}}": nil,
-		"not_{{$column}}": nil,{{end}}{{else}}{{range $column, $options := $model.Columns}}{{if not $options.IsArray}}
-		"{{$column}}": nil,
-		"not_{{$column}}": nil,{{end}}{{end}}{{end}}
-		"offset": offset,
-		"limit": limit,
-		"isolated_entity_id": isolatedEntityID,
+	mapQuery := map[string]interface{}{ 
+	{{- if IsCustomList $method}}
+		{{- range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
+			{{- if not (index (index $model.MethodsProps $i).ArrayColumns $column)}}
+				"{{$column}}": nil,
+				"not_{{$column}}": nil,
+			{{- end}}
+		{{- end}}
+	{{- else}}
+		{{- range $column, $options := $model.Columns}}
+			{{- if not $options.IsArray}}
+				"{{$column}}": nil,
+				"not_{{$column}}": nil,
+			{{- end}}
+		{{- end}}
+	{{- end}}
+			"offset": offset,
+			"limit": limit,
+			"isolated_entity_id": isolatedEntityID,
 	}
 
 	{{- if NeedCustomFilter $model $method}}
@@ -164,19 +175,30 @@ func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID
 	{{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}
 	if logicFilter {
 		for _, filter := range filters {
-			switch filter.Key { {{if IsCustomList $method}}{{range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
-			case "{{$column}}":
-				if filter.Include {
-					mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-				} else {
-					mapQuery["not_{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-				}{{end}}{{else}}{{range $column, $options := $model.Columns}}{{if not $options.IsArray}}
-			case "{{$column}}":
-				if filter.Include {
-					mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-				} else {
-					mapQuery["not_{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-				}{{end}}{{end}}{{end}}
+			switch filter.Key { 
+		{{- if IsCustomList $method}}
+			{{- range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
+				{{- if not (index (index $model.MethodsProps $i).ArrayColumns $column)}}
+				case "{{$column}}":
+					if filter.Include {
+						mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+					} else {
+						mapQuery["not_{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+					}
+				{{- end}}
+			{{- end}}
+		{{- else}}
+			{{- range $column, $options := $model.Columns}}
+				{{- if not $options.IsArray}}
+				case "{{$column}}":
+					if filter.Include {
+						mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+					} else {
+						mapQuery["not_{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+					}
+				{{- end}}
+			{{- end}}
+		{{- end}}
 			default:
 				customFilters = append(customFilters, filter)
 			}
@@ -187,7 +209,7 @@ func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID
 		}
 	}{{end}}
 	{{if $model.DetailedPagination}}
-	rows, err := a.db.NamedQuery(`SELECT COUNT(*) FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}}{{if not $model.Shared}} AND isolated_entity_id=:isolated_entity_id{{end}}`, mapQuery)
+	rows, err := a.db.NamedQuery(`SELECT COUNT(*) FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}}{{if not $model.Shared}}{{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}} AND{{else}}WHERE{{end}} isolated_entity_id=:isolated_entity_id{{end}}`, mapQuery)
 	if err != nil {
 		return nil, -1, nil, err
 	}
@@ -196,7 +218,7 @@ func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID
 		err = rows.Scan(&count)
 	}
 	{{end}}
-	rows, err {{if not $model.DetailedPagination}}:{{end}}= a.db.NamedQuery(`SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} {{if not $model.Shared}} AND isolated_entity_id=:isolated_entity_id{{end}} ` + orderQuery + ` OFFSET :offset LIMIT :limit`, mapQuery)
+	rows, err {{if not $model.DetailedPagination}}:{{end}}= a.db.NamedQuery(`SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} {{if not $model.Shared}}{{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}AND{{else}}WHERE{{end}} isolated_entity_id=:isolated_entity_id{{end}} ` + orderQuery + ` OFFSET :offset LIMIT :limit`, mapQuery)
 	if err != nil {
 		return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 	}
@@ -206,25 +228,33 @@ func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID
 		ms = append(ms, m)
 	}
 
-	{{if $model.HaveArrayOfStandatrType}}for i := range ms { {{range $column, $options := $model.Columns}}{{if and $options.IsArray (not $options.IsStruct)}}
-		if err := json.Unmarshal(ms[i].{{$options.TitleName}}JSON, &ms[i].{{$options.TitleName}}); err != nil {
-			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
-		}{{end}}{{end}}
-	}{{end}}
+	{{- if or (and (not (IsCustomList $method)) $model.HaveArrayOfStandatrType) (and (IsCustomList $method) (index $model.MethodsProps $i).HaveArrayOfStandatrType)}}
+		for i := range ms { 
+		{{- range $column, $options := $model.Columns}}
+			{{- if or (and $options.IsArray (not $options.IsStruct) (not (IsCustomList $method))) (and (IsCustomList $method) (index (index $model.MethodsProps $i).ArrayColumns $column))}}
+				if err := json.Unmarshal(ms[i].{{$options.TitleName}}JSON, &ms[i].{{$options.TitleName}}); err != nil {
+					return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
+				}
+			{{- end}}
+		{{- end}}
+		}
+	{{- end}}
 	
 	result := []{{$modelName}}{}
 	{{- if $model.HaveLazyLoading}}
 		{{- if (IsCustomList $method)}}
-			{{- if ((index $model.MethodsProps $i).NeedLazyLoading)}}
+			{{- if or ((index $model.MethodsProps $i).NeedLazyLoading) ((index $model.MethodsProps $i).HaveArrayOfStandatrType)}}
 				for i := range ms {
+				{{- if (index $model.MethodsProps $i).NeedLazyLoading}}
 					if err := ms[i].LazyLoading{{$method}}({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
 						return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 					}
+				{{- end}}
 					ok := true
 					for j := 0; j < len(customFilters); j++ {
 						var validFilter bool
 						filterKey := customFilters[j].Key
-					{{- if $model.HaveLazyLoading}}
+					{{- if (index $model.MethodsProps $i).NeedLazyLoading}}
 						if !logicFilter && !strings.Contains(customFilters[j].Key, ".") {
 							ok, validFilter = ms[i].Filter(customFilters[j])
 						} else {
