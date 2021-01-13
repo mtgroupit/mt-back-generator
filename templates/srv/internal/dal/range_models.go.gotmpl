@@ -98,26 +98,30 @@ type {{$modelName}} struct {
 	}
 	{{- end}}
 	{{- if IsEdit $method}}
-	func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  { {{range $column, $options := $model.Columns}}{{if or (not (IsCustomEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsCustomEdit $method))}}{{if and $options.IsStruct (not $options.IsArray)}}
-		var {{$column}}ID interface{}
-		if m.{{$options.TitleName}} != nil {
-			{{$column}}ID = m.{{$options.TitleName}}.ID
-		}{{end}}{{if and $options.IsArray (not $options.IsStruct)}}
-		{{$options.TitleName}}JSON, _ := json.Marshal(m.{{$options.TitleName}}){{end}}{{end}}{{end}}{{if $model.HaveModifiedAt}}
-		m.ModifiedAt = time.Now().Format(time.RFC3339){{end}}{{if $model.HaveModifiedBy}}
-		m.ModifiedBy = profileID{{end}}
+	func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  {
+		{{- range $column, $options := $model.Columns}}
+			{{- if or (not (IsCustomEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsCustomEdit $method))}}
+				{{- if and $options.IsStruct (not $options.IsArray)}}
+					var {{$column}}ID interface{}
+					if m.{{$options.TitleName}} != nil {
+						{{$column}}ID = m.{{$options.TitleName}}.ID
+					}
+				{{- end}}
+				{{- if and $options.IsArray (not $options.IsStruct)}}
+					{{$options.TitleName}}JSON, _ := json.Marshal(m.{{$options.TitleName}})
+				{{- end}}
+			{{- end}}
+		{{- end}}
+		{{- if $model.HaveModifiedAt}}
+			m.ModifiedAt = time.Now().Format(time.RFC3339)
+		{{- end}}
+		{{- if $model.HaveModifiedBy}}
+			m.ModifiedBy = profileID
+		{{- end}}
 		if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLEditStr}}{{else}}{{$model.SQLEditStr}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLEditExecParams}}{{end}}); err != nil {
 			return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 		}
-		{{if $model.ReturnWhenEdit}}
-		var edited {{$modelName}}
-		if err := a.db.Get(&edited, `SELECT {{$model.SQLSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
-			return nil, err
-		}{{if $model.HaveLazyLoading}}
-		if err := edited.LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
-			return nil, err
-		}{{end}}{{end}}
-		return {{if $model.ReturnWhenEdit}}app{{$modelName}}(edited), {{end}}nil
+		return {{if $model.ReturnWhenEdit}}a.get{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}}){{else}}nil{{end}}
 	}
 	{{- end}}
 	{{- if IsList $method}}
@@ -429,7 +433,7 @@ type {{$modelName}} struct {
 		{{- end}}
 		{{- end}}
 	{{- end}}
-{{- end}}
+{{end}}
 {{- end}}
 
 {{- if $model.HaveLazyLoading}}
