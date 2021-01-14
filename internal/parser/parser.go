@@ -243,7 +243,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			} else {
 				if options.IsArray {
-					model.HaveArrayOfStandatrType = true
+					model.HaveArrayOfStandardType = true
 				}
 			}
 
@@ -808,7 +808,7 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 						if !options.IsStruct {
 							sqlName := NameSQL(options.TitleName)
 							if options.IsArray {
-								result.MethodsProps[i].HaveArrayOfStandatrType = true
+								result.MethodsProps[i].HaveArrayOfStandardType = true
 								sqlName += "_json"
 							}
 							SQLSelect = append(SQLSelect, sqlName)

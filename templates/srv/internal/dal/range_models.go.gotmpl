@@ -24,7 +24,7 @@ import (
 {{- if HaveListWithWarn $model}}
 	"fmt"
 {{- end}}
-{{- if or $model.HaveArrayOfStandatrType (HaveColumnWithModelThatIsStructAndIsArray $model.Columns $.Models false true)}}
+{{- if or $model.HaveArrayOfStandardType (HaveColumnWithModelThatIsStructAndIsArray $model.Columns $.Models false true)}}
 	"encoding/json"
 {{- end}}
 
@@ -254,7 +254,7 @@ type {{$modelName}} struct {
 			ms = append(ms, m)
 		}
 
-		{{- if or (and (not (IsCustomList $method)) $model.HaveArrayOfStandatrType) (and (IsCustomList $method) (index $model.MethodsProps $i).HaveArrayOfStandatrType)}}
+		{{- if or (and (not (IsCustomList $method)) $model.HaveArrayOfStandardType) (and (IsCustomList $method) (index $model.MethodsProps $i).HaveArrayOfStandardType)}}
 			for i := range ms { 
 			{{- range $column, $options := $model.Columns}}
 				{{- if or (and $options.IsArray (not $options.IsStruct) (not (IsCustomList $method))) (and (IsCustomList $method) (index (index $model.MethodsProps $i).ArrayColumns $column))}}
@@ -269,7 +269,7 @@ type {{$modelName}} struct {
 		result := []{{$modelName}}{}
 		{{- if $model.HaveLazyLoading}}
 			{{- if (IsCustomList $method)}}
-				{{- if or ((index $model.MethodsProps $i).NeedLazyLoading) ((index $model.MethodsProps $i).HaveArrayOfStandatrType)}}
+				{{- if or ((index $model.MethodsProps $i).NeedLazyLoading) ((index $model.MethodsProps $i).HaveArrayOfStandardType)}}
 					for i := range ms {
 					{{- if (index $model.MethodsProps $i).NeedLazyLoading}}
 						if err := ms[i].LazyLoading{{$method}}({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {

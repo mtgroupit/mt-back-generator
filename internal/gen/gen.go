@@ -141,7 +141,7 @@ var goTmplFuncs = template.FuncMap{
 				if method == method2 {
 					if model.HaveLazyLoading {
 						if isCustomList(method) {
-							if len(model.MethodsProps[i].FilteredFields) != 0 || model.MethodsProps[i].HaveArrayOfStandatrType {
+							if len(model.MethodsProps[i].FilteredFields) != 0 || model.MethodsProps[i].HaveArrayOfStandardType {
 								return true
 							}
 							if !model.MethodsProps[i].NeedLazyLoading {
@@ -409,10 +409,7 @@ func formatName(name string) string {
 
 func isList(method string) bool {
 	method = strings.ToLower(method)
-	if method == "list" || isCustomList(method) {
-		return true
-	}
-	return false
+	return method == "list" || isCustomList(method)
 }
 
 const (
