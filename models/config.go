@@ -62,6 +62,8 @@ type MethodProps struct {
 	HTTPMethod              string
 	IsCustomList            bool
 	NeedLazyLoading         bool
+	HaveArrayOfStandardType bool
+	ArrayColumns            map[string]bool
 	CustomListSQLSelect     string
 	CustomListSQLWhereProps string
 	CustomSQLEditStr        string
@@ -89,7 +91,7 @@ type Model struct {
 	HaveEmail               bool
 	HaveListMethod          bool
 	HaveCustomMethod        bool
-	HaveArrayOfStandatrType bool
+	HaveArrayOfStandardType bool
 
 	SQLSelectStr      string
 	SQLWhereParams    string

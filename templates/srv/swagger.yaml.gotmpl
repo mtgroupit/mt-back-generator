@@ -88,19 +88,23 @@ paths:
                     {{- end}}
                   {{- else}}
                   {{$name}}:
-                    type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}} 
-                    {{- if $options.Format}}
-                    format: {{$options.Format}}
+                    {{- if $options.IsArray}}  
+                    type: array
+                    items:
                     {{- end}}
-                    {{- if .Length}}
-                    maxLength: {{.Length}}
-                    {{- end}}
-                    {{- if .Default}}
-                    default: {{.Default}}
-                    {{- end}}
-                    {{- if $options.Enum}}
-                    enum: {{$options.Enum}}
-                    {{- end}}
+                      type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}} 
+                      {{- if $options.Format}}
+                      format: {{$options.Format}}
+                      {{- end}}
+                      {{- if .Length}}
+                      maxLength: {{.Length}}
+                      {{- end}}
+                      {{- if .Default}}
+                      default: {{.Default}}
+                      {{- end}}
+                      {{- if $options.Enum}}
+                      enum: {{$options.Enum}}
+                      {{- end}}
                   {{- end}}
                 {{- end}}
               {{- end}}
