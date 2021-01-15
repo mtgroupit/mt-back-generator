@@ -111,7 +111,7 @@ var goTmplFuncs = template.FuncMap{
 	},
 	"IsEdit": func(method string) bool {
 		method = strings.ToLower(method)
-		if method == "edit" || method == "editmy" || isCustomEdit(method) {
+		if method == "edit" || method == "editmy" || method == "editoraddmy" || isCustomEdit(method) {
 			return true
 		}
 		return false
@@ -396,7 +396,7 @@ func isCustomList(method string) bool {
 }
 
 func isCustomEdit(method string) bool {
-	return regexp.MustCompile(`^(E|e)dit.+`).Match([]byte(method)) && strings.ToLower(method) != "editmy"
+	return regexp.MustCompile(`^(E|e)dit.+`).Match([]byte(method)) && strings.ToLower(method) != "editmy" && strings.ToLower(method) == "editoraddmy"
 }
 
 func formatName(name string) string {
