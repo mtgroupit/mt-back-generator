@@ -968,7 +968,7 @@ func isCustomMethod(method string) bool {
 // IsMyMethod return true if method is standard my method
 func IsMyMethod(method string) bool {
 	method = strings.ToLower(method)
-	if method == "getmy" || method == "addmy" || method == "deletemy" || method == "editmy" || regexp.MustCompile(`^editmy.+`).Match([]byte(method)) {
+	if method == "getmy" || method == "addmy" || method == "deletemy" || method == "editmy" || method == "editoraddmy" || regexp.MustCompile(`^editmy.+`).Match([]byte(method)) {
 		return true
 	}
 	return false

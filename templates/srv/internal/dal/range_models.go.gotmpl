@@ -118,9 +118,21 @@ type {{$modelName}} struct {
 		{{- if $model.HaveModifiedBy}}
 			m.ModifiedBy = profileID
 		{{- end}}
-		if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLEditStr}}{{else}}{{$model.SQLEditStr}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLEditExecParams}}{{end}}); err != nil {
+
+		{{if eq $method "EditOrAddMy"}}res{{else}}_{{end}}, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLEditStr}}{{else}}{{$model.SQLEditStr}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLEditExecParams}}{{end}})
+		if err != nil {
 			return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 		}
+
+		{{if eq $method "EditOrAddMy"}}
+			if count, _ := res.RowsAffected(); count == 0 {
+				_, err := a.add{{$modelName}}({{if $model.IDIsUUID}}id, {{end}}{{if $model.HaveCreatedBy}}id, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
+				if err != nil {
+					return {{if $model.ReturnWhenEdit}}nil, {{end}}err
+				}
+			}
+		{{end}}
+
 		return {{if $model.ReturnWhenEdit}}a.get{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}}){{else}}nil{{end}}
 	}
 	{{- end}}
