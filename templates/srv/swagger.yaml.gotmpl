@@ -151,6 +151,10 @@ paths:
           {{- end}}
                   $ref: "#/definitions/{{LowerTitle $modelName}}"
     {{- end}}
+        default:
+          description: error
+          schema:
+            $ref: "#/definitions/error"
   {{- end}} 
   {{- range $column, $options := $model.Columns}}
   {{- if and $options.IsStruct $options.IsArray}}
@@ -182,6 +186,10 @@ paths:
       responses:        
         200:
           description: OK
+        default:
+          description: error
+          schema:
+            $ref: "#/definitions/error"
   /{{LowerTitle $modelName}}/delete{{Title $column}}:    
     post:
     {{- if $model.Tags}}
@@ -205,7 +213,11 @@ paths:
                   type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}
       responses:        
         200:
-          description: OK 
+          description: OK
+        default:
+          description: error
+          schema:
+            $ref: "#/definitions/error"
   {{- end}}
   {{- end}}
   /{{LowerTitle $modelName}}/accessManager:    
@@ -225,6 +237,10 @@ paths:
       responses:        
         200:
           description: OK
+        default:
+          description: error
+          schema:
+            $ref: "#/definitions/error"
   {{- range $funcName, $func := $.Functions}}
   /{{LowerTitle $modelName}}/{{$funcName}}:
     post:
@@ -239,9 +255,25 @@ paths:
           description: OK                
           schema:             
             $ref: "#/definitions/{{$funcName}}Params" 
+        default:
+          description: error
+          schema:
+            $ref: "#/definitions/error"
   {{- end}}
 {{- end}}
 definitions:
+  error:
+    type: object
+    required:
+      - code
+      - message
+    properties:
+      code:
+        description: Either same as HTTP Status Code OR >= 600.
+        type: integer
+        format: int32
+      message:
+        type: string
 {{- range $modelName, $model := $.Models}}  
   {{LowerTitle $modelName}}:
     type: object
