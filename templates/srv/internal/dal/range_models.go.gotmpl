@@ -12,9 +12,7 @@ package dal
 
 import (
 	"database/sql"
-{{- if $model.HaveLazyLoading }}
 	"strings"
-{{- end}}
 {{- if $haveNestedSorts}}
 	"sort"
 {{- end}}
@@ -81,19 +79,37 @@ type {{$modelName}} struct {
 	}
 	{{- end}}
 	{{- if IsDelete $method}}
-	func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) error { {{range $modelName2, $model2 := $.Models}}{{range $column, $options := $model.Columns}}{{if eq $modelName2 $options.GoType}}{{if and $options.IsArray $options.IsStruct}}
-		if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
-			return err
-		}{{end}}{{end}}{{end}}{{end}} {{range $_, $bind := $model.Binds}}{{if $bind.IsArray}}
-		if _, err := a.db.Exec(`DELETE FROM {{NameSQL $bind.ModelName}}_{{NameSQL $bind.FieldName}} WHERE {{NameSQL $bind.FieldName}}_id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
-			return err
-		}{{else}}
-		if _, err := a.db.Exec(`UPDATE {{NameSQL $bind.ModelName}}s SET {{$bind.FieldName}}_id=NULL WHERE {{NameSQL $bind.FieldName}}_id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
-			return err
-		}{{end}}{{end}}
-		if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+	func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) error {
+		{{- range $modelName2, $model2 := $.Models}}
+			{{- range $column, $options := $model.Columns}}
+				{{- if eq $modelName2 $options.GoType}}
+					{{- if and $options.IsArray $options.IsStruct}}
+						if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+							return err
+						}
+					{{- end}}
+				{{- end}}
+			{{- end}}
+		{{- end}}
+		{{- range $_, $bind := $model.Binds}}
+			{{- if $bind.IsArray}}
+				if _, err := a.db.Exec(`DELETE FROM {{NameSQL $bind.ModelName}}_{{NameSQL $bind.FieldName}} WHERE {{NameSQL $bind.FieldName}}_id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+					return err
+				}
+			{{- else}}
+				if _, err := a.db.Exec(`UPDATE {{NameSQL $bind.ModelName}}s SET {{$bind.FieldName}}_id=NULL WHERE {{NameSQL $bind.FieldName}}_id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+					return err
+				}
+			{{- end}}
+		{{- end}}
+		res, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}})
+		if err != nil {
 			return err
 		}
+		if count, _ := res.RowsAffected(); count == 0 {
+			return app.ErrNotFound
+		}
+		
 		return nil
 	}
 	{{- end}}
