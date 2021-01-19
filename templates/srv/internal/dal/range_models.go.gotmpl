@@ -135,19 +135,23 @@ type {{$modelName}} struct {
 			m.ModifiedBy = profileID
 		{{- end}}
 
-		{{if eq $method "EditOrAddMy"}}res{{else}}_{{end}}, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLEditStr}}{{else}}{{$model.SQLEditStr}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLEditExecParams}}{{end}})
+		res, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLEditStr}}{{else}}{{$model.SQLEditStr}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLEditExecParams}}{{end}})
 		if err != nil {
 			return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 		}
 
-		{{if eq $method "EditOrAddMy"}}
-			if count, _ := res.RowsAffected(); count == 0 {
+		if count, _ := res.RowsAffected(); count == 0 {
+			{{- if eq $method "EditOrAddMy"}}
 				_, err := a.add{{$modelName}}({{if $model.IDIsUUID}}id, {{end}}{{if $model.HaveCreatedBy}}id, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
 				if err != nil {
 					return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 				}
-			}
-		{{end}}
+			{{- else}}
+				if err != nil {
+					return {{if $model.ReturnWhenEdit}}nil, {{end}}app.ErrNotFound
+				}
+			{{- end}}
+		}
 
 		return {{if $model.ReturnWhenEdit}}a.get{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}}){{else}}nil{{end}}
 	}
