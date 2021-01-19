@@ -48,12 +48,25 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 			prof := profile.(*extauthapi.Profile)
 		{{- end}}
 		c, err := svc.app.{{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}{{if $model.IDFromIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}, {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}app{{$modelName}}Add(params.Body))
-		if err != nil {
-			log.Err("{{$method}}{{$modelName}} error", err)
-		} else {
+		switch {
+		default:
+			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
+			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+				Code:    swag.Int32(codeInternal.extra),
+				Message: swag.String("internal error"),
+			})
+		{{- if IsMyMethod $method}}
+			case errors.Is(err, app.ErrDuplicateID):
+				log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeDuplicateID.status, "code", codeDuplicateID.extra, "err", err)
+				return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeDuplicateID.status).WithPayload(&models.Error{
+					Code:    swag.Int32(codeDuplicateID.extra),
+					Message: swag.String(err.Error()),
+				})
+		{{- end}}
+		case err == nil:
 			log.Info("{{$method}}{{$modelName}} ok")
+			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}Created().WithPayload(api{{$modelName}}(c))
 		}
-		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}Created().WithPayload(api{{$modelName}}(c))
 	{{- end}}
 	{{- if IsDelete $method}}
 		{{- if or (IsMyMethod $method) (not $model.Shared)}}
