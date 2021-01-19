@@ -129,12 +129,23 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 			{{- end}}
 		{{- end}}
 		{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if IsMyMethod $method}}{{if $model.IDFromIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}}, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}{{if IsCustomEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
-		if err != nil {
-			log.Err("{{$method}}{{$modelName}} error", err)
-		} else {
+		switch {
+		default:
+			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
+			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+				Code:    swag.Int32(codeInternal.extra),
+				Message: swag.String("internal error"),
+			})
+		case errors.Is(err, app.ErrNotFound):
+			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
+			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
+				Code:    swag.Int32(codeNotFound.extra),
+				Message: swag.String(err.Error()),
+			})
+		case err == nil:
 			log.Info("{{$method}}{{$modelName}} ok")
+			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK(){{if $model.ReturnWhenEdit}}.WithPayload(api{{$modelName}}(c)){{end}}
 		}
-		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK(){{if $model.ReturnWhenEdit}}.WithPayload(api{{$modelName}}(c)){{end}}
 	{{- end}}
 	{{- if  IsList $method}}
 		{{- if not $model.Shared}}
