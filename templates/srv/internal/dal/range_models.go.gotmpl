@@ -562,6 +562,9 @@ func (a *App) {{$modelName}}AccessManager(am *app.AccessManager) error {
 func (a *App) get{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
 	var m {{$modelName}}
 	if err := a.db.Get(&m, `SELECT {{$model.SQLSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, app.ErrNotFound
+		} 
 		return nil, err
 	}
 	{{- range $column, $options := $model.Columns}}

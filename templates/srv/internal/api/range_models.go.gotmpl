@@ -2,9 +2,12 @@
 package api
 
 import (
+	"errors"
+
 	"{{.Module}}/internal/api/restapi/models"
 	{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}} {{end}}"{{.Module}}/internal/api/restapi/restapi/operations{{if $model.Tags}}/{{NameSQL (index $model.Tags 0)}}{{end}}"
 	"{{.Module}}/internal/app"
+	"{{.Module}}/internal/def"
 
 	{{if or (HaveMyMethod $model.Methods) $model.HaveCreatedBy $model.HaveModifiedBy (and (not $model.Shared) ($model.Methods))}}extauthapi "{{.AuthSrv}}"{{end}}
 	{{if $model.HaveEmail}}"github.com/go-openapi/strfmt"{{end}}
@@ -24,15 +27,16 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 		c, err := svc.app.{{$method}}{{$modelName}}({{if IsMyMethod $method}}{{if $model.IDFromIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}}{{if not $model.Shared}}, prof.IsolatedEntityID.String(){{end}})
 		switch {
 		default:
-			log.PrintErr("{{$method}}{{$modelName}} server error", codeInternal.status, "code", codeInternal.extra, "err", err)
+			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
 			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
 		case errors.Is(err, app.ErrNotFound):
-			log.Info("{{$method}}{{$modelName}} client error", codeNotFound.status, "code", codeNotFound.extra, "err", err)
+			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
 			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeNotFound.extra),
+				Message: swag.String(err.Error()),
 			})
 		case err == nil:
 		log.Info("{{$method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}{{if $model.IDFromIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}})
