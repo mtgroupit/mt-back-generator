@@ -606,6 +606,9 @@ func (a *App) add{{$modelName}}({{if $model.IDIsUUID}}id string, {{end}}{{if $mo
 		{{- end}}
 	{{- end}}
 	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{NameSQL $modelName}}s{{$model.SQLAddStr}} RETURNING id`, {{$model.SQLAddExecParams}}{{if $model.IDIsUUID}}, {{$modelName}}ID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			return {{if $model.IDIsUUID}}""{{else}}0{{end}}, app.ErrDuplicateID
+		}
 		return {{if $model.IDIsUUID}}""{{else}}0{{end}}, err
 	}
 	{{- range $modelName2, $model2 := $.Models}}
