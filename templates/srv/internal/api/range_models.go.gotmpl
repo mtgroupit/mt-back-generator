@@ -217,12 +217,6 @@ func (svc *service) Delete{{Title $column}}{{$modelName}}(params {{if $model.Tag
 			Code:    swag.Int32(codeNotFound.extra),
 			Message: swag.String(err.Error()),
 		})
-	case errors.Is(err, app.ErrNotFoundArrayItem):
-		log.Info("Delete{{Title $column}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFoundArrayItem.status, "code", codeNotFoundArrayItem.extra, "err", err)
-		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewDelete{{Title $column}}{{$modelName}}Default(codeNotFoundArrayItem.status).WithPayload(&models.Error{
-			Code:    swag.Int32(codeNotFoundArrayItem.extra),
-			Message: swag.String(err.Error()),
-		})
 	case err == nil:
 		log.Info("Delete{{Title $column}}{{$modelName}} ok")
 		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewDelete{{Title $column}}{{$modelName}}OK()
