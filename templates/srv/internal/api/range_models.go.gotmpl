@@ -170,12 +170,29 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 func (svc *service) Add{{Title $column}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.Add{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
 	{{if or $model.HaveModifiedBy (not $model.Shared)}}prof := profile.(*extauthapi.Profile)
 	{{end}}err := svc.app.Add{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}params.Body.ItemsID, app{{$options.GoType}}sAdd(params.Body.Items))
-	if err != nil {
-		log.Err("Add{{Title $column}}{{$modelName}} error", err)
-	} else {
+	switch {
+	default:
+		log.PrintErr("Add{{Title $column}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
+		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewAdd{{Title $column}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+			Code:    swag.Int32(codeInternal.extra),
+			Message: swag.String("internal error"),
+		})
+	case errors.Is(err, app.ErrNotFound):
+		log.Info("Add{{Title $column}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
+		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewAdd{{Title $column}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
+			Code:    swag.Int32(codeNotFound.extra),
+			Message: swag.String(err.Error()),
+		})
+	case errors.Is(err, app.ErrNotFoundArrayItem):
+		log.Info("Add{{Title $column}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFoundArrayItem.status, "code", codeNotFoundArrayItem.extra, "err", err)
+		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewAdd{{Title $column}}{{$modelName}}Default(codeNotFoundArrayItem.status).WithPayload(&models.Error{
+			Code:    swag.Int32(codeNotFoundArrayItem.extra),
+			Message: swag.String(err.Error()),
+		})
+	case err == nil:
 		log.Info("Add{{Title $column}}{{$modelName}} ok")
+		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewAdd{{Title $column}}{{$modelName}}OK()
 	}
-	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewAdd{{Title $column}}{{$modelName}}OK()
 }
 
 func (svc *service) Delete{{Title $column}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.Delete{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
@@ -187,6 +204,29 @@ func (svc *service) Delete{{Title $column}}{{$modelName}}(params {{if $model.Tag
 		log.Info("Delete{{Title $column}}{{$modelName}} ok")
 	}
 	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewDelete{{Title $column}}{{$modelName}}OK()
+	switch {
+	default:
+		log.PrintErr("Delete{{Title $column}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
+		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewDelete{{Title $column}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+			Code:    swag.Int32(codeInternal.extra),
+			Message: swag.String("internal error"),
+		})
+	case errors.Is(err, app.ErrNotFound):
+		log.Info("Delete{{Title $column}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
+		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewDelete{{Title $column}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
+			Code:    swag.Int32(codeNotFound.extra),
+			Message: swag.String(err.Error()),
+		})
+	case errors.Is(err, app.ErrNotFoundArrayItem):
+		log.Info("Delete{{Title $column}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFoundArrayItem.status, "code", codeNotFoundArrayItem.extra, "err", err)
+		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewDelete{{Title $column}}{{$modelName}}Default(codeNotFoundArrayItem.status).WithPayload(&models.Error{
+			Code:    swag.Int32(codeNotFoundArrayItem.extra),
+			Message: swag.String(err.Error()),
+		})
+	case err == nil:
+		log.Info("Delete{{Title $column}}{{$modelName}} ok")
+		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewDelete{{Title $column}}{{$modelName}}OK()
+	}
 }
 {{end}}{{end}}
 func (svc *service) {{$modelName}}AccessManager(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$modelName}}AccessManagerParams, profile interface{}) middleware.Responder {
