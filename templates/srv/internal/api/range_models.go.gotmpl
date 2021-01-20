@@ -2,8 +2,10 @@
 package api
 
 import (
-{{- if $model.Methods}}
+{{- if NeedErrorsInApi $model}}
 	"errors"
+{{- end}}
+{{- if $model.Methods}}
 	"{{.Module}}/internal/def"
 	"github.com/go-openapi/swag"
 {{end}}
@@ -152,16 +154,21 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 			prof := profile.(*extauthapi.Profile)
 		{{- end}}
 		c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}({{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters), params.Body.LogicFilter, params.Body.SortBy, params.Body.OrderBy)
-		if err != nil {
-			log.Err("{{$method}}{{$modelName}} error", err)
-		} else {
+		switch {
+		default:
+			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
+			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+				Code:    swag.Int32(codeInternal.extra),
+				Message: swag.String("internal error"),
+			})
+		case err == nil:
 			log.Info("{{$method}}{{$modelName}} ok")
+			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(&{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}OKBody{
+				Items: api{{$modelName}}s(c),
+				Warnings: warnings,{{if $model.DetailedPagination}}
+				Count: int32(count),{{end}}
+			})
 		}
-		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(&{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}OKBody{
-			Items: api{{$modelName}}s(c),
-			Warnings: warnings,{{if $model.DetailedPagination}}
-			Count: int32(count),{{end}}
-		})
 	{{- end}}
 }
 {{- end}}
