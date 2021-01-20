@@ -95,13 +95,7 @@ var goTmplFuncs = template.FuncMap{
 		}
 		return false
 	},
-	"IsAdd": func(method string) bool {
-		method = strings.ToLower(method)
-		if method == "add" || method == "addmy" {
-			return true
-		}
-		return false
-	},
+	"IsAdd": isAdd,
 	"IsDelete": func(method string) bool {
 		method = strings.ToLower(method)
 		if method == "delete" || method == "deletemy" {
@@ -151,6 +145,19 @@ var goTmplFuncs = template.FuncMap{
 					}
 					return true
 				}
+			}
+		}
+		return false
+	},
+	"NeedErrorsInApi": func(model models.Model) bool {
+		for _, method := range model.Methods {
+			if !isList(method) && !(isAdd(method) && !parser.IsMyMethod(method)) {
+				return true
+			}
+		}
+		for _, options := range model.Columns {
+			if options.IsStruct && options.IsArray {
+				return true
 			}
 		}
 		return false
@@ -405,6 +412,14 @@ func formatName(name string) string {
 		splitedName[i] = strings.Title(splitedName[i])
 	}
 	return strings.Join(splitedName, "")
+}
+
+func isAdd(method string) bool {
+	method = strings.ToLower(method)
+	if method == "add" || method == "addmy" {
+		return true
+	}
+	return false
 }
 
 func isList(method string) bool {
