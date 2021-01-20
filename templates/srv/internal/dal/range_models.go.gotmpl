@@ -537,6 +537,14 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 		}
 		for _, itemID := range itemsID {
 			if _, err := a.db.Exec(`INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}({{NameSQL $modelName}}_id, {{NameSQL $column}}_id{{if not $model.Shared}}, isolated_entity_id{{end}}) VALUES ($1, $2{{if not $model.Shared}}, $3{{end}})`, id, itemID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+				if strings.Contains(err.Error(), "violates foreign key constraint") {
+					switch {
+					case strings.Contains(err.Error(), "{{NameSQL $modelName}}_id_fkey"):
+						return app.ErrNotFound
+					case strings.Contains(err.Error(), "{{NameSQL $column}}_id_fkey"):
+						return app.ErrNotFoundArrayItem
+					}
+				}
 				return err
 			}
 		}
@@ -554,8 +562,12 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 
 	func (a *App) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error {
 		for _, item := range items {
-			if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1 AND {{NameSQL $column}}_id=$2{{if not $model.Shared}} AND isolated_entity_id=$3{{end}}`, id, item{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+			res, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1 AND {{NameSQL $column}}_id=$2{{if not $model.Shared}} AND isolated_entity_id=$3{{end}}`, id, item{{if not $model.Shared}}, isolatedEntityID{{end}})
+			if err != nil {
 				return err
+			}
+			if count, _ := res.RowsAffected(); count == 0 {
+				return app.ErrNotFound
 			}
 		}
 	{{- if or $model.HaveModifiedAt $model.HaveModifiedBy}}
@@ -564,7 +576,7 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 			{{- $countParams = 3}}
 		{{- end}}
 		if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if $model.HaveModifiedAt}}modified_at=${{$countParams}}{{$countParams = 4}}{{end}}{{if $model.HaveModifiedBy}}modified_by=${{$countParams}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}{{if $model.HaveModifiedAt}}, time.Now().Format(time.RFC3339){{end}}{{if $model.HaveModifiedBy}}, profileID{{end}}); err != nil {
-			return {{if $model.ReturnWhenEdit}}nil, {{end}}err
+			return err
 		}
 	{{- end}}
 		return nil
