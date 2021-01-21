@@ -565,20 +565,57 @@ func titleize(cfg *models.Config) {
 }
 
 func isCustomList(method string) bool {
-	return regexp.MustCompile(`^list\(.+\)$`).Match([]byte(method))
+	return regexp.MustCompile(`^list\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
 }
 
 func isCustomEdit(method string) bool {
-	return regexp.MustCompile(`^edit(My)?\(.+\)$`).Match([]byte(method))
+	return regexp.MustCompile(`^edit(My)?\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
 }
 
-func expandStrNestedFields(method string) (string, string) {
-	pattern := regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\((?P<value>.+)\)$`)
+func expandStrNestedFields(method string) string {
+	pattern := regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\((?P<value>.+)\)(\[[a-zA-Z0-9]+\])?$`)
 	result := []byte{}
 	template := "$value"
 	result = pattern.ExpandString(result, template, method, pattern.FindSubmatchIndex([]byte(method)))
 
-	return strings.TrimSuffix(regexp.MustCompile("[^a-zA-Z0-9*]").Split(method, 2)[0], "*"), string(result)
+	return string(result)
+}
+
+func expandName(method string) string {
+	return strings.TrimSuffix(regexp.MustCompile("[^a-zA-Z0-9*]").Split(method, 2)[0], "*")
+}
+
+func expandNamePostfixForCustomEditOrList(method string) string {
+	pattern := regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\(.+\)(\[(?P<value>[a-zA-Z0-9]+)\])?$`)
+	result := []byte{}
+	template := "$value"
+	result = pattern.ExpandString(result, template, method, pattern.FindSubmatchIndex([]byte(method)))
+
+	return string(result)
+}
+
+func getNameForCustomEditOrList(method string) (result string) {
+	methodName := expandName(method)
+	methodNamePostfix := expandNamePostfixForCustomEditOrList(method)
+
+	if methodNamePostfix == "" {
+		fieldsStr := expandStrNestedFields(method)
+		fieldsFull := splitFields(fieldsStr)
+		fields := trimFieldsSuffix(fieldsFull)
+		for i := range fields {
+			fields[i] = strings.TrimSuffix(fields[i], "*")
+			if strings.ToLower(fields[i]) == "id" {
+				fields[i] = strings.ToUpper(fields[i])
+			} else {
+				fields[i] = strings.Title(fields[i])
+			}
+		}
+		result = methodName + strings.Join(fields, "")
+	} else {
+		result = methodName + strings.Title(methodNamePostfix)
+	}
+
+	return
 }
 
 func splitFields(fields string) []string {
@@ -635,7 +672,8 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 	objs := []models.NestedObjProps{}
 	obj := models.NestedObjProps{}
 
-	field, fieldsStr := expandStrNestedFields(elem)
+	field := expandName(elem)
+	fieldsStr := expandStrNestedFields(elem)
 	fieldsFull := splitFields(fieldsStr)
 	fields := trimFieldsSuffix(fieldsFull)
 	SQLSelect := []string{}
@@ -770,7 +808,7 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 	for i, method := range result.Methods {
 		if isCustomList(method) {
 			var SQLSelect, sqlWhereParams, filtredFields []string
-			_, fieldsStr := expandStrNestedFields(method)
+			fieldsStr := expandStrNestedFields(method)
 			fieldsFull := splitFields(fieldsStr)
 			fields := trimFieldsSuffix(fieldsFull)
 			haveID := false
@@ -848,7 +886,8 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 					result.MethodsProps[i].NestedObjs = append(result.MethodsProps[i].NestedObjs, objsForAdd...)
 				}
 			}
-			result.Methods[i] = "list" + strings.Join(fields, "")
+
+			result.Methods[i] = getNameForCustomEditOrList(method)
 			if !haveID && haveArr {
 				SQLSelect = append(SQLSelect, "id")
 			}
@@ -889,7 +928,7 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 		if isCustomEdit(method) {
 			var sqlEdit, sqlAddExecParams, editableFields []string
 			count := 1
-			methodName, fieldsStr := expandStrNestedFields(method)
+			fieldsStr := expandStrNestedFields(method)
 			fields := splitFields(fieldsStr)
 			for j := range fields {
 				if IsStandardColumn(fields[j]) {
@@ -934,7 +973,7 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 					}
 				}
 			}
-			result.Methods[i] = methodName + strings.Join(fields, "")
+			result.Methods[i] = getNameForCustomEditOrList(method)
 			result.MethodsProps[i].CustomSQLEditStr = strings.Join(sqlEdit, ", ")
 			result.MethodsProps[i].CustomSQLExecParams = strings.Join(sqlAddExecParams, ", ")
 			result.MethodsProps[i].EditableFields = editableFields
