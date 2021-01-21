@@ -260,8 +260,10 @@ func api{{$modelName}}(a *app.{{$modelName}}) *models.{{$modelName}} {
 	if a == nil {
 		return nil
 	}
-	return &models.{{$modelName}}{ {{range $name, $options := $model.Columns}}
-		{{$options.TitleName}}: {{if $options.IsStruct}}api{{$options.GoType}}{{if $options.IsArray}}s({{else}}({{end}}a.{{$options.TitleName}}){{else}}{{if eq $options.Format "date-time"}}toDateTime(a.{{$options.TitleName}}){{else}}{{if eq $options.Format "email"}}strfmt.Email(a.{{$options.TitleName}}){{else}}{{if $options.Default}}swag.{{Title $options.GoType}}(a.{{$options.TitleName}}){{else}}a.{{$options.TitleName}}{{end}}{{end}}{{end}}{{end}},{{end}}
+	return &models.{{$modelName}}{
+		{{- range $name, $options := $model.Columns}}
+			{{$options.TitleName}}: {{if $options.IsStruct}}api{{$options.GoType}}{{if $options.IsArray}}s({{else}}({{end}}a.{{$options.TitleName}}){{else}}{{if eq $options.Format "date-time"}}toDateTime(a.{{$options.TitleName}}){{else}}{{if eq $options.Format "email"}}strfmt.Email(a.{{$options.TitleName}}){{else}}{{if $options.Default}}swag.{{Title $options.GoType}}(a.{{$options.TitleName}}){{else}}a.{{$options.TitleName}}{{end}}{{end}}{{end}}{{end}},
+		{{- end}}
 	}
 }
 
@@ -278,12 +280,20 @@ func app{{$modelName}}(a *models.{{$modelName}}{{if $model.HaveLazyLoading}}, wi
 		return nil
 	}
 	{{LowerTitle $modelName}} := &app.{{$modelName}}{}
-	{{if $model.HaveLazyLoading}}
-	if withStructs { {{range $name, $options := $model.Columns}}{{if $options.IsStruct}}
-		{{LowerTitle $modelName}}.{{$options.TitleName}} = {{if $options.IsStruct}}app{{$options.GoType}}{{if $options.IsArray}}s{{end}}(a.{{$options.TitleName}}{{if (index $models $options.GoType).HaveLazyLoading}}, false{{end}}){{else}}a.{{$options.TitleName}}{{if or (eq $options.Format "date-time") (eq $options.Format "email")}}.String(){{end}}{{end}}{{end}}{{end}}
-	}{{end}}
-	{{range $name, $options := $model.Columns}}{{if not $options.IsStruct}}
-	{{LowerTitle $modelName}}.{{$options.TitleName}} = {{if and $options.Default (or (not $options.Format) (not (eq $options.GoType "string")))}}swag.{{Title $options.GoType}}Value(a.{{$options.TitleName}}){{else}}a.{{$options.TitleName}}{{end}}{{if or (eq $options.Format "date-time") (eq $options.Format "email")}}.String(){{end}}{{end}}{{end}}
+	{{- if $model.HaveLazyLoading}}
+		if withStructs {
+			{{- range $name, $options := $model.Columns}}
+				{{- if $options.IsStruct}}
+					{{LowerTitle $modelName}}.{{$options.TitleName}} = {{if $options.IsStruct}}app{{$options.GoType}}{{if $options.IsArray}}s{{end}}(a.{{$options.TitleName}}{{if (index $models $options.GoType).HaveLazyLoading}}, false{{end}}){{else}}a.{{$options.TitleName}}{{if or (eq $options.Format "date-time") (eq $options.Format "email")}}.String(){{end}}{{end}}
+				{{- end}}
+			{{- end}}
+		}
+	{{- end}}
+	{{- range $name, $options := $model.Columns}}
+		{{- if not $options.IsStruct}}
+			{{LowerTitle $modelName}}.{{$options.TitleName}} = {{if and $options.Default (or (not $options.Format) (not (eq $options.GoType "string")))}}swag.{{Title $options.GoType}}Value(a.{{$options.TitleName}}){{else}}a.{{$options.TitleName}}{{end}}{{if or (eq $options.Format "date-time") (eq $options.Format "email")}}.String(){{end}}
+		{{- end}}
+	{{- end}}
 	
 	return {{LowerTitle $modelName}}
 }
@@ -302,20 +312,29 @@ func app{{$modelName}}Add(a *models.{{$modelName}}Add) *app.{{$modelName}} {
 	}
 	{{LowerTitle $modelName}} := &app.{{$modelName}}{}
 
-	{{range $name, $options := $model.Columns}}{{if and (not $options.IsStruct) (ne $name "id") (not (IsStandardColumn $name))}}
-	{{LowerTitle $modelName}}.{{$options.TitleName}} = {{if and $options.Default (or (not $options.Format) (not (eq $options.GoType "string")))}}swag.{{Title $options.GoType}}Value(a.{{$options.TitleName}}){{else}}a.{{$options.TitleName}}{{end}}{{if or (eq $options.Format "date-time") (eq $options.Format "email")}}.String(){{end}}{{end}}{{end}}
-	{{range $name, $options := $model.Columns}}{{if and $options.IsStruct (not $options.IsArray)}}
-	if a.{{$options.TitleName}} != "" {
-		{{LowerTitle $modelName}}.{{$options.TitleName}} = &app.{{$options.GoType}}{ID: a.{{$options.TitleName}}}
-	}{{end}}{{end}}
-	{{range $name, $options := $model.Columns}}{{if  and $options.IsArray $options.IsStruct}}
-	if len(a.{{$options.TitleName}}) > 0 {
-		for _, id := range a.{{$options.TitleName}} {
-			{{LowerTitle $modelName}}.{{$options.TitleName}} = append({{LowerTitle $modelName}}.{{$options.TitleName}}, &app.{{$options.GoType}}{
-				ID: id,
-			})
-		}
-	}{{end}}{{end}}
+	{{- range $name, $options := $model.Columns}}
+		{{- if and (not $options.IsStruct) (ne $name "id") (not (IsStandardColumn $name))}}
+			{{LowerTitle $modelName}}.{{$options.TitleName}} = {{if and $options.Default (or (not $options.Format) (not (eq $options.GoType "string")))}}swag.{{Title $options.GoType}}Value(a.{{$options.TitleName}}){{else}}a.{{$options.TitleName}}{{end}}{{if or (eq $options.Format "date-time") (eq $options.Format "email")}}.String(){{end}}
+		{{- end}}
+	{{- end}}
+	{{- range $name, $options := $model.Columns}}
+		{{- if and $options.IsStruct (not $options.IsArray)}}
+			if a.{{$options.TitleName}} != "" {
+				{{LowerTitle $modelName}}.{{$options.TitleName}} = &app.{{$options.GoType}}{ID: a.{{$options.TitleName}}}
+			}
+		{{- end}}
+	{{- end}}
+	{{- range $name, $options := $model.Columns}}
+		{{- if  and $options.IsArray $options.IsStruct}}
+			if len(a.{{$options.TitleName}}) > 0 {
+				for _, id := range a.{{$options.TitleName}} {
+					{{LowerTitle $modelName}}.{{$options.TitleName}} = append({{LowerTitle $modelName}}.{{$options.TitleName}}, &app.{{$options.GoType}}{
+						ID: id,
+					})
+				}
+			}
+		{{- end}}
+	{{- end}}
 	
 	
 	return {{LowerTitle $modelName}}
