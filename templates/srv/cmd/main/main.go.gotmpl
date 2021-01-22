@@ -74,34 +74,35 @@ func main() {
 	}
 }
 
-func connect() (app.App, *extauthapi.Client, error) {
+func connect() (app.App,{{if .HaveCustomMethod}} app.Customs,{{end}} *extauthapi.Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), connectTimeout)
 	defer cancel()
 
 	extAuthSvc, err := extauthapi.NewClient(cfg.extauthEndpoint, &tls.Config{InsecureSkipVerify: true}, false)
 	if err != nil {
-		return nil, nil, fmt.Errorf("extauthapi: %v. Error can be if flag '%s' or environment variable '%s' is not set", err, ExtauthEndpointFlag, def.ExtauthEndpointEnvName)
+		return nil,{{if .HaveCustomMethod}} nil,{{end}} nil, fmt.Errorf("extauthapi: %v. Error can be if flag '%s' or environment variable '%s' is not set", err, ExtauthEndpointFlag, def.ExtauthEndpointEnvName)
 	}
 
 	a,{{if .HaveCustomMethod}} c,{{end}} err := dal.New(ctx, cfg.db, cfg.gooseDir{{if .Debug}}, cfg.resetDB{{end}})
 	if err != nil {
-		return nil, nil, err
+		return nil,{{if .HaveCustomMethod}} nil,{{end}} nil, err
 	}
 	
-	return app.New(a{{if .HaveCustomMethod}}, c{{end}}), extAuthSvc, nil
+	app{{if .HaveCustomMethod}}, cust{{end}} := app.New(a{{if .HaveCustomMethod}}, c{{end}})
+	return app{{if .HaveCustomMethod}}, cust{{end}}, extAuthSvc, nil
 }
 
 func runServe(errc chan<- error) {
 	log.Info("server started")
 	defer log.Info("server finished")
 
-	appl, extAuthSvc, err := connect()
+	appl,{{if .HaveCustomMethod}} cust,{{end}} extAuthSvc, err := connect()
 	if err != nil {
 		errc <- err
 		return
 	}
 
-	srv, err := api.NewServer(appl, extAuthSvc, cfg.api)
+	srv, err := api.NewServer(appl,{{if .HaveCustomMethod}} cust,{{end}} extAuthSvc, cfg.api)
 	if err != nil {
 		errc <- fmt.Errorf("api: %v", err)
 		return

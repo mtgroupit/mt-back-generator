@@ -35,6 +35,7 @@ type App struct {
 {{if .HaveCustomMethod}}
 type Customs struct {
 	db *sqlxx.DB
+	app *App
 }
 {{end}}
 {{range $i, $et := $.ExtraTables}}
@@ -83,11 +84,13 @@ func New(ctx context.Context, dbCfg pqx.Config, migrationDir string{{if .Debug}}
 	db, err := connect(ctx, dbCfg, migrationDir{{if .Debug}}, resetDB{{end}})
 	if err != nil {
 		return nil,{{if .HaveCustomMethod}} nil, {{end}} err
+	}	
+	app := &App{
+		db: db,
 	}
-	return &App{
+	return app,{{if .HaveCustomMethod}} &Customs{
 		db: db,
-	},{{if .HaveCustomMethod}} &Customs{
-		db: db,
+		app: app,
 	}, {{end}} nil
 }
 

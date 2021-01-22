@@ -39,12 +39,18 @@ type Config struct {
 
 type service struct {
 	app     app.App
+{{- if .HaveCustomMethod}}
+	cust    app.Customs
+{{- end}}
 	extAuth AuthSvc
 }
 
-func NewServer(appl app.App, extAuth AuthSvc, cfg Config) (*restapi.Server, error) {
+func NewServer(appl app.App,{{if .HaveCustomMethod}}cust app.Customs,{{end}} extAuth AuthSvc, cfg Config) (*restapi.Server, error) {
 	svc := &service{
 		app:     appl,
+	{{- if .HaveCustomMethod}}
+		cust:    cust,
+	{{- end}}
 		extAuth: extAuth,
 	}
 
