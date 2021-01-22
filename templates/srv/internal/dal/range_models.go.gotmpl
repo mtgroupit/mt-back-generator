@@ -97,7 +97,7 @@ type {{$modelName}} struct {
 					return err
 				}
 			{{- else}}
-				if _, err := a.db.Exec(`UPDATE {{NameSQL $bind.ModelName}}s SET {{$bind.FieldName}}_id=NULL WHERE {{NameSQL $bind.FieldName}}_id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+				if _, err := a.db.Exec(`UPDATE {{NameSQL $bind.ModelName}}s SET {{NameSQL $bind.FieldName}}_id=NULL WHERE {{NameSQL $bind.FieldName}}_id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
 					return err
 				}
 			{{- end}}
