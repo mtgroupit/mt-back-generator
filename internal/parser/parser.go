@@ -928,6 +928,9 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 		if isCustomEdit(method) {
 			var sqlEdit, sqlAddExecParams, editableFields []string
 			count := 1
+			if !model.Shared {
+				count++
+			}
 			fieldsStr := expandStrNestedFields(method)
 			fields := splitFields(fieldsStr)
 			for j := range fields {
