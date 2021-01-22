@@ -55,9 +55,11 @@ type app struct {
 	cust Customs{{end}}
 }
 
-func New(a App{{if .HaveCustomMethod}},c Customs{{end}}) App {
+func New(a App{{if .HaveCustomMethod}},c Customs{{end}}) (App{{if .HaveCustomMethod}}, Customs{{end}})  {
 	return &app{
-		appl: a,{{if .HaveCustomMethod}}
-		cust: c,{{end}}
-	}
+		appl: a,
+	}{{if .HaveCustomMethod}},
+    &app{
+        cust: c,
+    }{{end}}
 }
