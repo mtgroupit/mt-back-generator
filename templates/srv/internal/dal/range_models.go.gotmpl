@@ -448,7 +448,7 @@ type {{$modelName}} struct {
 					m.{{$nestedObj.Name}} = append(m.{{$nestedObj.Name}}, elem)
 				}
 			{{- else}}
-				if err = a.db.Get(&m.{{$nestedObj.Name}}, `SELECT {{$nestedObj.SQLSelect}} FROM {{NameSQL $nestedObj.Type}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, m.{{$nestedObj.Name}}ID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil && err.Error() != "sql: no rows in result set" {
+				if err = a.db.Get(&m.{{$nestedObj.Name}}, `SELECT {{$nestedObj.SQLSelect}} FROM {{NameSQL $nestedObj.Type}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, m.{{$nestedObj.Name}}ID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil && err != sql.ErrNoRows {
 					return
 				}
 				{{- if $nestedObj.NeedLazyLoading}}
@@ -500,13 +500,15 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 					m.{{$options.TitleName}} = append(m.{{$options.TitleName}}, {{$column}})
 				}
 			{{- else}}
-				if err = a.db.Get(&m.{{$options.TitleName}}, `SELECT {{$model2.SQLSelectStr}} FROM {{NameSQL $modelName2}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`,  m.{{$options.TitleName}}ID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil && err.Error() != "sql: no rows in result set" {
+				if err = a.db.Get(&m.{{$options.TitleName}}, `SELECT {{$model2.SQLSelectStr}} FROM {{NameSQL $modelName2}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`,  m.{{$options.TitleName}}ID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil && err != sql.ErrNoRows {
 					return
 				}
 				{{- range $column2, $options2 := $model2.Columns}}
 					{{- if and $options2.IsArray (not $options2.IsStruct)}}
-						if err = json.Unmarshal(m.{{$options.TitleName}}.{{$options2.TitleName}}JSON, &m.{{$options.TitleName}}.{{$options2.TitleName}}); err != nil {
-							return
+						if err != sql.ErrNoRows {
+							if err = json.Unmarshal(m.{{$options.TitleName}}.{{$options2.TitleName}}JSON, &m.{{$options.TitleName}}.{{$options2.TitleName}}); err != nil {
+								return
+							}
 						}
 					{{- end}}
 				{{- end}}
