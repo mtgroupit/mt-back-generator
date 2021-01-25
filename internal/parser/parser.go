@@ -390,7 +390,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					sqlEditExecParams = append(sqlEditExecParams, column+"ID")
 					countFields = append(countFields, fmt.Sprintf("$%d", count))
 					count++
-					sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count-countCreatedColumns))
+					if model.Shared {
+						sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count-countCreatedColumns))
+					} else {
+						sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), (count-countCreatedColumns)+1))
+					}
 				}
 			}
 		}
