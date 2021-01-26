@@ -170,6 +170,9 @@ func appAccessManager(am *models.AccessManager) *app.AccessManager {
 
 {{- if .HaveDateTime}}
 	func toDateTime(date string) (dt strfmt.DateTime) {
+		if date == "" {
+			return
+		}
 		dt.Scan(date)
 		return
 	}
