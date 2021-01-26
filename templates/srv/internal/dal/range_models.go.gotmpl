@@ -723,6 +723,9 @@ func (m *{{$modelName}}) Filter(filter *app.Filter) (ok, filterIsValid bool) {
 }
 
 func app{{$modelName}}(m {{$modelName}}) *app.{{$modelName}} {
+	if {{if $model.IDIsUUID}}m.ID.String() == "00000000-0000-0000-0000-000000000000"{{else}}m.ID == 0{{end}} {
+		return nil
+	}
 	return &app.{{$modelName}}{
 		{{- range $name, $options := $model.Columns}}
 			{{$options.TitleName}}: {{if $options.IsStruct}}app{{$options.GoType}}{{if $options.IsArray}}s{{end}}(m.{{$options.TitleName}}){{else}}m.{{$options.TitleName}}{{if eq $options.TitleName "ID"}}{{if $model.IDIsUUID}}.String(){{end}}{{else}}{{if not $options.IsArray}}.{{Title $options.GoType}}{{end}}{{end}}{{end}},
