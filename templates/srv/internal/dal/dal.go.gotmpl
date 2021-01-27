@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	
 	"{{.Module}}/migration"
 
 	{{$inputed := false}}{{range $modelName, $model := $.Models}}{{range $name, $options := $model.Columns}}{{if and $model.IDIsUUID (and $options.IsArray $options.IsStruct) (not $inputed)}}"github.com/google/uuid"{{$inputed = true}}{{end}}{{end}}{{end}}
@@ -45,14 +45,31 @@ type {{$et.RefTableOne}}{{$et.RefTableTwo}} struct{
 }
 {{end}}
 
-func connect(ctx context.Context, cfg pqx.Config, migrationDir string{{if .Debug}}, resetDB bool{{end}}) (*sqlxx.DB, error) { {{if .Debug}}
+func connect(ctx context.Context, cfg pqx.Config, migrationDir string, zeroMigrationsDir string{{if .Debug}}, resetDB bool{{end}}) (*sqlxx.DB, error) {
+	{{- if .Debug}}
 	if resetDB {
 		if err := migration.ResetAll(ctx, migrationDir, cfg); err != nil {
 			return nil, err
 		}
-	}{{end}}
-	if err := migration.Up(ctx, migrationDir, cfg); err != nil {
+	}
+	{{- end}}
+
+	version, err := migration.DBVersion(ctx, cfg)
+	if err != nil {
 		return nil, err
+	}
+	log.Printf("Current DB version is %d\n", version)
+	if version == 0 {
+		log.Printf("Applying zero migrations from %s\n", zeroMigrationsDir)
+		if err := migration.InitDBSchema(ctx, zeroMigrationsDir, cfg); err != nil {
+			return nil, err
+		}
+	} else {
+		log.Printf("Applying migrations from %s\n", zeroMigrationsDir)
+		err := migration.Up(ctx, migrationDir, cfg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	cfg.DefaultTransactionIsolation = sql.LevelSerializable
@@ -80,8 +97,8 @@ func connect(ctx context.Context, cfg pqx.Config, migrationDir string{{if .Debug
 	return sqlxx.NewDB(sqlx.NewDb(db, "postgres")), nil
 }
 
-func New(ctx context.Context, dbCfg pqx.Config, migrationDir string{{if .Debug}}, resetDB bool{{end}}) (*App, {{if .HaveCustomMethod}}*Customs, {{end}}error) {
-	db, err := connect(ctx, dbCfg, migrationDir{{if .Debug}}, resetDB{{end}})
+func New(ctx context.Context, dbCfg pqx.Config, migrationDir string, zeroMigrationsDir string{{if .Debug}}, resetDB bool{{end}}) (*App, {{if .HaveCustomMethod}}*Customs, {{end}}error) {
+	db, err := connect(ctx, dbCfg, migrationDir, zeroMigrationsDir{{if .Debug}}, resetDB{{end}})
 	if err != nil {
 		return nil,{{if .HaveCustomMethod}} nil, {{end}} err
 	}	

@@ -1,0 +1,39 @@
+{{- $modelName := .CurModel}}
+{{- $model := (index $.Models $modelName) -}}
+CREATE TABLE {{$model.SQLTableName}}
+(
+{{- range $j, $psqlParams := $model.Psql}}
+    {{- if not (and $psqlParams.IsArray $psqlParams.IsStruct)}}
+    {{$psqlParams.SQLName}} {{$psqlParams.TypeSQL}}
+        {{- if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}
+        {{- if $psqlParams.Unique}} UNIQUE{{end}}
+        {{- if $psqlParams.IsStruct}} REFERENCES {{$psqlParams.FKModel.SQLTableName}}({{$psqlParams.FK}}){{end}}
+        {{- if not (eq $j (MathAdd (len $model.Psql) -1)) }},{{end}}
+    {{- end}}
+{{- end}}
+{{- if not $model.Shared}},
+    isolated_entity_id uuid NOT NULL
+{{- end}}
+);
+CREATE TABLE {{$model.SQLAccessTableName}}
+(
+    user_name text,
+    group_name text,
+    read_access boolean,
+    write_access boolean,
+    delete_access boolean,
+    add_access boolean, 
+    access_manager boolean
+);
+{{- range $i, $et := $.ExtraTables}}
+    {{- if eq $et.RefTableOne $modelName}}
+CREATE TABLE {{$et.Name}}
+(
+    {{$et.FieldIDOne}} {{$et.TypeIDOne}} NOT NULL REFERENCES {{$et.RefTableOne | NameSQL}}s({{$et.RefIDOne}}),
+    {{$et.FieldIDTwo}} {{$et.TypeIDTwo}} NOT NULL REFERENCES {{$et.RefTableTwo | NameSQL}}s({{$et.RefIDTwo}})
+    {{- if not $model.Shared}},
+    isolated_entity_id uuid NOT NULL
+    {{- end}}
+);
+    {{- end}}
+{{- end}}

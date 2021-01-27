@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mtgroupit/mt-back-generator/internal/shared"
 	"github.com/mtgroupit/mt-back-generator/models"
 
-	"github.com/fatih/camelcase"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -156,7 +156,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		model.MethodsProps = props
 
 		psql := []models.PsqlParams{}
-		var indexLastNotArrOfStruct int
+		psqlMap := make(map[string]*models.PsqlParams)
 		var haveDefaultSort bool
 		for column, options := range model.Columns {
 			switch column {
@@ -248,7 +248,15 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			}
 
+			pp := models.PsqlParams{
+				IsArray:     options.IsArray,
+				IsStruct:    options.IsStruct,
+				PrevColName: options.PrevColName,
+			}
+
 			if options.IsStruct {
+				// TODO this is instead of binds
+				pp.FKModel = model
 				model.HaveLazyLoading = true
 
 				modelNameForBind := LowerTitle(options.GoType)
@@ -269,11 +277,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				if options.IsArray {
 					et := models.ExtraTable{}
 
-					et.Name = NameSQL(name) + "_" + NameSQL(column)
+					et.Name = shared.NameSQL(name) + "_" + shared.NameSQL(column)
 
 					et.RefTableOne = strings.Title(name)
 					et.RefIDOne = "id"
-					et.FieldIDOne = NameSQL(name) + "_id"
+					et.FieldIDOne = shared.NameSQL(name) + "_id"
 					if cfg.Models[name].Columns["id"].Type == "uuid" {
 						et.TypeIDOne = "uuid"
 					} else {
@@ -282,7 +290,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 					et.RefTableTwo = options.GoType
 					et.RefIDTwo = "id"
-					et.FieldIDTwo = NameSQL(column) + "_id"
+					et.FieldIDTwo = shared.NameSQL(column) + "_id"
 					if cfg.Models[LowerTitle(options.GoType)].Columns["id"].Type == "uuid" {
 						et.TypeIDTwo = "uuid"
 					} else {
@@ -297,9 +305,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			}
 
-			pp := models.PsqlParams{}
-			pp.IsArray = options.IsArray
-			pp.IsStruct = options.IsStruct
 			if column == "id" {
 				switch options.Type {
 				case "uuid":
@@ -366,7 +371,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				pp.Type = options.GoType
 				pp.Name = options.TitleName
 				if pp.IsStruct {
-					pp.SQLName = NameSQL(column) + "_id"
+					pp.SQLName = shared.NameSQL(column) + "_id"
 					pp.FK = "id"
 					if cfg.Models[LowerTitle(options.GoType)].Columns["id"].Type == "uuid" {
 						pp.TypeSQL = "uuid"
@@ -375,10 +380,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					}
 				} else {
 					if pp.IsArray {
-						pp.SQLName = NameSQL(column) + "_json"
+						pp.SQLName = shared.NameSQL(column) + "_json"
 						pp.TypeSQL = "jsonb"
 					} else {
-						pp.SQLName = NameSQL(column)
+						pp.SQLName = shared.NameSQL(column)
 						switch options.Type {
 						case "string":
 							pp.TypeSQL = "text"
@@ -395,20 +400,20 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 			pp.Unique = options.Unique
 
+			// TODO FKModel
+
 			psql = append(psql, pp)
-			if !pp.IsStruct || (!pp.IsArray && pp.IsStruct) {
-				indexLastNotArrOfStruct = len(psql) - 1
-			}
+			psqlMap[pp.Name] = &pp
 		}
-		psql[indexLastNotArrOfStruct].Last = true
 		model.Psql = psql
+		model.PsqlMap = psqlMap
 
 		var SQLSelect, sqlWhereParams, sqlAdd, sqlEdit, sqlAddExecParams, sqlEditExecParams, countFields []string
 		count := 1
 		countCreatedColumns := 0
 		for column, options := range model.Columns {
 			if !options.IsStruct {
-				sqlName := NameSQL(options.TitleName)
+				sqlName := shared.NameSQL(options.TitleName)
 				titleName := options.TitleName
 				if options.IsArray {
 					sqlName += "_json"
@@ -445,17 +450,17 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			} else {
 				if !options.IsArray {
-					SQLSelect = append(SQLSelect, NameSQL(options.TitleName)+"_id")
-					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
-					sqlAdd = append(sqlAdd, NameSQL(options.TitleName)+"_id")
+					SQLSelect = append(SQLSelect, shared.NameSQL(options.TitleName)+"_id")
+					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, shared.NameSQL(options.TitleName)+"_id", column, "not_"+column, "not_"+column, shared.NameSQL(options.TitleName)+"_id", "not_"+column))
+					sqlAdd = append(sqlAdd, shared.NameSQL(options.TitleName)+"_id")
 					sqlAddExecParams = append(sqlAddExecParams, column+"ID")
 					sqlEditExecParams = append(sqlEditExecParams, column+"ID")
 					countFields = append(countFields, fmt.Sprintf("$%d", count))
 					count++
 					if model.Shared {
-						sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count-countCreatedColumns))
+						sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", shared.NameSQL(options.TitleName), count-countCreatedColumns))
 					} else {
-						sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), (count-countCreatedColumns)+1))
+						sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", shared.NameSQL(options.TitleName), (count-countCreatedColumns)+1))
 					}
 				}
 			}
@@ -479,15 +484,15 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	}
 	for name, model := range cfg.Models {
 
-		if err = handleSorts(cfg.Models, &model, name); err != nil {
+		if err = handleSorts(cfg.Models, model, name); err != nil {
 			return
 		}
 
-		if err = handleCustomLists(cfg.Models, &model, name); err != nil {
+		if err = handleCustomLists(cfg.Models, model, name); err != nil {
 			return
 		}
 
-		if err = handleCustomEdits(cfg.Models, &model, name); err != nil {
+		if err = handleCustomEdits(cfg.Models, model, name); err != nil {
 			return
 		}
 
@@ -713,13 +718,8 @@ func LowerTitle(in string) string {
 	}
 }
 
-// NameSQL converts name to "snake_case" format
-func NameSQL(name string) string {
-	return strings.ToLower(strings.Join(camelcase.Split(name), "_"))
-}
-
 func titleize(cfg *models.Config) {
-	titleModels := make(map[string]models.Model)
+	titleModels := make(map[string]*models.Model)
 	for modelName, model := range cfg.Models {
 		for i := range cfg.Models[modelName].Methods {
 			model.Methods[i] = strings.Title(model.Methods[i])
@@ -825,7 +825,7 @@ func isStruct(method string) bool {
 	return regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\(.+\)$`).Match([]byte(method))
 }
 
-func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting, parent string, isArray bool) ([]models.NestedObjProps, error) {
+func handleNestedObjs(modelsIn map[string]*models.Model, modelName, elem, nesting, parent string, isArray bool) ([]models.NestedObjProps, error) {
 	objs := []models.NestedObjProps{}
 	obj := models.NestedObjProps{}
 
@@ -859,10 +859,10 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 		for column, options := range modelsIn[modelName].Columns {
 			if fields[i] == column {
 				if !options.IsStruct {
-					SQLSelect = append(SQLSelect, NameSQL(column))
+					SQLSelect = append(SQLSelect, shared.NameSQL(column))
 				} else {
 					if !options.IsArray {
-						SQLSelect = append(SQLSelect, NameSQL(fields[i])+"_id")
+						SQLSelect = append(SQLSelect, shared.NameSQL(fields[i])+"_id")
 					} else {
 						structIsArr = true
 					}
@@ -897,7 +897,7 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 	return result, nil
 }
 
-func handleSorts(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
+func handleSorts(modelsMap map[string]*models.Model, model *models.Model, modelName string) error {
 	result := *model
 	for column, options := range result.Columns {
 		if options.SortOn {
@@ -956,7 +956,7 @@ func handleSorts(modelsMap map[string]models.Model, model *models.Model, modelNa
 	return nil
 }
 
-func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
+func handleCustomLists(modelsMap map[string]*models.Model, model *models.Model, modelName string) error {
 	result := *model
 	for i, method := range result.Methods {
 		if isCustomList(method) {
@@ -996,24 +996,24 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 				for column, options := range result.Columns {
 					if fields[j] == options.TitleName {
 						if !options.IsStruct {
-							sqlName := NameSQL(options.TitleName)
+							sqlName := shared.NameSQL(options.TitleName)
 							if options.IsArray {
 								result.MethodsProps[i].HaveArrayOfStandardType = true
 								sqlName += "_json"
 							}
-							SQLSelect = append(SQLSelect, sqlName)
+							SQLSelect = append(SQLSelect, shared.NameSQL(column))
 							if needFilter && !options.IsArray {
 								if options.Type != "string" || options.StrictFilter {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, sqlName, column, "not_"+column, "not_"+column, sqlName, "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, shared.NameSQL(options.TitleName), column, "not_"+column, "not_"+column, shared.NameSQL(options.TitleName), "not_"+column))
 								} else {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) LIKE LOWER(:%s)) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, column, sqlName, column, "not_"+column, "not_"+column, sqlName, "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) LIKE LOWER(:%s)) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, column, shared.NameSQL(options.TitleName), column, "not_"+column, "not_"+column, shared.NameSQL(options.TitleName), "not_"+column))
 								}
 							}
 						} else {
 							if !options.IsArray {
-								SQLSelect = append(SQLSelect, NameSQL(options.TitleName)+"_id")
+								SQLSelect = append(SQLSelect, shared.NameSQL(options.TitleName)+"_id")
 								if needFilter {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, shared.NameSQL(options.TitleName)+"_id", column, "not_"+column, "not_"+column, shared.NameSQL(options.TitleName)+"_id", "not_"+column))
 								}
 							} else {
 								structIsArr = true
@@ -1069,7 +1069,7 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 	return nil
 }
 
-func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
+func handleCustomEdits(modelsMap map[string]*models.Model, model *models.Model, modelName string) error {
 	result := *model
 	for i, method := range result.Methods {
 		if isCustomEdit(method) {
@@ -1102,7 +1102,7 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 				for column, options := range result.Columns {
 					if fields[j] == options.TitleName {
 						if !options.IsStruct {
-							sqlName := NameSQL(options.TitleName)
+							sqlName := shared.NameSQL(options.TitleName)
 							titleName := options.TitleName
 							if options.IsArray {
 								sqlName += "_json"
@@ -1120,7 +1120,7 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 							if !options.IsArray {
 								sqlAddExecParams = append(sqlAddExecParams, column+"ID")
 								count++
-								sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count))
+								sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", shared.NameSQL(options.TitleName), count))
 							}
 						}
 					}
