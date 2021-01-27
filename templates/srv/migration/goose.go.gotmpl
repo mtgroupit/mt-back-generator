@@ -7,6 +7,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"path/filepath"
+	"io/ioutil"
+	"os"
 
 	_ "github.com/lib/pq" // Driver.
 	"github.com/pkg/errors"
@@ -114,4 +117,43 @@ func Run(ctx context.Context, dir string, command string, cfg pqx.Config) error 
 		err = goose.Run("fix", db, dir)
 	}
 	return errors.Wrapf(err, "failed to run goose %q", command)
+}
+
+func DBVersion(ctx context.Context, cfg pqx.Config) (int64, error) {
+	db, err := connect(ctx, cfg)
+	if err != nil {
+		return 0, err
+	}
+	defer log.WarnIfFail(db.Close)
+
+	version, err := goose.GetDBVersion(db)
+	return version, err
+}
+
+func InitDBSchema(ctx context.Context, zeroMigrationsDir string, cfg pqx.Config) error {
+	db, err := connect(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	defer log.WarnIfFail(db.Close)
+
+	err = filepath.Walk(zeroMigrationsDir, func(path string, info os.FileInfo, err error) error {
+        if err != nil {
+            return err
+        }
+		if strings.HasSuffix(info.Name(), ".sql") {
+        	return applyZeroMigrationFile(db, path)
+		}
+		return nil
+    })
+	return err
+}
+
+func applyZeroMigrationFile(db *sql.DB, file string) error {
+	data, err := ioutil.ReadFile(file)
+    if err != nil {
+        return err
+    }
+	_, err = db.Exec(string(data))
+	return err
 }

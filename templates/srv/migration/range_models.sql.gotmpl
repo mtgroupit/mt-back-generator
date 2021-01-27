@@ -1,17 +1,54 @@
--- +goose Up {{$modelName := .CurModel}} {{$model := (index $.Models $modelName)}}
-CREATE TABLE {{NameSQL $modelName}}s
-({{range $j, $psqlParams := $model.Psql}}{{if not (and $psqlParams.IsArray $psqlParams.IsStruct)}}
-    {{$psqlParams.SQLName}} {{$psqlParams.TypeSQL}}{{if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}{{if $psqlParams.Unique}} UNIQUE{{end}}{{if $psqlParams.IsStruct}}  REFERENCES {{NameSQL $psqlParams.Type}}s({{$psqlParams.FK}}){{end}},{{end}}{{end}}
-    {{- if not $model.HaveCreatedBy}}
+{{- if not .OldModelObj }}
+    {{- template "migration_create" . }}
+{{- else }}
+    {{- if and .OldModelObj (not .NewModelObj) }}
+        {{- template "migration_drop" . }}
+    {{- else }}
+        {{- $diff := .NewModelObj.Difference .OldModelObj }}
+        {{- if or (len $diff.Create) (len $diff.Update) (len $diff.Delete) }}
+            {{- template "migration_alter" . }}
+        {{- end }}
+    {{- end }}
+{{- end -}}
+
+{{- define "migration_create" }}
+-- +goose Up
+{{- template "create" . }}
+-- +goose Down
+{{- template "drop" . }}
+{{- end -}}
+
+{{- define "migration_drop" }}
+-- +goose Up
+{{- template "drop" . }}
+-- +goose Down
+{{- template "create" . }}
+{{- end -}}
+
+{{- define "create" }}
+CREATE TABLE {{ $.NewModelObj.SQLTableName }}
+(
+    {{- range $i, $p := .NewModelObj.Psql }}
+        {{- if not (and $p.IsArray $p.IsStruct) }}
+    {{ $p.SQLName }} {{ $p.TypeSQL }}
+            {{- if eq $p.Name "ID"}} PRIMARY KEY{{ end }}
+            {{- if $p.Unique}} UNIQUE{{ end }}
+            {{- if $p.IsStruct}} REFERENCES {{ $p.FKModel.SQLTableName }}({{ $p.FK }}){{ end }}
+            {{- if not (eq $i (MathAdd (len $.NewModelObj.Psql) -1)) }},{{ end }}
+        {{- end }}
+    {{- end }}
+    {{- if not $.NewModelObj.HaveCreatedBy}}
     created_by uuid NOT NULL,
     {{- end}}
     bound boolean NOT NULL DEFAULT false,
     deleted boolean NOT NULL DEFAULT false,
     deleted_at TIMESTAMP,
-    deleted_by uuid{{if not $model.Shared}},
-    isolated_entity_id uuid NOT NULL{{end}}
+    deleted_by uuid,
+    {{- if not $.NewModelObj.Shared }},
+    isolated_entity_id uuid NOT NULL
+    {{- end }}
 );
-CREATE TABLE {{NameSQL $modelName}}s_access 
+CREATE TABLE {{ $.NewModelObj.SQLAccessTableName }}
 (
     user_name text,
     group_name text,
@@ -21,16 +58,102 @@ CREATE TABLE {{NameSQL $modelName}}s_access
     add_access boolean, 
     access_manager boolean
 );
-{{range $i, $et := $.ExtraTables}}{{if eq $et.RefTableOne $modelName}}
-CREATE TABLE {{$et.Name}}
+    {{- range $i, $p := $.NewModelObj.ColsWithRefs }}
+        {{- if $p.IsArray }}
+CREATE TABLE {{ $.NewModelObj.TitleName | NameSQL }}_{{ $p.Name | NameSQL }}
 (
-    {{$et.FieldIDOne}} {{$et.TypeIDOne}} NOT NULL REFERENCES {{NameSQL $et.RefTableOne}}s({{$et.RefIDOne}}),
-    {{$et.FieldIDTwo}} {{$et.TypeIDTwo}} NOT NULL REFERENCES {{NameSQL $et.RefTableTwo}}s({{$et.RefIDTwo}}){{if not $model.Shared}},
-    isolated_entity_id uuid NOT NULL{{end}}
-);{{end}}{{end}}
+    {{ $.NewModelObj.TitleName | NameSQL }}_id {{ (index $.NewModelObj.PsqlMap "ID").TypeSQL }} NOT NULL REFERENCES {{ $.NewModelObj.SQLTableName }}(id)
+    {{ $p.FKModel.TitleName | NameSQL }}_id {{ (index $p.FKModel.PsqlMap "ID").TypeSQL }} NOT NULL REFERENCES {{ $p.FKModel.SQLTableName }}(id)
+            {{- if not $.NewModelObj.Shared}},
+    isolated_entity_id uuid NOT NULL
+            {{- end }}
+);     
+        {{- end }}    
+    {{- end }}
+{{- end -}}
 
+{{- define "drop" }}
+    {{- range $i, $p := $.NewModelObj.ColsWithRefs }}
+DROP TABLE IF EXISTS {{ $.NewModelObj.TitleName | NameSQL }}_{{ $p.Name | NameSQL }};
+    {{- end }}
+DROP TABLE IF EXISTS {{ $.NewModelObj.SQLTableName }};
+DROP TABLE IF EXISTS {{ $.NewModelObj.SQLAccessTableName }};
+{{- end }}
 
--- +goose Down{{range $i, $et := $.ExtraTables}}{{if eq $et.RefTableOne $modelName}}
-DROP TABLE IF EXISTS {{$et.Name}};{{end}}{{end}}
-DROP TABLE IF EXISTS {{NameSQL $modelName}}s;
-DROP TABLE IF EXISTS {{NameSQL $modelName}}s_access;
+{{- define "migration_alter" }}
+    {{- $diff := $.NewModelObj.Difference $.OldModelObj }}
+-- +goose Up
+    {{- if len $diff.Create }}
+ALTER TABLE {{ $.NewModelObj.SQLTableName }}
+        {{- range $i, $p := $diff.Create }}
+    ADD COLUMN {{ $p.SQLName }} {{ $p.TypeSQL }}
+            {{- if eq $p.Name "ID"}} PRIMARY KEY{{ end }}
+            {{- if $p.Unique}} UNIQUE{{ end }}
+            {{- if $p.IsStruct}} REFERENCES {{ $p.FKModel.SQLTableName }}({{ $p.FK }}){{ end }}
+            {{- if not (eq $i (MathAdd (len $diff.Create) -1)) }},{{ end }}
+        {{- end }};
+    {{- end}}
+    {{- if len $diff.Delete }}
+ALTER TABLE {{ $.NewModelObj.SQLTableName }}
+        {{- range $i, $p := $diff.Delete }}
+    DROP COLUMN {{ $p.SQLName }}
+            {{- if not (eq $i (MathAdd (len $diff.Delete) -1)) }},{{ end }}
+        {{- end }};
+    {{- end}}
+    {{- if len $diff.Update }}
+        {{- range $i, $p := $diff.Update }}
+            {{- if $p.PrevColName }}
+                {{- Log (Title $p.PrevColName) }}
+                {{- Log ($.OldModelObj.PsqlMap) }}
+                {{- $oldParams := (index $.OldModelObj.PsqlMap (Title $p.PrevColName)) }}
+                {{- if not (eq $oldParams.Name $p.Name) }}
+ALTER TABLE {{ $.NewModelObj.SQLTableName }} RENAME COLUMN {{ $oldParams.SQLName }} TO {{ $p.SQLName }};
+                {{- end }}
+            {{- else }}
+                {{- $oldParams := (index $.OldModelObj.PsqlMap $p.Name) }}
+                {{- if not (eq $oldParams.Type $p.Type) }}
+ALTER TABLE {{ $.NewModelObj.SQLTableName }} ALTER COLUMN {{ $p.SQLName }} SET DATA TYPE {{ $p.TypeSQL }} USING {{ $p.SQLName }}::{{ $p.TypeSQL }};
+                {{- end }}
+            {{- end }}
+            {{- /* TODO if not (eq $oldParams.Unique $p.Unique) */}}
+            {{- /* TODO if not (eq $oldParams.IsArray $p.IsArray) */}}
+            {{- /* TODO if not (eq $oldParams.FK $p.FK) */}}
+        {{- end }}
+    {{- end}}
+-- +goose Down
+    {{- if len $diff.Create }}
+ALTER TABLE {{ .NewModelObj.SQLTableName }}
+        {{- range $i, $p := $diff.Create }}
+    DROP COLUMN {{ $p.SQLName }}
+            {{- if not (eq $i (MathAdd (len $diff.Create) -1)) }},{{ end }}
+        {{- end }};
+    {{- end}}
+    {{- if len $diff.Delete }}
+ALTER TABLE {{ .NewModelObj.SQLTableName }}
+        {{- range $i, $p := $diff.Delete }}
+    ADD COLUMN {{ $p.SQLName }} {{ $p.TypeSQL }}
+            {{- if eq $p.Name "ID"}} PRIMARY KEY{{ end }}
+            {{- if $p.Unique}} UNIQUE{{ end }}
+            {{- if $p.IsStruct}} REFERENCES {{ $p.FKModel.SQLTableName }}({{ $p.FK }}){{ end }}
+            {{- if not (eq $i (MathAdd (len $diff.Delete) -1)) }},{{ end }}
+        {{- end }};
+    {{- end}}
+    {{- if len $diff.Update }}
+        {{- range $i, $p := $diff.Update }}
+            {{- if $p.PrevColName }}
+                {{- $oldParams := (index $.OldModelObj.PsqlMap (Title $p.PrevColName)) }}
+                {{- if not (eq $oldParams.Name $p.Name) }}
+ALTER TABLE {{ $.NewModelObj.SQLTableName }} RENAME COLUMN {{ $p.SQLName }} TO {{ $oldParams.SQLName }};
+                {{- end }}
+            {{- else }}
+                {{- $oldParams := (index $.OldModelObj.PsqlMap $p.Name) }}
+                {{- if not (eq $oldParams.Type $p.Type) }}
+ALTER TABLE {{ $.NewModelObj.SQLTableName }} ALTER COLUMN {{ $oldParams.SQLName }} SET DATA TYPE {{ $oldParams.TypeSQL }} USING {{ $oldParams.SQLName }}::{{ $oldParams.TypeSQL }};
+                {{- end }}
+            {{- end }}
+            {{- /* TODO if not (eq $oldParams.Unique $p.Unique) */}}
+            {{- /* TODO if not (eq $oldParams.IsArray $p.IsArray) */}}
+            {{- /* TODO if not (eq $oldParams.FK $p.FK) */}}
+        {{- end }}
+    {{- end}}
+{{- end }}
