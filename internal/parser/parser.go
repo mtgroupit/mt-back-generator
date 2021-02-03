@@ -212,6 +212,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				model.HaveLazyLoading = true
 
 				modelNameForBind := LowerTitle(options.GoType)
+
+				if !cfg.Models[modelNameForBind].Shared && model.Shared {
+					return nil, errors.Errorf(`Model: "%s". Column: "%s". "%s" is invalid type for column. Shared models can not use non-shared models as column type`, name, column, options.Type)
+				}
+
 				cfg.AddBind(modelNameForBind, models.Bind{
 					ModelName: name,
 					FieldName: column,
