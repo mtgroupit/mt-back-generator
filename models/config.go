@@ -161,3 +161,13 @@ type Config struct {
 	// CurModel - field for define needed model for template
 	CurModel string
 }
+
+// AddBind - adding external bind to model with name 'nameModelTo'.
+func (c *Config) AddBind(nameModelTo string, bind Bind) {
+	modelTo, ok := c.Models[nameModelTo]
+	if !ok {
+		return
+	}
+	modelTo.Binds = append(modelTo.Binds, bind)
+	c.Models[nameModelTo] = modelTo
+}

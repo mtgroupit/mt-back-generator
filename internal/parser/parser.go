@@ -66,7 +66,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		return
 	}
 
-	binds := map[string]models.Bind{}
 	for name, model := range cfg.Models {
 		if model.IDFromIsolatedEntity && model.Shared {
 			return nil, errors.Errorf(`Model: "%s". Id from isolated entity available only for not shared models`, name)
@@ -211,11 +210,14 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 			if options.IsStruct {
 				model.HaveLazyLoading = true
-				binds[options.GoType] = models.Bind{
+
+				modelNameForBind := LowerTitle(options.GoType)
+				cfg.AddBind(modelNameForBind, models.Bind{
 					ModelName: name,
 					FieldName: column,
 					IsArray:   options.IsArray,
-				}
+				})
+
 				if options.IsArray {
 					et := models.ExtraTable{}
 
@@ -412,12 +414,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		cfg.Models[name] = model
 	}
 	for name, model := range cfg.Models {
-		for bindModel, bind := range binds {
-			if strings.Title(name) == bindModel {
-				model.Binds = append(model.Binds, bind)
-				break
-			}
-		}
 
 		if err = handleSorts(cfg.Models, &model, name); err != nil {
 			return
