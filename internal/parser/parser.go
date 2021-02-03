@@ -673,6 +673,8 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 	objs := []models.NestedObjProps{}
 	obj := models.NestedObjProps{}
 
+	obj.Shared = modelsIn[modelName].Shared
+
 	field := expandName(elem)
 	fieldsStr := expandStrNestedFields(elem)
 	fieldsFull := splitFields(fieldsStr)

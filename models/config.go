@@ -55,6 +55,7 @@ type NestedObjProps struct {
 	IsArray               bool
 	IsFirstForLazyLoading bool
 	IsLastForLazyLoading  bool
+	Shared                bool
 }
 
 // MethodProps contains all additional information for method
