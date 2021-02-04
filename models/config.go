@@ -1,5 +1,7 @@
 package models
 
+import "github.com/pkg/errors"
+
 // Options contain properties of column
 type Options struct {
 	TitleName string
@@ -55,6 +57,7 @@ type NestedObjProps struct {
 	IsArray               bool
 	IsFirstForLazyLoading bool
 	IsLastForLazyLoading  bool
+	Shared                bool
 }
 
 // MethodProps contains all additional information for method
@@ -160,4 +163,15 @@ type Config struct {
 	Tags map[string]struct{}
 	// CurModel - field for define needed model for template
 	CurModel string
+}
+
+// AddBind - adding external bind to model with name 'nameModelTo'.
+func (c *Config) AddBind(nameModelTo string, bind Bind) error {
+	modelTo, ok := c.Models[nameModelTo]
+	if !ok {
+		return errors.Errorf(`Config has not "%s" model`, nameModelTo)
+	}
+	modelTo.Binds = append(modelTo.Binds, bind)
+	c.Models[nameModelTo] = modelTo
+	return nil
 }

@@ -66,7 +66,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		return
 	}
 
-	binds := map[string]models.Bind{}
 	for name, model := range cfg.Models {
 		if model.IDFromIsolatedEntity && model.Shared {
 			return nil, errors.Errorf(`Model: "%s". Id from isolated entity available only for not shared models`, name)
@@ -211,11 +210,22 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 			if options.IsStruct {
 				model.HaveLazyLoading = true
-				binds[options.GoType] = models.Bind{
+
+				modelNameForBind := LowerTitle(options.GoType)
+
+				if  modelForBind, ok := cfg.Models[modelNameForBind]; ok && !modelForBind.Shared && model.Shared {
+					return nil, errors.Errorf(`Model: "%s". Column: "%s". "%s" is invalid type for column. Shared models can not use non-shared models as column type`, name, column, options.Type)
+				}
+
+				err = cfg.AddBind(modelNameForBind, models.Bind{
 					ModelName: name,
 					FieldName: column,
 					IsArray:   options.IsArray,
+				})
+				if err != nil {
+					return nil, err
 				}
+
 				if options.IsArray {
 					et := models.ExtraTable{}
 
@@ -412,12 +422,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		cfg.Models[name] = model
 	}
 	for name, model := range cfg.Models {
-		for bindModel, bind := range binds {
-			if strings.Title(name) == bindModel {
-				model.Binds = append(model.Binds, bind)
-				break
-			}
-		}
 
 		if err = handleSorts(cfg.Models, &model, name); err != nil {
 			return
@@ -541,7 +545,7 @@ func checkColumn(columnType string, cfg *models.Config) (bool, bool, string, err
 		case isStandardTypes(t):
 			return false, true, t, nil
 		default:
-			return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarat types %s or refers to any other model`, t, standardTypes)
+			return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarad types %s or refers to any other model`, t, standardTypes)
 		}
 
 	}
@@ -671,6 +675,8 @@ func isStruct(method string) bool {
 func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting, parent string, isArray bool) ([]models.NestedObjProps, error) {
 	objs := []models.NestedObjProps{}
 	obj := models.NestedObjProps{}
+
+	obj.Shared = modelsIn[modelName].Shared
 
 	field := expandName(elem)
 	fieldsStr := expandStrNestedFields(elem)
