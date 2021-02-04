@@ -213,15 +213,18 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 				modelNameForBind := LowerTitle(options.GoType)
 
-				if !cfg.Models[modelNameForBind].Shared && model.Shared {
+				if  modelForBind, ok := cfg.Models[modelNameForBind]; ok && !modelForBind.Shared && model.Shared {
 					return nil, errors.Errorf(`Model: "%s". Column: "%s". "%s" is invalid type for column. Shared models can not use non-shared models as column type`, name, column, options.Type)
 				}
 
-				cfg.AddBind(modelNameForBind, models.Bind{
+				err = cfg.AddBind(modelNameForBind, models.Bind{
 					ModelName: name,
 					FieldName: column,
 					IsArray:   options.IsArray,
 				})
+				if err != nil {
+					return nil, err
+				}
 
 				if options.IsArray {
 					et := models.ExtraTable{}
@@ -542,7 +545,7 @@ func checkColumn(columnType string, cfg *models.Config) (bool, bool, string, err
 		case isStandardTypes(t):
 			return false, true, t, nil
 		default:
-			return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarat types %s or refers to any other model`, t, standardTypes)
+			return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarad types %s or refers to any other model`, t, standardTypes)
 		}
 
 	}

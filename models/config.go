@@ -1,5 +1,7 @@
 package models
 
+import "github.com/pkg/errors"
+
 // Options contain properties of column
 type Options struct {
 	TitleName string
@@ -164,11 +166,12 @@ type Config struct {
 }
 
 // AddBind - adding external bind to model with name 'nameModelTo'.
-func (c *Config) AddBind(nameModelTo string, bind Bind) {
+func (c *Config) AddBind(nameModelTo string, bind Bind) error {
 	modelTo, ok := c.Models[nameModelTo]
 	if !ok {
-		return
+		return errors.Errorf(`Config has not "%s" model`, nameModelTo)
 	}
 	modelTo.Binds = append(modelTo.Binds, bind)
 	c.Models[nameModelTo] = modelTo
+	return nil
 }
