@@ -162,6 +162,68 @@ var goTmplFuncs = template.FuncMap{
 		}
 		return false
 	},
+	"ConvertApiToAppColumn": func(columnOptions models.Options) string {
+		appValue := "a." + columnOptions.TitleName
+
+		switch columnOptions.Format {
+		case "date-time", "email":
+			appValue = fmt.Sprintf("%s.String()", appValue)
+		default:
+			if columnOptions.Default != "" {
+				switch columnOptions.GoType {
+				case "float64":
+					appValue = fmt.Sprintf("swag.Float32Value(%s)", appValue)
+				default:
+					appValue = fmt.Sprintf("swag.%sValue(%s)", strings.Title(columnOptions.GoType), appValue)
+				}
+			}
+		}
+
+		if columnOptions.GoType == "float64" {
+			appValue = fmt.Sprintf("float64(%s)", appValue)
+		}
+
+		return appValue
+	},
+	"ConvertAppToApiColumn": func(columnOptions models.Options) string {
+		apiValue := "a." + columnOptions.TitleName
+
+		if columnOptions.IsStruct {
+			var s string
+			if columnOptions.IsArray {
+				s = "s"
+			}
+			return fmt.Sprintf("api%s%s(%s)", columnOptions.GoType, s, apiValue)
+		}
+
+		if columnOptions.GoType == "float64" {
+			apiValue = fmt.Sprintf("float32(%s)", apiValue)
+		}
+
+		switch columnOptions.Format {
+		case "date-time":
+			apiValue = fmt.Sprintf("toDateTime(%s)", apiValue)
+			if columnOptions.Default != "" {
+				apiValue = fmt.Sprintf("conv.DateTime(%s)", apiValue)
+			}
+		case "email":
+			apiValue = fmt.Sprintf("strfmt.Email(%s)", apiValue)
+			if columnOptions.Default != "" {
+				apiValue = fmt.Sprintf("conv.Email(%s)", apiValue)
+			}
+		default:
+			if columnOptions.Default != "" {
+				switch columnOptions.GoType {
+				case "float64":
+					apiValue = fmt.Sprintf("swag.Float32(%s)", apiValue)
+				default:
+					apiValue = fmt.Sprintf("swag.%s(%s)", strings.Title(columnOptions.GoType), apiValue)
+				}
+			}
+		}
+
+		return apiValue
+	},
 }
 
 // Srv - generate dir with service

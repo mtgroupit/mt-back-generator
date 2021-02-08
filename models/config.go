@@ -92,6 +92,7 @@ type Model struct {
 	HaveLazyLoading         bool
 	IDIsUUID                bool
 	HaveEmail               bool
+	NeedConv                bool
 	HaveListMethod          bool
 	HaveCustomMethod        bool
 	HaveArrayOfStandardType bool

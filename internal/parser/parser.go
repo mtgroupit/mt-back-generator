@@ -216,9 +216,15 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 			if options.Format == "date-time" {
 				cfg.HaveDateTime = true
+				if options.Default != "" {
+					model.NeedConv = true
+				}
 			}
 			if options.Format == "email" {
 				model.HaveEmail = true
+				if options.Default != "" {
+					model.NeedConv = true
+				}
 			}
 
 			if options.Enum != "" {
@@ -359,7 +365,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 						case "string":
 							pp.TypeSQL = "text"
 						case "number":
-							pp.TypeSQL = "numberic"
+							pp.TypeSQL = "numeric"
 						default:
 							pp.TypeSQL = options.Type
 						}
