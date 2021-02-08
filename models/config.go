@@ -93,6 +93,7 @@ type Model struct {
 	IDIsUUID                bool
 	HaveEmail               bool
 	NeedConv                bool
+	NeedTypes               bool
 	HaveListMethod          bool
 	HaveCustomMethod        bool
 	HaveArrayOfStandardType bool

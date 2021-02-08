@@ -28,6 +28,8 @@ const (
 	structTypePrefix        = "model."
 	arrayTypePrefix         = "[]"
 	arrayOfStructTypePrefix = arrayTypePrefix + structTypePrefix
+
+	TypesPrefix = "types."
 )
 
 func isStandardType(t string) bool {
@@ -178,6 +180,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			}
 			if options.IsStruct, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
 				return
+			}
+
+			if strings.HasPrefix(options.GoType, TypesPrefix) {
+				model.NeedTypes = true
 			}
 
 			if options.SortDefault {
@@ -398,6 +404,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				} else {
 					titleName = "m." + titleName
 				}
+				if strings.HasPrefix(options.GoType, TypesPrefix) {
+					titleName += ".Value()"
+				}
 				SQLSelect = append(SQLSelect, sqlName)
 				if !options.IsArray {
 					if options.Type != "string" || options.StrictFilter {
@@ -602,9 +611,9 @@ func convertTypeToGoType(columnType string) string {
 func convertStandardTypeToGoType(columnType string) string {
 	switch {
 	case columnType == "decimal":
-		return "types.Decimal"
-	case columnType == "uuid":
-		return "types.UUID"
+		return TypesPrefix + "Decimal"
+	// case columnType == "uuid":
+	// 	return TypesPrefix + "UUID"
 	case columnType == "float":
 		return "float64"
 	default:
@@ -1088,6 +1097,9 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 								titleName += "JSON"
 							} else {
 								titleName = "m." + titleName
+							}
+							if strings.HasPrefix(options.GoType, TypesPrefix) {
+								titleName += ".Value()"
 							}
 							sqlAddExecParams = append(sqlAddExecParams, titleName)
 							count++

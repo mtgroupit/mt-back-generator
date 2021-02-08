@@ -27,6 +27,9 @@ import (
 {{- end}}
 
 	"{{.Module}}/internal/app"
+{{- if $model.NeedTypes}}
+	"{{.Module}}/internal/types"
+{{- end}}
 
 {{- if or $model.IDIsUUID (ContainsStr $model.Methods "AddMy")}}
 	"github.com/google/uuid"
@@ -53,7 +56,7 @@ type {{$modelName}} struct {
 		{{$psqlParams.Name}} {{if $psqlParams.IsArray}}[]{{end}}{{$psqlParams.Type}}
 	{{- else}}
 		{{- if not $psqlParams.IsArray}}
-			{{$psqlParams.Name}} {{if eq  $psqlParams.TypeSQL "uuid"}}uuid.UUID{{else}}sql.Null{{Title $psqlParams.Type}}{{end}} `db:"{{$psqlParams.SQLName}}"` 
+			{{$psqlParams.Name}} {{if eq  $psqlParams.TypeSQL "uuid"}}uuid.UUID{{else}}{{DalType $psqlParams.Type}}{{end}} `db:"{{$psqlParams.SQLName}}"` 
 		{{- else}}
 			{{$psqlParams.Name}}JSON []byte `db:"{{$psqlParams.SQLName}}"`
 			{{$psqlParams.Name}} []{{$psqlParams.Type}} 
@@ -706,7 +709,7 @@ func (m *{{$modelName}}) Filter(filter *app.Filter) (ok, filterIsValid bool) {
 			{{- if $options.IsArray}}
 			for _, elem := range m.{{$options.TitleName}} {
 			{{- end}}
-				value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}})
+				value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{if eq $options.GoType "types.Decimal"}}Decimal.String(){{else}}{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}}{{end}})
 				if ({{if or (ne $options.Type "string") $options.StrictFilter}}value == filter.Value{{else}}contains(value, filter.Value){{end}} && filter.Include) || ({{if or (ne $options.Type "string") $options.StrictFilter}}value != filter.Value{{else}}!contains(value, filter.Value){{end}} && !filter.Include) {
 					ok, filterIsValid = true, true
 				} else {
@@ -729,7 +732,7 @@ func app{{$modelName}}(m {{$modelName}}) *app.{{$modelName}} {
 	}
 	return &app.{{$modelName}}{
 		{{- range $name, $options := $model.Columns}}
-			{{$options.TitleName}}: {{if $options.IsStruct}}app{{$options.GoType}}{{if $options.IsArray}}s{{end}}(m.{{$options.TitleName}}){{else}}m.{{$options.TitleName}}{{if eq $options.TitleName "ID"}}{{if $model.IDIsUUID}}.String(){{end}}{{else}}{{if not $options.IsArray}}.{{Title $options.GoType}}{{end}}{{end}}{{end}},
+			{{$options.TitleName}}: {{ConvertDalToAppColumn $options}},
 		{{- end}}
 	}
 }

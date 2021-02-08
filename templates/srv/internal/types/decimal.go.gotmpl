@@ -1,0 +1,44 @@
+package types
+
+import (
+	"database/sql/driver"
+
+	"github.com/shopspring/decimal"
+)
+
+// Decimal is implementation of github.com/shopspring/decimal
+type Decimal decimal.Decimal
+
+func NewDecimal(value interface{}) Decimal {
+	switch value.(type) {
+	case string:
+		return Decimal(decimal.RequireFromString(value.(string)))
+	case int32:
+		return Decimal(decimal.NewFromInt32(value.(int32)))
+	case int64:
+		return Decimal(decimal.NewFromInt(value.(int64)))
+	case float64:
+		return Decimal(decimal.NewFromFloat(value.(float64)))
+	default:
+		return Decimal{}
+	}
+}
+
+func (d *Decimal) Float64() (f float64) {
+	f, _ = (*decimal.Decimal)(d).Float64()
+	return
+}
+
+func (d *Decimal) Value() driver.Value {
+	f, err := (*decimal.Decimal)(d).Value()
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
+
+type NullDecimal decimal.NullDecimal
+
+func (d *NullDecimal) Scan(value interface{}) error {
+	return (*decimal.NullDecimal)(d).Scan(value)
+}

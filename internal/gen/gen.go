@@ -162,8 +162,8 @@ var goTmplFuncs = template.FuncMap{
 		}
 		return false
 	},
-	"ConvertApiToAppColumn": func(columnOptions models.Options) string {
-		appValue := "a." + columnOptions.TitleName
+	"ConvertApiToAppColumn": func(sourceStructName string, columnOptions models.Options) string {
+		appValue := sourceStructName + "." + columnOptions.TitleName
 
 		switch columnOptions.Format {
 		case "date-time", "email":
@@ -183,6 +183,10 @@ var goTmplFuncs = template.FuncMap{
 			appValue = fmt.Sprintf("float64(%s)", appValue)
 		}
 
+		if columnOptions.GoType == parser.TypesPrefix+"Decimal" {
+			appValue = fmt.Sprintf("%sNewDecimal(%s)", parser.TypesPrefix, appValue)
+		}
+
 		return appValue
 	},
 	"ConvertAppToApiColumn": func(columnOptions models.Options) string {
@@ -196,8 +200,11 @@ var goTmplFuncs = template.FuncMap{
 			return fmt.Sprintf("api%s%s(%s)", columnOptions.GoType, s, apiValue)
 		}
 
-		if columnOptions.GoType == "float64" {
+		switch columnOptions.GoType {
+		case "float64":
 			apiValue = fmt.Sprintf("float32(%s)", apiValue)
+		case parser.TypesPrefix + "Decimal":
+			apiValue = fmt.Sprintf("%s.Float64()", apiValue)
 		}
 
 		switch columnOptions.Format {
@@ -223,6 +230,40 @@ var goTmplFuncs = template.FuncMap{
 		}
 
 		return apiValue
+	},
+	"ConvertDalToAppColumn": func(columnOptions models.Options) string {
+		appValue := "m." + columnOptions.TitleName
+
+		if columnOptions.IsStruct {
+			var s string
+			if columnOptions.IsArray {
+				s = "s"
+			}
+			return fmt.Sprintf("app%s%s(%s)", columnOptions.GoType, s, appValue)
+		} else {
+			if columnOptions.IsArray {
+				return appValue
+			}
+		}
+
+		switch {
+		case columnOptions.TitleName == "ID" && columnOptions.Type == "uuid":
+			appValue = fmt.Sprintf("%s.String()", appValue)
+		case strings.HasPrefix(columnOptions.GoType, parser.TypesPrefix):
+			appValue = fmt.Sprintf("%s(%s.Decimal)", columnOptions.GoType, appValue)
+		default:
+			appValue = fmt.Sprintf("%s.%s", appValue, strings.Title(columnOptions.GoType))
+		}
+
+		return appValue
+	},
+	"DalType": func(psqlType string) string {
+		switch psqlType {
+		case parser.TypesPrefix + "Decimal":
+			return fmt.Sprintf("%sNullDecimal", parser.TypesPrefix)
+		default:
+			return fmt.Sprintf("sql.Null%s", strings.Title(psqlType))
+		}
 	},
 }
 
@@ -429,6 +470,9 @@ func buildTreeDirs(p, srvName string) error {
 		return err
 	}
 	if err := ensureDir(path.Join(p, srvName, "internal"), "def"); err != nil {
+		return err
+	}
+	if err := ensureDir(path.Join(p, srvName, "internal"), "types"); err != nil {
 		return err
 	}
 	if err := ensureDir(path.Join(p, srvName), "migration"); err != nil {
