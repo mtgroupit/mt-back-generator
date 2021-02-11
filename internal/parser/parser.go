@@ -225,6 +225,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				cfg.HaveDateTime = true
 			}
 			if options.Format == "email" {
+				cfg.HaveEmail = true
 				model.HaveEmail = true
 			}
 

@@ -209,20 +209,30 @@ var goTmplFuncs = template.FuncMap{
 
 		switch columnOptions.Format {
 		case "date-time":
-			apiValue = fmt.Sprintf("toDateTime(%s)", apiValue)
-			if columnOptions.Default != "" {
-				apiValue = fmt.Sprintf("conv.DateTime(%s)", apiValue)
+			if columnOptions.IsArray {
+				apiValue = fmt.Sprintf("toDateTimeArray(%s)", apiValue)
+			} else {
+				apiValue = fmt.Sprintf("toDateTime(%s)", apiValue)
+				if columnOptions.Default != "" {
+					apiValue = fmt.Sprintf("conv.DateTime(%s)", apiValue)
+				}
 			}
 		case "email":
-			apiValue = fmt.Sprintf("strfmt.Email(%s)", apiValue)
-			if columnOptions.Default != "" {
-				apiValue = fmt.Sprintf("conv.Email(%s)", apiValue)
+			if columnOptions.IsArray {
+				apiValue = fmt.Sprintf("toEmailArray(%s)", apiValue)
+			} else {
+				apiValue = fmt.Sprintf("strfmt.Email(%s)", apiValue)
+				if columnOptions.Default != "" {
+					apiValue = fmt.Sprintf("conv.Email(%s)", apiValue)
+				}
 			}
 		default:
 			if columnOptions.Default != "" {
 				switch columnOptions.GoType {
 				case "float64":
 					apiValue = fmt.Sprintf("swag.Float32(%s)", apiValue)
+				case parser.TypesPrefix + "Decimal":
+					apiValue = fmt.Sprintf("swag.Float64(%s)", apiValue)
 				default:
 					apiValue = fmt.Sprintf("swag.%s(%s)", strings.Title(columnOptions.GoType), apiValue)
 				}

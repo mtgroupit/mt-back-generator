@@ -160,6 +160,7 @@ type Config struct {
 	HaveListMethod   bool
 	HaveCustomMethod bool
 	HaveDateTime     bool
+	HaveEmail        bool
 	HaveTypes        bool
 	HaveConv         bool
 	HaveSwag         bool

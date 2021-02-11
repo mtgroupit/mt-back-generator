@@ -18,7 +18,7 @@ import (
 
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/runtime/middleware"
-	{{- if .HaveDateTime}}
+	{{- if or .HaveDateTime .HaveEmail}}
 		"github.com/go-openapi/strfmt"
 	{{- end}}
 	"github.com/pkg/errors"
@@ -169,11 +169,27 @@ func appAccessManager(am *models.AccessManager) *app.AccessManager {
 {{- end}}
 
 {{- if .HaveDateTime}}
+	func toDateTimeArray(dates []string) (dts []strfmt.DateTime) {
+		for _, date := range dates {
+			dts = append(dts, toDateTime(date))
+		}
+		return
+	}
+
 	func toDateTime(date string) (dt strfmt.DateTime) {
 		if date == "" {
 			return
 		}
 		dt.Scan(date)
+		return
+	}
+{{- end}}
+
+{{- if .HaveEmail}}
+	func toEmailArray(emails []string) (es []strfmt.Email) {
+		for _, email := range emails {
+			es = append(es, strfmt.Email(email))
+		}
 		return
 	}
 {{- end}}
