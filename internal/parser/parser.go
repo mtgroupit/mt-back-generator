@@ -183,6 +183,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			}
 
 			if strings.HasPrefix(options.GoType, TypesPrefix) {
+				cfg.HaveTypes = true
 				model.NeedTypes = true
 			}
 
@@ -222,14 +223,18 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 			if options.Format == "date-time" {
 				cfg.HaveDateTime = true
-				if options.Default != "" {
-					model.NeedConv = true
-				}
 			}
 			if options.Format == "email" {
 				model.HaveEmail = true
-				if options.Default != "" {
+			}
+
+			if options.Default != "" {
+				switch options.Format {
+				case "date-time", "email":
+					cfg.HaveConv = true
 					model.NeedConv = true
+				default:
+					cfg.HaveSwag = true
 				}
 			}
 

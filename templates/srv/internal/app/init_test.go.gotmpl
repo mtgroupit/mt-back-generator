@@ -3,6 +3,9 @@ package app
 
 import (
 	"github.com/google/uuid"
+	{{- if .HaveTypes}}
+		"{{.Module}}/internal/types"
+	{{- end}}
 )
 
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
@@ -14,29 +17,15 @@ var (
 {{- range $modelName, $model := $.Models}}
 	test{{$modelName}}1 = &{{$modelName}}{  
 		{{- range $column, $options := $model.Columns}}
-		{{$options.TitleName}}: {{if and (eq $column "id") (eq $options.Type "uuid")}}uuid.New().String(){{else}}{{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}1{{end}}{{if eq $options.GoType "string"}}{{if $options.IsArray}}[]string{ {{end}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://127.0.0.1:34763"{{end}}{{if eq $options.Format "date-time"}}"1970-01-01T00:00:00.000Z"{{end}}{{if eq $options.Format "email"}}"test1@test.com"{{end}}{{if eq $options.Format "phone"}}"+79998887766"{{end}}{{else}}"test1"{{end}}{{if $options.IsArray}} }{{end}}{{end}}{{if eq $options.GoType "bool"}}true{{end}}{{end}}{{end}},
+		{{$options.TitleName}}: {{if and (eq $column "id") (eq $options.Type "uuid")}}uuid.New().String(){{else}}{{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{GenAppTestValue $options}}{{end}}{{end}},
 		{{- end}}
 	}
 	{{- if not $model.IDFromIsolatedEntity}}
 		test{{$modelName}}2 = &{{$modelName}}{  
 			{{- range $column, $options := $model.Columns}}
-			{{$options.TitleName}}: {{if and (eq $column "id") (eq $options.Type "uuid")}}uuid.New().String(){{else}}{{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}2{{end}}{{if eq $options.GoType "string"}}{{if $options.IsArray}}[]string{ {{end}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://localhost:34764"{{end}}{{if eq $options.Format "date-time"}}"1980-02-01T02:00:00.000Z"{{end}}{{if eq $options.Format "email"}}"test2@test.com"{{end}}{{if eq $options.Format "phone"}}"8(999)888-77-66"{{end}}{{else}}"test2"{{end}}{{if $options.IsArray}} }{{end}}{{end}}{{if eq $options.GoType "bool"}}false{{end}}{{end}}{{end}},
+			{{$options.TitleName}}: {{if and (eq $column "id") (eq $options.Type "uuid")}}uuid.New().String(){{else}}{{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}}{{end}},
 			{{- end}}
 		}
-		{{/* testAdd{{$modelName}}1 = &{{$modelName}}{  
-			{{- range $column, $options := $model.Columns}}
-			{{- if and (ne $column "id") (not (IsStandardColumn $column))}}
-			{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}1{{end}}{{if eq $options.GoType "string"}}{{if $options.IsArray}}[]string{ {{end}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://127.0.0.1:34763"{{end}}{{if eq $options.Format "date-time"}}"1970-01-01T00:00:00.000Z"{{end}}{{if eq $options.Format "email"}}"test1@test.com"{{end}}{{if eq $options.Format "phone"}}"+79998887766"{{end}}{{else}}"test1"{{end}}{{if $options.IsArray}} }{{end}}{{end}}{{if eq $options.GoType "bool"}}true{{end}}{{end}},
-			{{- end}}
-			{{- end}}
-		}
-		testAdd{{$modelName}}2 = &{{$modelName}}{  
-			{{- range $column, $options := $model.Columns}}
-			{{- if and (ne $column "id") (not (IsStandardColumn $column))}}
-			{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{if eq $options.GoType "int" "int32" "int64"}}2{{end}}{{if eq $options.GoType "string"}}{{if $options.IsArray}}[]string{ {{end}}{{if $options.Format}}{{if eq $options.Format "url"}}"http://localhost:34764"{{end}}{{if eq $options.Format "date-time"}}"1980-02-01T02:00:00.000Z"{{end}}{{if eq $options.Format "email"}}"test2@test.com"{{end}}{{if eq $options.Format "phone"}}"8(999)888-77-66"{{end}}{{else}}"test2"{{end}}{{if $options.IsArray}} }{{end}}{{end}}{{if eq $options.GoType "bool"}}false{{end}}{{end}},
-			{{- end}}
-			{{- end}}
-		} */}}
 		test{{$modelName}}s = []*{{$modelName}}{test{{$modelName}}1, test{{$modelName}}2}
 	{{- end}}
 {{- end}}

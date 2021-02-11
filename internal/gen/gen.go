@@ -265,6 +265,8 @@ var goTmplFuncs = template.FuncMap{
 			return fmt.Sprintf("sql.Null%s", strings.Title(psqlType))
 		}
 	},
+	"GenApiTestValue": genApiTestValue,
+	"GenAppTestValue": genAppTestValue,
 }
 
 // Srv - generate dir with service

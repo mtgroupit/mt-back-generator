@@ -1,6 +1,8 @@
 package models
 
-import "github.com/pkg/errors"
+import (
+	"github.com/pkg/errors"
+)
 
 // Options contain properties of column
 type Options struct {
@@ -158,6 +160,9 @@ type Config struct {
 	HaveListMethod   bool
 	HaveCustomMethod bool
 	HaveDateTime     bool
+	HaveTypes        bool
+	HaveConv         bool
+	HaveSwag         bool
 	MaxDeepNesting   int
 
 	ExtraTables []ExtraTable
