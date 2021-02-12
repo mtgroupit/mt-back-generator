@@ -65,7 +65,7 @@ func connect(ctx context.Context, cfg pqx.Config, migrationDir string, zeroMigra
 			return nil, err
 		}
 	} else {
-		log.Printf("Applying migrations from %s\n", zeroMigrationsDir)
+		log.Printf("Applying migrations from %s\n", migrationDir)
 		err := migration.Up(ctx, migrationDir, cfg)
 		if err != nil {
 			return nil, err

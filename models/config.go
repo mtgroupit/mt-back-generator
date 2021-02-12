@@ -42,14 +42,24 @@ type PsqlParams struct {
 	Unique   bool
 	Type     string
 	TypeSQL  string
+	Model    *Model
 	IsArray  bool
 	IsStruct bool
-	FK       string
+	// TODO this looks like Model.Binds, contains pointer to the model, if IsStruct == true
+	FKModel *Model
+	FK      string
 
 	PrevColName string
+}
 
-	// TODO this looks like Model.Binds, contains pointer to the model, if this column IsStruct
-	FKModel *Model
+// NewPsqlParams initializes new PsqlParams
+func NewPsqlParams(model *Model, options Options) *PsqlParams {
+	return &PsqlParams{
+		Model:       model,
+		IsArray:     options.IsArray,
+		IsStruct:    options.IsStruct,
+		PrevColName: options.PrevColName,
+	}
 }
 
 // Equals says if current params have same values as in input params
@@ -59,6 +69,13 @@ func (p PsqlParams) Equals(_p PsqlParams) bool {
 		p.IsArray == _p.IsArray &&
 		p.Unique == _p.Unique &&
 		p.FK == _p.FK
+}
+
+// UniqueIdxName returns name of unique index for current model and column
+func (p PsqlParams) UniqueIdxName() func() string {
+	return func() (name string) {
+		return p.Model.SQLTableName() + "_" + p.SQLName + "_key"
+	}
 }
 
 //Bind binds tables for build delete method
@@ -100,9 +117,10 @@ type MethodProps struct {
 
 // ModelDifference represents sets of PsqlParams which shows model difference against other model (Create - new column, Delete - removed column, Update - changed column)
 type ModelDifference struct {
-	Create []*PsqlParams
-	Delete []*PsqlParams
-	Update []*PsqlParams
+	Create        []*PsqlParams
+	Delete        []*PsqlParams
+	Update        []*PsqlParams
+	SharedChanged bool
 }
 
 // Model - description one component of models
@@ -117,6 +135,7 @@ type Model struct {
 	Fields               map[string]string
 	Psql                 []PsqlParams
 	PsqlMap              map[string]*PsqlParams
+	ExtraTables          []*ExtraTable
 	DeepNesting          int
 
 	HaveLazyLoading         bool
@@ -161,7 +180,10 @@ func (m *Model) SQLAccessTableName() string {
 // Equals says if current model has same table columns configuration as in input model
 func (m *Model) Equals(_m Model) bool {
 	diff := m.Difference(_m)
-	return len(diff.Create) == 0 && len(diff.Delete) == 0 && len(diff.Update) == 0
+	return len(diff.Create) == 0 &&
+		len(diff.Delete) == 0 &&
+		len(diff.Update) == 0 &&
+		!diff.SharedChanged
 }
 
 // Difference returns current model PsqlParams that differs with params of input model
@@ -206,9 +228,10 @@ func (m *Model) Difference(_m Model) ModelDifference {
 	}
 
 	return ModelDifference{
-		Create: differenceCreate,
-		Update: differenceUpdate,
-		Delete: differenceDelete,
+		Create:        differenceCreate,
+		Update:        differenceUpdate,
+		Delete:        differenceDelete,
+		SharedChanged: m.Shared != _m.Shared,
 	}
 }
 
@@ -221,6 +244,14 @@ func (m *Model) ColsWithRefs() []*PsqlParams {
 		}
 	}
 	return ps
+}
+
+// SameOrPrevious - if input "p" has PrevColName, method returns previous column from current model, overwise it returns same column from current model
+func (m *Model) SameOrPrevious(p *PsqlParams) *PsqlParams {
+	if p.PrevColName != "" {
+		return m.PsqlMap[strings.Title(p.PrevColName)]
+	}
+	return m.PsqlMap[p.Name]
 }
 
 // Function contain input and output params
@@ -241,11 +272,15 @@ type Function struct {
 type ExtraTable struct {
 	Name string
 
+	Model1      *Model
+	Model1Col   *PsqlParams
 	RefTableOne string
 	RefIDOne    string
 	FieldIDOne  string
 	TypeIDOne   string
 
+	Model2      *Model
+	Model2Col   *PsqlParams
 	RefTableTwo string
 	RefIDTwo    string
 	FieldIDTwo  string

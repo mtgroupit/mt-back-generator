@@ -29,11 +29,11 @@ CREATE TABLE {{$model.SQLAccessTableName}}
     {{- if eq $et.RefTableOne $modelName}}
 CREATE TABLE {{$et.Name}}
 (
-    {{$et.FieldIDOne}} {{$et.TypeIDOne}} NOT NULL REFERENCES {{$et.RefTableOne | NameSQL}}s({{$et.RefIDOne}}),
-    {{$et.FieldIDTwo}} {{$et.TypeIDTwo}} NOT NULL REFERENCES {{$et.RefTableTwo | NameSQL}}s({{$et.RefIDTwo}})
-    {{- if not $model.Shared}},
+    {{$et.FieldIDOne}} {{$et.TypeIDOne}} NOT NULL REFERENCES {{ $et.Model1.SQLTableName }}({{ $et.RefIDOne }}),
+    {{$et.FieldIDTwo}} {{$et.TypeIDTwo}} NOT NULL REFERENCES {{ $et.Model2.SQLTableName }}({{ $et.RefIDTwo }}),
+        {{- if not $model.Shared}},
     isolated_entity_id uuid NOT NULL
-    {{- end}}
+        {{- end}}
 );
     {{- end}}
 {{- end}}

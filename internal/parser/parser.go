@@ -78,6 +78,8 @@ func ReadYAMLCfg(file string) (*models.Config, error) {
 func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	cfg = inCfg
 
+	// TODO add errors for not supported changes for migrations
+
 	if cfg.Name == "" {
 		return nil, errors.New("name is empty")
 	}
@@ -248,15 +250,12 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			}
 
-			pp := models.PsqlParams{
-				IsArray:     options.IsArray,
-				IsStruct:    options.IsStruct,
-				PrevColName: options.PrevColName,
-			}
+			pp := models.NewPsqlParams(model, options)
 
 			if options.IsStruct {
 				// TODO this is instead of binds
-				pp.FKModel = model
+				referencedModel := cfg.Models[LowerTitle(options.GoType)]
+				pp.FKModel = referencedModel
 				model.HaveLazyLoading = true
 
 				modelNameForBind := LowerTitle(options.GoType)
@@ -279,6 +278,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 					et.Name = shared.NameSQL(name) + "_" + shared.NameSQL(column)
 
+					et.Model1 = model
+					et.Model1Col = pp
 					et.RefTableOne = strings.Title(name)
 					et.RefIDOne = "id"
 					et.FieldIDOne = shared.NameSQL(name) + "_id"
@@ -288,15 +289,18 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 						et.TypeIDOne = "integer"
 					}
 
+					et.Model2 = referencedModel
+					et.Model2Col = referencedModel.PsqlMap["ID"]
 					et.RefTableTwo = options.GoType
 					et.RefIDTwo = "id"
 					et.FieldIDTwo = shared.NameSQL(column) + "_id"
-					if cfg.Models[LowerTitle(options.GoType)].Columns["id"].Type == "uuid" {
+					if referencedModel.Columns["id"].Type == "uuid" {
 						et.TypeIDTwo = "uuid"
 					} else {
 						et.TypeIDTwo = "integer"
 					}
 
+					model.ExtraTables = append(model.ExtraTables, &et)
 					cfg.ExtraTables = append(cfg.ExtraTables, et)
 				}
 			} else {
@@ -400,10 +404,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 			pp.Unique = options.Unique
 
-			// TODO FKModel
-
-			psql = append(psql, pp)
-			psqlMap[pp.Name] = &pp
+			psql = append(psql, *pp)
+			psqlMap[pp.Name] = pp
 		}
 		model.Psql = psql
 		model.PsqlMap = psqlMap

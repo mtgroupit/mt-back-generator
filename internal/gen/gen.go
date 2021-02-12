@@ -319,8 +319,16 @@ var goTmplFuncs = template.FuncMap{
 	},
 	// for debug purposes
 	"Log": func(in interface{}) string {
+		log.Printf("%#v", in)
 		return fmt.Sprintf("%#v", in)
 	},
+}
+
+func errWrapWithModel(err error, model models.Model) error {
+	if err != nil {
+		err = fmt.Errorf("%s: error occured while proccessing a model \"%s\" from new config", err, model.TitleName)
+	}
+	return err
 }
 
 // Srv - generate dir with service, if prevCfg is specified, then additional migrations will be generated
@@ -397,12 +405,13 @@ func exec(name, dirTMPL, dirTarget string, cfg *models.Config, prevCfg *models.C
 		switch {
 		case strings.HasSuffix(name, ".sql.gotmpl"):
 			if prevCfg != nil {
+				// this is for tracking deleted models
 				checkedModels := make(map[string]struct{})
 
 				log.Printf("Previous configuration found, last DB version is %d\n", cfg.LastMigrationVersion)
 
 				// check new config against previous one for new and modified models
-				err := cfg.ForEachModel(func(newModelName string, newModel *models.Model) error {
+				err := cfg.ForEachModel(func(newModelName string, newModel *models.Model) (err error) {
 					oldModel, ok := prevCfg.Models[newModelName]
 					checkedModels[newModelName] = struct{}{}
 					if !ok {
@@ -412,7 +421,8 @@ func exec(name, dirTMPL, dirTarget string, cfg *models.Config, prevCfg *models.C
 						cfg.NewModelObj = newModel
 						cfg.OldModelObj = nil
 						fileName := fmt.Sprintf("%05d_create_%s.sql", cfg.LastMigrationVersion, shared.NameSQL(cfg.CurModel))
-						return createFile(fileName, dirTMPL, dirTarget, cfg, tmp)
+						err = errWrapWithModel(createFile(fileName, dirTMPL, dirTarget, cfg, tmp), *newModel)
+						return
 					}
 					if !newModel.Equals(*oldModel) {
 						// ALTER migration
@@ -421,16 +431,17 @@ func exec(name, dirTMPL, dirTarget string, cfg *models.Config, prevCfg *models.C
 						cfg.NewModelObj = newModel
 						cfg.OldModelObj = oldModel
 						fileName := fmt.Sprintf("%05d_alter_%s.sql", cfg.LastMigrationVersion, shared.NameSQL(cfg.CurModel))
-						return createFile(fileName, dirTMPL, dirTarget, cfg, tmp)
+						err = errWrapWithModel(createFile(fileName, dirTMPL, dirTarget, cfg, tmp), *newModel)
+						return
 					}
-					return nil
+					return
 				})
 				if err != nil {
 					return err
 				}
 
 				// check previous config against new one for deleted models
-				err = prevCfg.ForEachModel(func(oldModelName string, oldModel *models.Model) error {
+				err = prevCfg.ForEachModel(func(oldModelName string, oldModel *models.Model) (err error) {
 					if _, ok := checkedModels[oldModelName]; !ok {
 						// DROP migration
 						cfg.LastMigrationVersion++
@@ -438,9 +449,10 @@ func exec(name, dirTMPL, dirTarget string, cfg *models.Config, prevCfg *models.C
 						cfg.NewModelObj = nil
 						cfg.OldModelObj = oldModel
 						fileName := fmt.Sprintf("%05d_drop_%s.sql", cfg.LastMigrationVersion, shared.NameSQL(cfg.CurModel))
-						return createFile(fileName, dirTMPL, dirTarget, cfg, tmp)
+						err = errWrapWithModel(createFile(fileName, dirTMPL, dirTarget, cfg, tmp), *oldModel)
+						return
 					}
-					return nil
+					return
 				})
 				if err != nil {
 					return err
@@ -622,6 +634,11 @@ func clearDir(dir string) error {
 		return err
 	}
 	for _, name := range names {
+		// TODO this check should read input mask named something like "skipFiles []string"
+		if strings.HasSuffix(name, "custom.go") {
+			log.Printf("Skipped deletion of %s", name)
+			continue
+		}
 		err = os.RemoveAll(filepath.Join(dir, name))
 		if err != nil {
 			return err
