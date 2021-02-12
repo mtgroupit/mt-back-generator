@@ -169,7 +169,14 @@ func appAccessManager(am *models.AccessManager) *app.AccessManager {
 {{- end}}
 
 {{- if .HaveDateTime}}
-	func toDateTimeArray(dates []string) (dts []strfmt.DateTime) {
+	func fromDateTimesArray(dts []strfmt.DateTime) (dates []string) {
+		for _, date := range dts {
+			dates = append(dates, date.String())
+		}
+		return
+	}
+
+	func toDateTimesArray(dates []string) (dts []strfmt.DateTime) {
 		for _, date := range dates {
 			dts = append(dts, toDateTime(date))
 		}
@@ -183,13 +190,20 @@ func appAccessManager(am *models.AccessManager) *app.AccessManager {
 		dt.Scan(date)
 		return
 	}
-{{- end}}
+{{end}}
 
 {{- if .HaveEmail}}
-	func toEmailArray(emails []string) (es []strfmt.Email) {
+	func fromEmailsArray(es []strfmt.Email) (emails []string) {
+		for _, email := range es {
+			emails = append(emails, email.String())
+		}
+		return
+	}
+
+	func toEmailsArray(emails []string) (es []strfmt.Email) {
 		for _, email := range emails {
 			es = append(es, strfmt.Email(email))
 		}
 		return
 	}
-{{- end}}
+{{end}}

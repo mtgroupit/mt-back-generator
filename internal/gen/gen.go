@@ -166,13 +166,25 @@ var goTmplFuncs = template.FuncMap{
 		appValue := sourceStructName + "." + columnOptions.TitleName
 
 		switch columnOptions.Format {
-		case "date-time", "email":
-			appValue = fmt.Sprintf("%s.String()", appValue)
+		case "date-time":
+			if columnOptions.IsArray {
+				appValue = fmt.Sprintf("fromDateTimesArray(%s)", appValue)
+			} else {
+				appValue = fmt.Sprintf("%s.String()", appValue)
+			}
+		case "email":
+			if columnOptions.IsArray {
+				appValue = fmt.Sprintf("fromEmailsArray(%s)", appValue)
+			} else {
+				appValue = fmt.Sprintf("%s.String()", appValue)
+			}
 		default:
 			if columnOptions.Default != "" {
 				switch columnOptions.GoType {
 				case "float64":
 					appValue = fmt.Sprintf("swag.Float32Value(%s)", appValue)
+				case parser.TypesPrefix + "Decimal":
+					appValue = fmt.Sprintf("swag.Float64Value(%s)", appValue)
 				default:
 					appValue = fmt.Sprintf("swag.%sValue(%s)", strings.Title(columnOptions.GoType), appValue)
 				}
@@ -210,7 +222,7 @@ var goTmplFuncs = template.FuncMap{
 		switch columnOptions.Format {
 		case "date-time":
 			if columnOptions.IsArray {
-				apiValue = fmt.Sprintf("toDateTimeArray(%s)", apiValue)
+				apiValue = fmt.Sprintf("toDateTimesArray(%s)", apiValue)
 			} else {
 				apiValue = fmt.Sprintf("toDateTime(%s)", apiValue)
 				if columnOptions.Default != "" {
@@ -219,7 +231,7 @@ var goTmplFuncs = template.FuncMap{
 			}
 		case "email":
 			if columnOptions.IsArray {
-				apiValue = fmt.Sprintf("toEmailArray(%s)", apiValue)
+				apiValue = fmt.Sprintf("toEmailsArray(%s)", apiValue)
 			} else {
 				apiValue = fmt.Sprintf("strfmt.Email(%s)", apiValue)
 				if columnOptions.Default != "" {
