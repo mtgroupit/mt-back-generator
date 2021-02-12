@@ -46,6 +46,8 @@ func genApiTestArray(columnOptions models.Options) string {
 		return fmt.Sprintf("[]strfmt.DateTime{%s}", strings.Join(arr, ", "))
 	case "email":
 		return fmt.Sprintf("[]strfmt.Email{%s}", strings.Join(arr, ", "))
+	case "float":
+		return fmt.Sprintf("[]float32{%s}", strings.Join(arr, ", "))
 	default:
 		return fmt.Sprintf("[]%s{%s}", columnOptions.GoType, strings.Join(arr, ", "))
 	}
