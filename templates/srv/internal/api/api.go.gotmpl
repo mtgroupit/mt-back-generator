@@ -207,3 +207,20 @@ func appAccessManager(am *models.AccessManager) *app.AccessManager {
 		return
 	}
 {{end}}
+
+{{- if .HaveFloatArr}}
+	func float64to32Array(floats64 []float64) (floats32 []float32) {
+		for _, f64 := range floats64 {
+			floats32 = append(floats32, float32(f64))
+		}
+		return
+	}
+
+
+	func float32to64Array(floats32 []float32) (floats64 []float64) {
+		for _, f32 := range floats32 {
+			floats64 = append(floats64, float64(f32))
+		}
+		return
+	}
+{{end}}

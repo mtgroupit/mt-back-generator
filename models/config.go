@@ -159,6 +159,7 @@ type Config struct {
 	Functions        map[string]Function
 	HaveListMethod   bool
 	HaveCustomMethod bool
+	HaveFloatArr     bool
 	HaveDateTime     bool
 	HaveEmail        bool
 	HaveTypes        bool

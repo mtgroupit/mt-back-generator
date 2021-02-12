@@ -337,6 +337,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 						if options.GoType == "int" {
 							options.Type = "int32"
 							options.GoType = "int32"
+						} else if options.GoType == "float64" {
+							options.Type = "float"
+							cfg.HaveFloatArr = true
 						} else {
 							options.Type = options.GoType
 						}

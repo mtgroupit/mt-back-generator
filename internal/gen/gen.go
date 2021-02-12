@@ -192,7 +192,11 @@ var goTmplFuncs = template.FuncMap{
 		}
 
 		if columnOptions.GoType == "float64" {
-			appValue = fmt.Sprintf("float64(%s)", appValue)
+			if columnOptions.IsArray {
+				appValue = fmt.Sprintf("float32to64Array(%s)", appValue)
+			} else {
+				appValue = fmt.Sprintf("float64(%s)", appValue)
+			}
 		}
 
 		if columnOptions.GoType == parser.TypesPrefix+"Decimal" {
@@ -214,7 +218,11 @@ var goTmplFuncs = template.FuncMap{
 
 		switch columnOptions.GoType {
 		case "float64":
-			apiValue = fmt.Sprintf("float32(%s)", apiValue)
+			if columnOptions.IsArray {
+				apiValue = fmt.Sprintf("float64to32Array(%s)", apiValue)
+			} else {
+				apiValue = fmt.Sprintf("float32(%s)", apiValue)
+			}
 		case parser.TypesPrefix + "Decimal":
 			apiValue = fmt.Sprintf("%s.Float64()", apiValue)
 		}
