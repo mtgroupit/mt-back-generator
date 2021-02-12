@@ -180,7 +180,7 @@ var goTmplFuncs = template.FuncMap{
 				appValue = fmt.Sprintf("fromEmailsArray(%s)", appValue)
 			} else {
 				if columnOptions.Default != "" {
-				appValue = fmt.Sprintf("conv.EmailValue(%s)", appValue)
+					appValue = fmt.Sprintf("conv.EmailValue(%s)", appValue)
 				}
 				appValue = fmt.Sprintf("%s.String()", appValue)
 			}
@@ -206,7 +206,11 @@ var goTmplFuncs = template.FuncMap{
 		}
 
 		if columnOptions.GoType == parser.TypesPrefix+"Decimal" {
-			appValue = fmt.Sprintf("%sNewDecimal(%s)", parser.TypesPrefix, appValue)
+			if columnOptions.IsArray {
+				appValue = fmt.Sprintf("%sFloat64ToDecimalsArray(%s)", parser.TypesPrefix, appValue)
+			} else {
+				appValue = fmt.Sprintf("%sNewDecimal(%s)", parser.TypesPrefix, appValue)
+			}
 		}
 
 		return appValue
@@ -230,7 +234,11 @@ var goTmplFuncs = template.FuncMap{
 				apiValue = fmt.Sprintf("float32(%s)", apiValue)
 			}
 		case parser.TypesPrefix + "Decimal":
-			apiValue = fmt.Sprintf("%s.Float64()", apiValue)
+			if columnOptions.IsArray {
+				apiValue = fmt.Sprintf("%sDecimalsToFloat64Array(%s)", parser.TypesPrefix, apiValue)
+			} else {
+				apiValue = fmt.Sprintf("%s.Float64()", apiValue)
+			}
 		}
 
 		switch columnOptions.Format {

@@ -334,13 +334,16 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 						options.GoType = "int32"
 					}
 					if options.IsArray {
-						if options.GoType == "int" {
+						switch options.GoType {
+						case "int":
 							options.Type = "int32"
 							options.GoType = "int32"
-						} else if options.GoType == "float64" {
+						case "float64":
 							options.Type = "float"
 							cfg.HaveFloatArr = true
-						} else {
+						case TypesPrefix + "Decimal":
+							options.Type = "decimal"
+						default:
 							options.Type = options.GoType
 						}
 					}
@@ -413,7 +416,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				} else {
 					titleName = "m." + titleName
 				}
-				if strings.HasPrefix(options.GoType, TypesPrefix) {
+				if strings.HasPrefix(options.GoType, TypesPrefix) && !options.IsArray {
 					titleName += ".Value()"
 				}
 				SQLSelect = append(SQLSelect, sqlName)
@@ -1107,7 +1110,7 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 							} else {
 								titleName = "m." + titleName
 							}
-							if strings.HasPrefix(options.GoType, TypesPrefix) {
+							if strings.HasPrefix(options.GoType, TypesPrefix) && !options.IsArray {
 								titleName += ".Value()"
 							}
 							sqlAddExecParams = append(sqlAddExecParams, titleName)
