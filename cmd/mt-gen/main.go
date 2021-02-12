@@ -60,14 +60,14 @@ func main() {
 	}
 
 	// save configuration for futher version generation
-	_, err = copy(config, prevCfgPath)
+	_, err = copyFile(config, prevCfgPath)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 }
 
-func copy(src, dst string) (int64, error) {
+func copyFile(src, dst string) (int64, error) {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
 		return 0, err
