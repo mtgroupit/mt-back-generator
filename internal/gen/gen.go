@@ -170,12 +170,18 @@ var goTmplFuncs = template.FuncMap{
 			if columnOptions.IsArray {
 				appValue = fmt.Sprintf("fromDateTimesArray(%s)", appValue)
 			} else {
+				if columnOptions.Default != "" {
+					appValue = fmt.Sprintf("conv.DateTimeValue(%s)", appValue)
+				}
 				appValue = fmt.Sprintf("%s.String()", appValue)
 			}
 		case "email":
 			if columnOptions.IsArray {
 				appValue = fmt.Sprintf("fromEmailsArray(%s)", appValue)
 			} else {
+				if columnOptions.Default != "" {
+				appValue = fmt.Sprintf("conv.EmailValue(%s)", appValue)
+				}
 				appValue = fmt.Sprintf("%s.String()", appValue)
 			}
 		default:
