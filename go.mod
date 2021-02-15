@@ -5,6 +5,7 @@ go 1.14
 require (
 	9fans.net/go v0.0.2 // indirect
 	github.com/Lisss13/french-auth v0.0.0-20201218152549-61fd5712da3c
+	github.com/brianvoe/gofakeit v3.18.0+incompatible
 	github.com/fatih/camelcase v1.0.0
 	github.com/go-openapi/errors v0.19.9
 	github.com/go-openapi/loads v0.20.0

@@ -1,6 +1,8 @@
 package models
 
-import "github.com/pkg/errors"
+import (
+	"github.com/pkg/errors"
+)
 
 // Options contain properties of column
 type Options struct {
@@ -92,6 +94,8 @@ type Model struct {
 	HaveLazyLoading         bool
 	IDIsUUID                bool
 	HaveEmail               bool
+	NeedConv                bool
+	NeedTypes               bool
 	HaveListMethod          bool
 	HaveCustomMethod        bool
 	HaveArrayOfStandardType bool
@@ -155,7 +159,12 @@ type Config struct {
 	Functions        map[string]Function
 	HaveListMethod   bool
 	HaveCustomMethod bool
+	HaveFloatArr     bool
 	HaveDateTime     bool
+	HaveEmail        bool
+	HaveTypes        bool
+	HaveConv         bool
+	HaveSwag         bool
 	MaxDeepNesting   int
 
 	ExtraTables []ExtraTable

@@ -18,7 +18,7 @@ import (
 
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/runtime/middleware"
-	{{- if .HaveDateTime}}
+	{{- if or .HaveDateTime .HaveEmail}}
 		"github.com/go-openapi/strfmt"
 	{{- end}}
 	"github.com/pkg/errors"
@@ -169,6 +169,20 @@ func appAccessManager(am *models.AccessManager) *app.AccessManager {
 {{- end}}
 
 {{- if .HaveDateTime}}
+	func fromDateTimesArray(dts []strfmt.DateTime) (dates []string) {
+		for _, date := range dts {
+			dates = append(dates, date.String())
+		}
+		return
+	}
+
+	func toDateTimesArray(dates []string) (dts []strfmt.DateTime) {
+		for _, date := range dates {
+			dts = append(dts, toDateTime(date))
+		}
+		return
+	}
+
 	func toDateTime(date string) (dt strfmt.DateTime) {
 		if date == "" {
 			return
@@ -176,4 +190,37 @@ func appAccessManager(am *models.AccessManager) *app.AccessManager {
 		dt.Scan(date)
 		return
 	}
-{{- end}}
+{{end}}
+
+{{- if .HaveEmail}}
+	func fromEmailsArray(es []strfmt.Email) (emails []string) {
+		for _, email := range es {
+			emails = append(emails, email.String())
+		}
+		return
+	}
+
+	func toEmailsArray(emails []string) (es []strfmt.Email) {
+		for _, email := range emails {
+			es = append(es, strfmt.Email(email))
+		}
+		return
+	}
+{{end}}
+
+{{- if .HaveFloatArr}}
+	func float64to32Array(floats64 []float64) (floats32 []float32) {
+		for _, f64 := range floats64 {
+			floats32 = append(floats32, float32(f64))
+		}
+		return
+	}
+
+
+	func float32to64Array(floats32 []float32) (floats64 []float64) {
+		for _, f32 := range floats32 {
+			floats64 = append(floats64, float64(f32))
+		}
+		return
+	}
+{{end}}

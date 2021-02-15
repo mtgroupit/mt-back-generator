@@ -15,13 +15,44 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var isCorectName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]+$`).MatchString
+var (
+	isCorrectName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]+$`).MatchString
 
-var standardTypes = []string{"string", "int", "int32", "int64"}
+	intNumbericTypes      = []string{"int", "int32", "int64"}
+	fractionNumbericTypes = []string{"float", "decimal"}
+	standardNumbericTypes = append(intNumbericTypes, fractionNumbericTypes...)
+	standardTypes         = append([]string{"string"}, standardNumbericTypes...)
+)
 
-func isStandardTypes(t string) bool {
+const (
+	structTypePrefix        = "model."
+	arrayTypePrefix         = "[]"
+	arrayOfStructTypePrefix = arrayTypePrefix + structTypePrefix
+
+	TypesPrefix = "types."
+)
+
+func isStandardType(t string) bool {
 	for i := range standardTypes {
 		if t == standardTypes[i] {
+			return true
+		}
+	}
+	return false
+}
+
+func isIntNumbericType(t string) bool {
+	for i := range intNumbericTypes {
+		if t == intNumbericTypes[i] {
+			return true
+		}
+	}
+	return false
+}
+
+func isFractionNumbericType(t string) bool {
+	for i := range fractionNumbericTypes {
+		if t == fractionNumbericTypes[i] {
 			return true
 		}
 	}
@@ -73,7 +104,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		if name == strings.Title(name) {
 			return nil, errors.Errorf(`Model "%s" starts with captial letter, please rename it to "%s" starting with small letter`, name, LowerTitle(name))
 		}
-		if !isCorectName(name) {
+		if !isCorrectName(name) {
 			return nil, errors.Errorf(`"%s" is invalid name for model. A valid name must contain only letters and numbers in camelCase`, name)
 		}
 		model.TitleName = strings.Title(name)
@@ -96,7 +127,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				case strings.HasPrefix(method, "edit") && strings.Contains(method, "("):
 					return nil, errors.Errorf(`Model: "%s". "%s"  is invalid as a custom edit. A valid custom edit shouldn't contain spaces before brackets. Correct method pattern: "edit(column1, column2)"`, name, method)
 				default:
-					if !isCorectName(method) {
+					if !isCorrectName(method) {
 						return nil, errors.Errorf(`Model: "%s". "%s"  is invalid name for method. A valid name must contain only letters and numbers in camelCase`, name, method)
 					}
 				}
@@ -144,11 +175,16 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				options.Type = "string"
 				model.HaveModifiedBy = true
 			}
-			if !isCorectName(column) {
+			if !isCorrectName(column) {
 				return nil, errors.Errorf(`Model: "%s". "%s"  is invalid name for column. A valid name must contain only letters and numbers in camelCase`, name, column)
 			}
-			if options.IsStruct, options.IsArray, options.GoType, err = checkColumn(options.Type, cfg); err != nil {
+			if options.IsStruct, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
 				return
+			}
+
+			if strings.HasPrefix(options.GoType, TypesPrefix) {
+				cfg.HaveTypes = true
+				model.NeedTypes = true
 			}
 
 			if options.SortDefault {
@@ -189,22 +225,26 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				cfg.HaveDateTime = true
 			}
 			if options.Format == "email" {
+				cfg.HaveEmail = true
 				model.HaveEmail = true
 			}
 
+			if options.Default != "" {
+				switch options.Format {
+				case "date-time", "email":
+					cfg.HaveConv = true
+					model.NeedConv = true
+				default:
+					cfg.HaveSwag = true
+				}
+			}
+
 			if options.Enum != "" {
-				if isStandardTypes(options.Type) && column != "id" {
-					if options.Type == "string" {
-						if !regexp.MustCompile(`^\[\s*('.+'\s*,\s*)*'.+'+\s*\]$`).Match([]byte(options.Enum)) {
-							return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum for strings must be in this format: ['asc', 'desc'] and inputed as string`, name, column)
-						}
-					} else {
-						if !regexp.MustCompile(`^\[\s*([0-9]+\s*,\s*)*[0-9]+\s*\]$`).Match([]byte(options.Enum)) {
-							return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum for types 'int', 'int32' and 'int64' must be in this format: [1, 2, 3] and inputed as string`, name, column)
-						}
-					}
-				} else {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum available only for non id and types: %s`, name, column, standardTypes)
+				if column == "id" {
+					return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum available only for not id columns`, name, column)
+				}
+				if err = enumValidate(options.Enum, options.Type); err != nil {
+					return nil, errors.Wrapf(err, `Model: "%s". Column: "%s". Column type: "%s"`, name, column, options.Type)
 				}
 			}
 
@@ -213,7 +253,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 				modelNameForBind := LowerTitle(options.GoType)
 
-				if  modelForBind, ok := cfg.Models[modelNameForBind]; ok && !modelForBind.Shared && model.Shared {
+				if modelForBind, ok := cfg.Models[modelNameForBind]; ok && !modelForBind.Shared && model.Shared {
 					return nil, errors.Errorf(`Model: "%s". Column: "%s". "%s" is invalid type for column. Shared models can not use non-shared models as column type`, name, column, options.Type)
 				}
 
@@ -269,7 +309,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					pp.Type = "string"
 					pp.TypeSQL = "uuid"
 				case "int64":
-					options.GoType = options.Type
 					options.Type = "integer"
 
 					pp.Type = "int64"
@@ -288,27 +327,39 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					options.TitleName = strings.Title(column)
 				}
 				if options.IsStruct {
-					options.Type = strings.ToLower(string(options.GoType[0])) + options.GoType[1:]
+					options.Type = LowerTitle(options.GoType)
 				} else {
 					if options.Type == "int" {
 						options.Type = "int32"
+						options.GoType = "int32"
 					}
-					if !options.IsArray {
-						options.GoType = options.Type
-					} else {
-						if options.GoType == "int" {
+					if options.IsArray {
+						switch options.GoType {
+						case "int":
 							options.Type = "int32"
 							options.GoType = "int32"
-						} else {
+						case "float64":
+							options.Type = "float"
+							cfg.HaveFloatArr = true
+						case TypesPrefix + "Decimal":
+							options.Type = "decimal"
+						default:
 							options.Type = options.GoType
 						}
 					}
+
 					switch options.Type {
 					case "int32", "int64":
 						options.Format = options.Type
 						options.Type = "integer"
 					case "bool":
 						options.Type = "boolean"
+					case "float":
+						options.Format = "float"
+					}
+
+					if isFractionNumbericType(options.Type) {
+						options.Type = "number"
 					}
 				}
 
@@ -331,6 +382,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 						switch options.Type {
 						case "string":
 							pp.TypeSQL = "text"
+						case "number":
+							pp.TypeSQL = "numeric"
 						default:
 							pp.TypeSQL = options.Type
 						}
@@ -362,6 +415,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					titleName += "JSON"
 				} else {
 					titleName = "m." + titleName
+				}
+				if strings.HasPrefix(options.GoType, TypesPrefix) && !options.IsArray {
+					titleName += ".Value()"
 				}
 				SQLSelect = append(SQLSelect, sqlName)
 				if !options.IsArray {
@@ -500,7 +556,7 @@ func countDeepNesting(model string, cfg *models.Config) (int, error) {
 	var err error
 	deepNesting := 0
 	for _, options := range cfg.Models[model].Columns {
-		if options.IsStruct, options.IsArray, options.GoType, err = checkColumn(options.Type, cfg); err != nil {
+		if options.IsStruct, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
 			return 0, err
 		}
 		if options.IsStruct {
@@ -527,29 +583,134 @@ func countDeepNesting(model string, cfg *models.Config) (int, error) {
 	return deepNesting, nil
 }
 
-func checkColumn(columnType string, cfg *models.Config) (bool, bool, string, error) {
+func parseColumnType(columnType string, cfg *models.Config) (bool, bool, string, error) {
+	goType := convertTypeToGoType(columnType)
+	lowerTitleGoType := LowerTitle(goType)
 	switch {
-	case strings.HasPrefix(columnType, "model."):
-		if _, ok := cfg.Models[columnType[6:]]; !ok {
-			return false, false, "", errors.Errorf(`One of the fields refers to "%s" model which is not described anywhere`, columnType[6:])
+	case strings.HasPrefix(columnType, structTypePrefix):
+		if _, ok := cfg.Models[lowerTitleGoType]; !ok {
+			return false, false, "", errors.Errorf(`One of the fields refers to "%s" model which is not described anywhere`, lowerTitleGoType)
 		}
-		return true, false, strings.Title(columnType[6:]), nil
-	case strings.HasPrefix(columnType, "[]model."):
-		if _, ok := cfg.Models[columnType[8:]]; !ok {
-			return false, false, "", errors.Errorf(`One of the fields refers to "%s" model which is not described anywhere`, columnType[8:])
+		return true, false, goType, nil
+	case strings.HasPrefix(columnType, arrayOfStructTypePrefix):
+		if _, ok := cfg.Models[lowerTitleGoType]; !ok {
+			return false, false, "", errors.Errorf(`One of the fields refers to "%s" model which is not described anywhere`, lowerTitleGoType)
 		}
-		return true, true, strings.Title(columnType[8:]), nil
-	case strings.HasPrefix(columnType, "[]") && !strings.HasPrefix(columnType, "[]model."):
-		t := columnType[2:]
-		switch {
-		case isStandardTypes(t):
-			return false, true, t, nil
-		default:
-			return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarad types %s or refers to any other model`, t, standardTypes)
+		return true, true, goType, nil
+	case strings.HasPrefix(columnType, arrayTypePrefix) && !strings.HasPrefix(columnType, arrayOfStructTypePrefix):
+		if isStandardType(columnType[len(arrayTypePrefix):]) {
+			return false, true, goType, nil
 		}
-
+		return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarad types %s or refers to any other model`, goType, strings.Join(standardTypes, ", "))
+	default:
+		return false, false, goType, nil
 	}
-	return false, false, "", nil
+}
+
+func convertTypeToGoType(columnType string) string {
+	switch {
+	case strings.HasPrefix(columnType, structTypePrefix):
+		return strings.Title(columnType[len(structTypePrefix):])
+	case strings.HasPrefix(columnType, arrayOfStructTypePrefix):
+		return strings.Title(columnType[len(arrayOfStructTypePrefix):])
+	case strings.HasPrefix(columnType, arrayTypePrefix) && !strings.HasPrefix(columnType, arrayOfStructTypePrefix):
+		return convertStandardTypeToGoType(columnType[len(arrayTypePrefix):])
+	default:
+		return convertStandardTypeToGoType(columnType)
+	}
+}
+
+func convertStandardTypeToGoType(columnType string) string {
+	switch {
+	case columnType == "decimal":
+		return TypesPrefix + "Decimal"
+	// case columnType == "uuid":
+	// 	return TypesPrefix + "UUID"
+	case columnType == "float":
+		return "float64"
+	default:
+		return columnType
+	}
+}
+
+// isCustomMethod return true if method is custom
+func isCustomMethod(method string) bool {
+	method = strings.ToLower(method)
+	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isCustomList(method) || isCustomEdit(method) || IsMyMethod(method) {
+		return false
+	}
+	return true
+}
+
+// IsMyMethod return true if method is standard my method
+func IsMyMethod(method string) bool {
+	method = strings.ToLower(method)
+	if method == "getmy" || method == "addmy" || method == "deletemy" || method == "editmy" || method == "editoraddmy" || regexp.MustCompile(`^editmy.+`).Match([]byte(method)) {
+		return true
+	}
+	return false
+}
+
+func isCustomEdit(method string) bool {
+	return regexp.MustCompile(`^edit(My)?\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
+}
+
+func isCustomList(method string) bool {
+	return regexp.MustCompile(`^list\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
+}
+
+func enumValidate(enum, columnType string) error {
+	if isStandardType(columnType) {
+		if columnType == "string" {
+			return stringEnumValidate(enum)
+		}
+		return numberEnumValidate(enum, columnType)
+	}
+	return errors.Errorf(`Enum available only for standard types: %s`, strings.Join(standardTypes, ", "))
+}
+
+func stringEnumValidate(enum string) error {
+	if regexp.MustCompile(`^\[\s*('.+'\s*,\s*)*'.+'+\s*\]$`).Match([]byte(enum)) {
+		return nil
+	}
+	return errors.Errorf(`Incorrect enum. Enum for string type must be in this format: ['asc', 'desc'] and inputed as string`)
+}
+
+func numberEnumValidate(enum, columnType string) error {
+	switch {
+	case isIntNumbericType(columnType):
+		return intNumbericEnumValidate(enum)
+	case isFractionNumbericType(columnType):
+		return fractionNumbericEnumValidate(enum)
+	default:
+		return errors.Errorf(`Enum of numbers available only for standard numberic types: %s`, strings.Join(standardNumbericTypes, ", "))
+	}
+}
+
+func intNumbericEnumValidate(enum string) error {
+	if regexp.MustCompile(`^\[\s*([0-9]+\s*,\s*)*[0-9]+\s*\]$`).Match([]byte(enum)) {
+		return nil
+	}
+	return errors.Errorf(`Incorrect enum. Enum for types %s must be in this format: [1, 2, 3] and inputed as string`, strings.Join(intNumbericTypes, ", "))
+}
+
+func fractionNumbericEnumValidate(enum string) error {
+	if regexp.MustCompile(`^\[\s*(([0-9]?(\.[0-9]+)?)+\s*,\s*)*([0-9]?(\.[0-9]+)?)\s*\]$`).Match([]byte(enum)) {
+		return nil
+	}
+	return errors.Errorf(`Incorrect enum. Enum for types %s must be in this format: [1.1, 2, 0.3, .44] and inputed as string`, strings.Join(fractionNumbericTypes, ", "))
+}
+
+// LowerTitle cancels strings.Title
+func LowerTitle(in string) string {
+	switch len(in) {
+	case 0:
+		return ""
+	case 1:
+		return strings.ToLower(string(in))
+	default:
+		return strings.ToLower(string(in[0])) + string(in[1:])
+	}
 }
 
 // NameSQL converts name to "snake_case" format
@@ -566,14 +727,6 @@ func titleize(cfg *models.Config) {
 		titleModels[strings.Title(modelName)] = model
 	}
 	cfg.Models = titleModels
-}
-
-func isCustomList(method string) bool {
-	return regexp.MustCompile(`^list\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
-}
-
-func isCustomEdit(method string) bool {
-	return regexp.MustCompile(`^edit(My)?\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
 }
 
 func expandStrNestedFields(method string) string {
@@ -957,6 +1110,9 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 							} else {
 								titleName = "m." + titleName
 							}
+							if strings.HasPrefix(options.GoType, TypesPrefix) && !options.IsArray {
+								titleName += ".Value()"
+							}
 							sqlAddExecParams = append(sqlAddExecParams, titleName)
 							count++
 							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", sqlName, count))
@@ -978,36 +1134,6 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 	}
 	model = &result
 	return nil
-}
-
-// LowerTitle cancels strings.Title
-func LowerTitle(in string) string {
-	switch len(in) {
-	case 0:
-		return ""
-	case 1:
-		return strings.ToLower(string(in))
-	default:
-		return strings.ToLower(string(in[0])) + string(in[1:])
-	}
-}
-
-// isCustomMethod return true if method is custom
-func isCustomMethod(method string) bool {
-	method = strings.ToLower(method)
-	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isCustomList(method) || isCustomEdit(method) || IsMyMethod(method) {
-		return false
-	}
-	return true
-}
-
-// IsMyMethod return true if method is standard my method
-func IsMyMethod(method string) bool {
-	method = strings.ToLower(method)
-	if method == "getmy" || method == "addmy" || method == "deletemy" || method == "editmy" || method == "editoraddmy" || regexp.MustCompile(`^editmy.+`).Match([]byte(method)) {
-		return true
-	}
-	return false
 }
 
 // IsStandardColumn check if column is one of column which description column with auto substituted when model is created or modified

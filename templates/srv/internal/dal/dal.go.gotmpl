@@ -122,6 +122,8 @@ func toString(value interface{}) string {
 		return strconv.FormatInt(int64(value.(int32)), 10)
 	case int64:
 		return strconv.FormatInt(value.(int64), 10)
+	case float64:
+		return strconv.FormatFloat(value.(float64), 'f', -1, 64)
 	case bool:
 		if value.(bool) {
 			return "true"
