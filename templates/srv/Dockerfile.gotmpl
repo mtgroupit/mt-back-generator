@@ -1,13 +1,27 @@
-FROM ubuntu
+FROM golang:1-buster as builder
 
-WORKDIR /app/cmd/main/migration
+ARG GITHUB_USER=$GITHUB_USER
+ARG GITHUB_PASS=$GITHUB_PASS
 
-ADD /migration/*.sql ./
+RUN printf "machine github.com\n\tlogin %s\n\tpassword %s" ${GITHUB_USER} ${GITHUB_PASS} >> ~/.netrc && \
+    apt-get update -yqq && \
+    apt-get install -yqq make git build-essential && \
+    apt-get clean && \
+    apt-get autoremove -yqq && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-WORKDIR /app/cmd/main
+WORKDIR /app
 
-ADD /bin/{{FormatName .Name}} .
+COPY ./ ./
 
-EXPOSE 5432
+RUN go build -o ./bin/{{FormatName .Name}} ./cmd/main/*
 
-CMD ["./{{FormatName .Name}}"]
+
+FROM alpine:3  
+
+COPY --from=builder /app/bin/{{FormatName .Name}} /bin/{{FormatName .Name}}
+COPY --from=builder /app/migration/*.sql /migration/
+
+RUN apk add --no-cache libc6-compat ca-certificates
+
+CMD ["/bin/{{FormatName .Name}}"] 
