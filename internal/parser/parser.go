@@ -285,37 +285,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				if err != nil {
 					return nil, err
 				}
-
-				if options.IsArray {
-					et := models.ExtraTable{}
-
-					et.Name = shared.NameSQL(name) + "_" + shared.NameSQL(column)
-
-					et.Model1 = model
-					et.Model1Col = pp
-					et.RefTableOne = strings.Title(name)
-					et.RefIDOne = "id"
-					et.FieldIDOne = shared.NameSQL(name) + "_id"
-					if cfg.Models[name].Columns["id"].Type == "uuid" {
-						et.TypeIDOne = "uuid"
-					} else {
-						et.TypeIDOne = "integer"
-					}
-
-					et.Model2 = referencedModel
-					et.Model2Col = referencedModel.PsqlMap["ID"]
-					et.RefTableTwo = options.GoType
-					et.RefIDTwo = "id"
-					et.FieldIDTwo = shared.NameSQL(column) + "_id"
-					if referencedModel.Columns["id"].Type == "uuid" {
-						et.TypeIDTwo = "uuid"
-					} else {
-						et.TypeIDTwo = "integer"
-					}
-
-					model.ExtraTables = append(model.ExtraTables, &et)
-					cfg.ExtraTables = append(cfg.ExtraTables, et)
-				}
 			} else {
 				if options.IsArray || options.IsCustom {
 					model.HaveJSON = true
@@ -523,6 +492,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		}
 
 		cfg.Models[name] = model
+		cfg.ExtraTables = append(cfg.ExtraTables, model.ExtraTables()...)
 	}
 
 	for funcName, function := range cfg.Functions {
