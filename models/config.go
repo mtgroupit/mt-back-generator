@@ -135,7 +135,6 @@ type Model struct {
 	Fields               map[string]string
 	Psql                 []PsqlParams
 	PsqlMap              map[string]*PsqlParams
-	ExtraTables          []*ExtraTable
 	DeepNesting          int
 
 	HaveLazyLoading         bool
@@ -252,6 +251,44 @@ func (m *Model) SameOrPrevious(p *PsqlParams) *PsqlParams {
 		return m.PsqlMap[strings.Title(p.PrevColName)]
 	}
 	return m.PsqlMap[p.Name]
+}
+
+// ExtraTables - returns table definitions for many-to-many junction tables
+func (m *Model) ExtraTables() []ExtraTable {
+	tables := make([]ExtraTable, 0)
+	for _, p := range m.Psql {
+		if p.IsArray && p.IsStruct {
+			et := ExtraTable{}
+
+			et.Name = shared.NameSQL(m.TitleName) + "_" + p.SQLName
+
+			et.Model1 = m
+			et.Model1Col = &p
+			et.RefTableOne = shared.NameSQL(m.TitleName)
+			et.RefIDOne = "id"
+			et.FieldIDOne = shared.NameSQL(m.TitleName) + "_id"
+			if m.Columns["id"].Type == "uuid" {
+				et.TypeIDOne = "uuid"
+			} else {
+				et.TypeIDOne = "integer"
+			}
+
+			et.Model2 = p.FKModel
+			et.Model2Col = p.FKModel.PsqlMap["ID"]
+			// TODO redundant code
+			et.RefTableTwo = et.Model2Col.Type
+			et.RefIDTwo = "id"
+			et.FieldIDTwo = p.SQLName + "_id"
+			if p.FKModel.Columns["id"].Type == "uuid" {
+				et.TypeIDTwo = "uuid"
+			} else {
+				et.TypeIDTwo = "integer"
+			}
+
+			tables = append(tables, et)
+		}
+	}
+	return tables
 }
 
 // Function contain input and output params
