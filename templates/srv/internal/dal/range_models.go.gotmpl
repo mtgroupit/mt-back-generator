@@ -208,23 +208,21 @@ type {{$modelName}} struct {
 		}
 
 		mapQuery := map[string]interface{}{ 
-		{{- if IsCustomList $method}}
-			{{- range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
-				{{- if not (index (index $model.MethodsProps $i).ArrayColumns $column)}}
-					"{{$column}}": nil,
-					"not_{{$column}}": nil,
+			{{- if IsCustomList $method}}
+				{{- range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
+					{{- if not (index (index $model.MethodsProps $i).ArrayColumns $column)}}
+						"{{$column}}": nil,
+						"not_{{$column}}": nil,
+					{{- end}}
+				{{- end}}
+			{{- else}}
+				{{- range $column, $options := $model.Columns}}
+					{{- if not $options.IsArray}}
+						"{{$column}}": nil,
+						"not_{{$column}}": nil,
+					{{- end}}
 				{{- end}}
 			{{- end}}
-		{{- else}}
-			{{- range $column, $options := $model.Columns}}
-				{{- if not $options.IsArray}}
-					"{{$column}}": nil,
-					"not_{{$column}}": nil,
-				{{- end}}
-			{{- end}}
-		{{- end}}
-				"offset": offset,
-				"limit": limit,
 			{{- if not $model.Shared}}
 				"isolated_entity_id": isolatedEntityID,
 			{{- end}}
@@ -233,53 +231,46 @@ type {{$modelName}} struct {
 		{{- if NeedCustomFilter $model $method}}
 			customFilters := []*app.Filter{}
 		{{- end}}
-		{{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}
-		if logicFilter {
-			for _, filter := range filters {
-				switch filter.Key { 
-			{{- if IsCustomList $method}}
-				{{- range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
-					{{- if not (index (index $model.MethodsProps $i).ArrayColumns $column)}}
-					case "{{$column}}":
-						if filter.Include {
-							mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-						} else {
-							mapQuery["not_{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-						}
+
+		{{- if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}
+			if logicFilter {
+				for _, filter := range filters {
+					switch filter.Key { 
+				{{- if IsCustomList $method}}
+					{{- range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
+						{{- if not (index (index $model.MethodsProps $i).ArrayColumns $column)}}
+						case "{{$column}}":
+							if filter.Include {
+								mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+							} else {
+								mapQuery["not_{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+							}
+						{{- end}}
+					{{- end}}
+				{{- else}}
+					{{- range $column, $options := $model.Columns}}
+						{{- if not $options.IsArray}}
+						case "{{$column}}":
+							if filter.Include {
+								mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+							} else {
+								mapQuery["not_{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+							}
+						{{- end}}
 					{{- end}}
 				{{- end}}
-			{{- else}}
-				{{- range $column, $options := $model.Columns}}
-					{{- if not $options.IsArray}}
-					case "{{$column}}":
-						if filter.Include {
-							mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-						} else {
-							mapQuery["not_{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-						}
-					{{- end}}
-				{{- end}}
-			{{- end}}
-				default:
+					default:
+						customFilters = append(customFilters, filter)
+					}
+				}
+			} else {
+				for _, filter := range filters {
 					customFilters = append(customFilters, filter)
 				}
 			}
-		} else {
-			for _, filter := range filters {
-				customFilters = append(customFilters, filter)
-			}
-		}{{end}}
-		{{if $model.DetailedPagination}}
-		rows, err := a.db.NamedQuery(`SELECT COUNT(*) FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}}{{if not $model.Shared}}{{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}} AND{{else}}WHERE{{end}} isolated_entity_id=:isolated_entity_id{{end}}`, mapQuery)
-		if err != nil {
-			return nil, -1, nil, err
-		}
-		var count int
-		for rows.Next() {
-			err = rows.Scan(&count)
-		}
-		{{end}}
-		rows, err {{if not $model.DetailedPagination}}:{{end}}= a.db.NamedQuery(`SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} {{if not $model.Shared}}{{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}AND{{else}}WHERE{{end}} isolated_entity_id=:isolated_entity_id{{end}} ` + orderQuery + ` OFFSET :offset LIMIT :limit`, mapQuery)
+		{{- end}}
+		
+		rows, err := a.db.NamedQuery(`SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} {{if not $model.Shared}}{{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}AND{{else}}WHERE{{end}} isolated_entity_id=:isolated_entity_id{{end}} ` + orderQuery, mapQuery)
 		if err != nil {
 			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 		}
@@ -420,7 +411,9 @@ type {{$modelName}} struct {
 			}
 		{{- end}}
 
-		return app{{$modelName}}s(result),{{if $model.DetailedPagination}} count,{{end}} warnings, nil
+		start, end := pagination(int(offset), int(limit), len(result))
+
+		return app{{$modelName}}s(result[start:end]),{{if $model.DetailedPagination}} len(result),{{end}} warnings, nil
 	}
 	{{- end}}
 

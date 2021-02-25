@@ -137,3 +137,17 @@ func toString(value interface{}) string {
 func contains(str, substr string) bool  {
 	return strings.Contains(strings.ToLower(str), strings.ToLower(substr))
 }
+
+func pagination(offset, limit, len int) (start, end int) {
+	if len > offset {
+		start = offset
+		if len >= offset+limit {
+			end = offset + limit
+		} else {
+			end = len
+		}
+	} else {
+		start, end = 0, 0
+	}
+	return
+}
