@@ -425,7 +425,7 @@ type {{$modelName}} struct {
 	{{- if and (IsCustomList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}
 		{{- range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
 		{{- if $nestedObj.IsFirstForLazyLoading}}
-			func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}) LazyLoading{{$method}}{{$nestedObj.Path}}({{if $nestedObj.Path}}{{if not $nestedObj.Shared}} isolatedEntityID string, {{end}}{{else}}{{if not $model.Shared}}isolatedEntityID string, {{end}}{{end}}a *App) (err error) { 
+			func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}})LazyLoading{{$method}}{{$nestedObj.Path}}({{if $nestedObj.Path}}{{if not  (index $.Models $nestedObj.ParentStruct).Shared}} isolatedEntityID string, {{end}}{{else}}{{if not $model.Shared}}isolatedEntityID string, {{end}}{{end}}a *App) (err error) { 
 		{{- end}} 
 			{{- $model2 := (index $.Models $nestedObj.Type)}}
 			{{- if  $nestedObj.IsArray}}
