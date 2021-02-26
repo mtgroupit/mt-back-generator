@@ -164,40 +164,45 @@ type {{$modelName}} struct {
 		ms := []{{$modelName}}{}
 		warnings := []string{}
 
-		var orderQuery string {{if $haveNestedSorts}}
-		var nestedSort bool {{end}}
+		var orderQuery string 
+		{{- if $haveNestedSorts}}
+			var nestedSort bool
+		{{- end}}
 		switch sortBy {
-		{{- range $column, $options := $model.Columns }}
-			{{- if and $options.SortOn (not $options.IsStruct) }}
-		case "{{$column}}":
-			orderQuery = "ORDER BY {{NameSQL $column}}"
-			{{- end}}
-		{{- end}}
-		default:
-		{{- $completeIfStmt := false }}
-		{{- range $column, $options := $model.Columns}}
-			{{- if $options.SortDefault }}
-				{{- if $haveNestedSorts }}
-				{{- $completeIfStmt := true }}
-			if sortBy == "" { 
+			{{- range $column, $options := $model.Columns }}
+				{{- if and $options.SortOn (not $options.IsStruct) }}
+					case "{{$column}}":
+						orderQuery = "ORDER BY {{NameSQL $column}}"
 				{{- end}}
-				orderQuery = "ORDER BY {{NameSQL $column}}"
-				{{- if $options.SortOrderDefault}}
-				if orderBy == "" {
-					orderBy = "{{$options.SortOrderDefault}}"
-				}
+			{{- end}}
+			default:
+				{{- $completeIfStmt := false }}
+				{{- range $column, $options := $model.Columns}}
+					{{- if $options.SortDefault }}
+						{{/* {{- if $haveNestedSorts }} */}}
+							{{- $completeIfStmt = true }}
+							if sortBy == "" { 
+						{{/* {{- end}} */}}
+								orderQuery = "ORDER BY {{NameSQL $column}}"
+						{{- if $options.SortOrderDefault}}
+								if orderBy == "" {
+									orderBy = "{{$options.SortOrderDefault}}"
+								}
+						{{- end }}
+					{{- end }}
 				{{- end }}
-			{{- end }}
-		{{- end }}
-		{{- if and $haveNestedSorts $completeIfStmt}}
-			} else {
-				nestedSort = true
-			}
-		{{- end}}
-		{{- if and $haveNestedSorts (not $completeIfStmt)}}
-			nestedSort = true
-		{{- end}}
+				{{- if and $haveNestedSorts $completeIfStmt}}
+							} else {
+								nestedSort = true
+				{{- end}}
+				{{- if and $haveNestedSorts (not $completeIfStmt)}}
+								nestedSort = true
+				{{- end}}
+				{{- if $completeIfStmt}}
+							}
+				{{- end}}
 		}
+
 		if orderQuery != "" {
 			switch orderBy {
 			case "ASC", "":

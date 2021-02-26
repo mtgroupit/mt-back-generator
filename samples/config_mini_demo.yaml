@@ -57,6 +57,7 @@ models:
       - editMy
       - editMy(defaultPhone, phones)[phones]
       - deleteMy
+      - list
       - list(id, name*, company*(name, locations(id, name)))[withCompanyLocations]
       - custom
 
