@@ -164,40 +164,45 @@ type {{$modelName}} struct {
 		ms := []{{$modelName}}{}
 		warnings := []string{}
 
-		var orderQuery string {{if $haveNestedSorts}}
-		var nestedSort bool {{end}}
+		var orderQuery string 
+		{{- if $haveNestedSorts}}
+			var nestedSort bool
+		{{- end}}
 		switch sortBy {
-		{{- range $column, $options := $model.Columns }}
-			{{- if and $options.SortOn (not $options.IsStruct) }}
-		case "{{$column}}":
-			orderQuery = "ORDER BY {{NameSQL $column}}"
-			{{- end}}
-		{{- end}}
-		default:
-		{{- $completeIfStmt := false }}
-		{{- range $column, $options := $model.Columns}}
-			{{- if $options.SortDefault }}
-				{{- if $haveNestedSorts }}
-				{{- $completeIfStmt := true }}
-			if sortBy == "" { 
+			{{- range $column, $options := $model.Columns }}
+				{{- if and $options.SortOn (not $options.IsStruct) }}
+					case "{{$column}}":
+						orderQuery = "ORDER BY {{NameSQL $column}}"
 				{{- end}}
-				orderQuery = "ORDER BY {{NameSQL $column}}"
-				{{- if $options.SortOrderDefault}}
-				if orderBy == "" {
-					orderBy = "{{$options.SortOrderDefault}}"
-				}
+			{{- end}}
+			default:
+				{{- $completeIfStmt := false }}
+				{{- range $column, $options := $model.Columns}}
+					{{- if $options.SortDefault }}
+						{{/* {{- if $haveNestedSorts }} */}}
+							{{- $completeIfStmt = true }}
+							if sortBy == "" { 
+						{{/* {{- end}} */}}
+								orderQuery = "ORDER BY {{NameSQL $column}}"
+						{{- if $options.SortOrderDefault}}
+								if orderBy == "" {
+									orderBy = "{{$options.SortOrderDefault}}"
+								}
+						{{- end }}
+					{{- end }}
 				{{- end }}
-			{{- end }}
-		{{- end }}
-		{{- if and $haveNestedSorts $completeIfStmt}}
-			} else {
-				nestedSort = true
-			}
-		{{- end}}
-		{{- if and $haveNestedSorts (not $completeIfStmt)}}
-			nestedSort = true
-		{{- end}}
+				{{- if and $haveNestedSorts $completeIfStmt}}
+							} else {
+								nestedSort = true
+				{{- end}}
+				{{- if and $haveNestedSorts (not $completeIfStmt)}}
+								nestedSort = true
+				{{- end}}
+				{{- if $completeIfStmt}}
+							}
+				{{- end}}
 		}
+
 		if orderQuery != "" {
 			switch orderBy {
 			case "ASC", "":
@@ -420,7 +425,7 @@ type {{$modelName}} struct {
 	{{- if and (IsCustomList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}
 		{{- range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
 		{{- if $nestedObj.IsFirstForLazyLoading}}
-			func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}) LazyLoading{{$method}}{{$nestedObj.Path}}({{if $nestedObj.Path}}{{if not $nestedObj.Shared}} isolatedEntityID string, {{end}}{{else}}{{if not $model.Shared}}isolatedEntityID string, {{end}}{{end}}a *App) (err error) { 
+			func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}})LazyLoading{{$method}}{{$nestedObj.Path}}({{if $nestedObj.Path}}{{if not  (index $.Models $nestedObj.ParentStruct).Shared}} isolatedEntityID string, {{end}}{{else}}{{if not $model.Shared}}isolatedEntityID string, {{end}}{{end}}a *App) (err error) { 
 		{{- end}} 
 			{{- $model2 := (index $.Models $nestedObj.Type)}}
 			{{- if  $nestedObj.IsArray}}
