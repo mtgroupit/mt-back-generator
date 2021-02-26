@@ -1,22 +1,68 @@
 name: "Demo"
-module: "Demo"
+module: "demo"
 description: "demo generated app"
 debug: true # used for create flag and env variable for reset database
 auth-srv: "github.com/mtgroupit/mt-back-generator/extauthapi"
 models:
-  location:
-    description: "location object"
+
+  employee:
+    description: "employee object"
+    tags:
+      - Employee
     columns:
       id:
         type: "uuid"
       name:
         type: "string"
+        sort-on: true
+        sort-default: true
+        sort-order-default: "ASC"
+      dateOfBirth:
+        type: "string"
+        format: "date-time"
+      email:
+        type: "string"
+        format: "email"
+        strict-filter: true
+      defaultPhone:
+        type: "string"
+        format: "phone"
+      phones:
+        type: "[]string"
+      department:
+        type: "string"
+      age:
+        type: "int"
+      salary:
+        type: "decimal"
+      multiplierSalary:
+        type: "float"
+        enum: "[1, 2.5, 5.9]"
+        default: "1"
+      status:
+        type: "string"
+        enum: "['working', 'onVacation']"
+      company:
+        type: "model.company"
+        sort-on: true
+        sort-by:
+          - name
+          - headOfficeLocation.name
+      contract:
+        type: "model.document"
     methods:
-      - add
+      - get
+      - getMy
+      - addMy
+      - editMy
+      - editMy(defaultPhone, phones)[phones]
+      - deleteMy
+      - list(id, name*, company*(name, locations(id, name)))[withCompanyLocations]
+      - custom
+
   company:
     description: "company object"
     detailed-pagination: true
-    id-from-profile: true
     return-when-edit: true
     columns:
       id:
@@ -26,43 +72,67 @@ models:
         sort-on: true
       occupation:
         type: "string"
-        sort-on: true
       headOfficeLocation:
         type: "model.location"
       locations:
         type: "[]model.location"
+        default: 3
     methods:
       - get
       - add
       - delete
-      # - edit(occupation, locations)
+      - edit(headOfficeLocation, locations)
       - list
-  employe:
-    description: "employe object"
-    tags:
-      - Employe
+      - list(name, headOfficeLocation*(id, name))
+
+  ourCompany:
+    description: "ourCompany object"
+    id-from-isolated-entity: true
+    columns:
+      id:
+        type: "uuid"
+      owner:
+        type: "model.employee"
+      company:
+        type: "model.company"
+    methods:
+      - getMy
+      - addMy
+      - deleteMy
+
+  location:
+    description: "location object"
+    shared: true
     columns:
       id:
         type: "uuid"
       name:
         type: "string"
-        sort-on: true
-      department:
-        type: "string"
-      age:
-        type: "int"
-      status:
-        type: "string"
-        enum: "['working', 'fired', 'onVacation']"
-      company:
-        type: "model.company"
-        sort-on: true
-        sort-by:
-          - occupation
-          - headOfficeLocation.name
     methods:
-      # - add
-      # - edit
+      - get
+      - add
+      - edit
+      - delete
       - list
-      # - list(id, name*, company*(name, locations(id, name)))
-      - custom
+
+  document:
+    description: "document object for save files"
+    columns:
+      id:
+        type: "uuid"
+      name:
+        type: "string"
+      link:
+        type: "string"
+        format: "url"
+      createdAt:
+      createdBy:
+      modifiedAt:
+      modifiedBy:
+    methods:
+      - get
+      - add
+      - edit
+      - delete
+      - list
+    
