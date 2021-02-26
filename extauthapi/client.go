@@ -4,6 +4,7 @@ package extauthapi
 import (
 	"context"
 	"crypto/tls"
+	"net/http"
 	"strings"
 )
 
@@ -33,7 +34,8 @@ func newProfile(userID, isolatedEntityID ID) *Profile {
 
 // GetUserProfile gets a cookie with the userID and isolatedEntityID separated by a dot(.) and returns a profile with the values from the cookie.
 // Authn is always true.
-func (c *Client) GetUserProfile(ctx context.Context, cookie string) (*Profile, error) {
+func (c *Client) GetUserProfile(ctx context.Context, rawCookies string) (*Profile, error) {
+	cookie := parseCookieRaw(rawCookies)
 	idStrs := strings.SplitN(cookie, ".", 2)
 
 	var ids []ID
@@ -49,4 +51,17 @@ func (c *Client) GetUserProfile(ctx context.Context, cookie string) (*Profile, e
 	}
 
 	return newProfile(ids[0], ids[1]), nil
+}
+
+func parseCookieRaw(rawCookies string) string {
+	header := http.Header{}
+	header.Add("Cookie", rawCookies)
+	request := http.Request{Header: header}
+
+	cookieKey, err := request.Cookie(SessionCookieName)
+	if err != nil {
+		return ""
+	}
+
+	return cookieKey.Value
 }
