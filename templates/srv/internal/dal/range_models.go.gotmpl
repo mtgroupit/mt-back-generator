@@ -16,7 +16,7 @@ import (
 {{- if $haveNestedSorts}}
 	"sort"
 {{- end}}
-{{- if or $model.HaveCreatedAt $model.HaveModifiedAt}}
+{{- if or $model.HaveCreatedAt $model.HaveModifiedAt (ContainsStr $model.Methods "Delete") (ContainsStr $model.Methods "DeleteMy")}}
 	"time"
 {{- end}}
 {{- if HaveListWithWarn $model}}
@@ -82,30 +82,8 @@ type {{$modelName}} struct {
 	}
 	{{- end}}
 	{{- if IsDelete $method}}
-	func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) error {
-		{{- range $modelName2, $model2 := $.Models}}
-			{{- range $column, $options := $model.Columns}}
-				{{- if eq $modelName2 $options.GoType}}
-					{{- if and $options.IsArray $options.IsStruct}}
-						if _, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
-							return err
-						}
-					{{- end}}
-				{{- end}}
-			{{- end}}
-		{{- end}}
-		{{- range $_, $bind := $model.Binds}}
-			{{- if $bind.IsArray}}
-				if _, err := a.db.Exec(`DELETE FROM {{NameSQL $bind.ModelName}}_{{NameSQL $bind.FieldName}} WHERE {{NameSQL $bind.FieldName}}_id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
-					return err
-				}
-			{{- else}}
-				if _, err := a.db.Exec(`UPDATE {{NameSQL $bind.ModelName}}s SET {{NameSQL $bind.FieldName}}_id=NULL WHERE {{NameSQL $bind.FieldName}}_id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
-					return err
-				}
-			{{- end}}
-		{{- end}}
-		res, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}})
+	func (a *App) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, profileID string{{if not $model.Shared}}, isolatedEntityID string{{end}}) error {
+		res, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET deleted=true, deleted_at=$2, deleted_by=$3 WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$4{{end}} AND NOT deleted`, id, time.Now().Format(time.RFC3339), profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
 		if err != nil {
 			return err
 		}
@@ -138,7 +116,7 @@ type {{$modelName}} struct {
 			m.ModifiedBy = profileID
 		{{- end}}
 
-		res, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLEditStr}}{{else}}{{$model.SQLEditStr}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLEditExecParams}}{{end}})
+		res, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLEditStr}}{{else}}{{$model.SQLEditStr}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}} AND NOT deleted`, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLEditExecParams}}{{end}})
 		if err != nil {
 			return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 		}
@@ -150,9 +128,7 @@ type {{$modelName}} struct {
 					return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 				}
 			{{- else}}
-				if err != nil {
-					return {{if $model.ReturnWhenEdit}}nil, {{end}}app.ErrNotFound
-				}
+				return {{if $model.ReturnWhenEdit}}nil, {{end}}app.ErrNotFound
 			{{- end}}
 		}
 
@@ -275,7 +251,7 @@ type {{$modelName}} struct {
 			}
 		{{- end}}
 		
-		rows, err := a.db.NamedQuery(`SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} {{if not $model.Shared}}{{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}AND{{else}}WHERE{{end}} isolated_entity_id=:isolated_entity_id{{end}} ` + orderQuery, mapQuery)
+		rows, err := a.db.NamedQuery(`SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} {{if not $model.Shared}}{{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}AND{{else}}WHERE{{end}} isolated_entity_id=:isolated_entity_id{{end}} AND NOT deleted ` + orderQuery, mapQuery)
 		if err != nil {
 			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 		}
@@ -597,7 +573,7 @@ func (a *App) {{$modelName}}AccessManager(am *app.AccessManager) error {
 
 func (a *App) get{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
 	var m {{$modelName}}
-	if err := a.db.Get(&m, `SELECT {{$model.SQLSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+	if err := a.db.Get(&m, `SELECT {{$model.SQLSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}} AND NOT deleted`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, app.ErrNotFound
 		} 

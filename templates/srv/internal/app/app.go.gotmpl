@@ -14,7 +14,7 @@ type App interface {
             {{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}id string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) (*{{$modelName}}, error)
         {{- end}}
 	    {{- if IsDelete $method}}
-            {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) error
+            {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, profileID string{{if not $model.Shared}}, isolatedEntityID string{{end}}) error
         {{- end}}
         {{- if IsEdit $method}}
             {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}}
