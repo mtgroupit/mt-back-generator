@@ -139,9 +139,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			}
 
 			var prop models.MethodProps
-			if method == "delete" {
+			if method == "delete" || method == "deleteMy" {
 				prop.HTTPMethod = "delete"
-			} else if method == "edit" || isCustomEdit(method) {
+			} else if method == "edit"  || method == "editMy" || isCustomEdit(method) {
 				prop.HTTPMethod = "put"
 			} else {
 				prop.HTTPMethod = "post"
