@@ -82,7 +82,7 @@ models:
       - get
       - add
       - delete
-      - edit(headOfficeLocation, locations)
+      - edit(headOfficeLocation)
       - list
       - list(name, headOfficeLocation*(id, name))
 
