@@ -7,12 +7,15 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 
 	"github.com/mtgroupit/mt-back-generator/internal/parser"
+	"github.com/mtgroupit/mt-back-generator/internal/shared"
 	"github.com/rhysd/abspath"
 
 	"github.com/mtgroupit/mt-back-generator/models"
@@ -31,7 +34,7 @@ var goTmplFuncs = template.FuncMap{
 		var keys []string
 		iter := reflect.ValueOf(in).MapRange()
 		for iter.Next() {
-			keys = append(keys, parser.NameSQL(iter.Key().String()+"s"))
+			keys = append(keys, shared.NameSQL(iter.Key().String()+"s"))
 		}
 		return strings.Join(keys, ", ")
 	},
@@ -40,7 +43,7 @@ var goTmplFuncs = template.FuncMap{
 	},
 	"LowerTitle":   parser.LowerTitle,
 	"Title":        strings.Title,
-	"NameSQL":      parser.NameSQL,
+	"NameSQL":      shared.NameSQL,
 	"IsCustomList": isCustomList,
 	"IsCustomEdit": isCustomEdit,
 	"HaveField": func(method, modelName string) bool {
@@ -66,7 +69,7 @@ var goTmplFuncs = template.FuncMap{
 	},
 	"FormatName":       formatName,
 	"IsStandardColumn": parser.IsStandardColumn,
-	"IsNotStrictFilter": func(model models.Model, column string) bool {
+	"IsNotStrictFilter": func(model *models.Model, column string) bool {
 		if model.Columns[column].Type != "string" || model.Columns[column].StrictFilter {
 			return false
 		}
@@ -74,7 +77,7 @@ var goTmplFuncs = template.FuncMap{
 	},
 	// HaveColumnWithModelThatIsStructAndIsArray is function for finding model in columns with column that struct or/and array
 	// For withStruct=true, withArray=true "HaveColumnWithModelThatIsStructAndIsArray" will return true only if columns have column that is  model with column that is struct AND array
-	"HaveColumnWithModelThatIsStructAndIsArray": func(columns map[string]models.Options, models map[string]models.Model, isStruct, isArray bool) bool {
+	"HaveColumnWithModelThatIsStructAndIsArray": func(columns map[string]models.Options, models map[string]*models.Model, isStruct, isArray bool) bool {
 		for _, options := range columns {
 			for modelName2, model2 := range models {
 				if options.GoType == modelName2 {
@@ -311,36 +314,56 @@ var goTmplFuncs = template.FuncMap{
 	},
 	"GenApiTestValue": genApiTestValue,
 	"GenAppTestValue": genAppTestValue,
+	"MathAdd": func(a, b int) int {
+		return a + b
+	},
+	// for debug purposes
+	"Log": func(in interface{}) string {
+		log.Printf("%#v", in)
+		return fmt.Sprintf("%#v", in)
+	},
 }
 
-// Srv - generate dir with service
-func Srv(dir string, cfg *models.Config) error {
+func errWrapWithModel(err error, model models.Model) error {
+	if err != nil {
+		err = fmt.Errorf("%s: error occured while proccessing a model \"%s\" from new config", err, model.TitleName)
+	}
+	return err
+}
+
+// Srv - generate dir with service, if prevCfg is specified, then additional migrations will be generated
+func Srv(dir string, cfg *models.Config, prevCfg *models.Config) error {
 	abs, err := abspath.ExpandFrom(dir)
 	if err != nil {
 		return err
 	}
 	dir = abs.String()
-	if err := ensureDir(dir, ""); err != nil {
+	if err := ensureDir(dir, "", false); err != nil {
 		return err
 	}
-	fmt.Println(cfg.Name)
 
 	if err := buildTreeDirs(dir, cfg.Name); err != nil {
 		return err
 	}
 
+	migVer, err := lastMigrationVersion(dir, cfg.Name)
+	if err != nil {
+		return err
+	}
+	cfg.LastMigrationVersion = migVer
+
 	abs, err = abspath.ExpandFrom("~/mt-gen/templates/srv")
 	if err != nil {
 		return err
 	}
-	if err := gen(abs.String(), path.Join(dir, cfg.Name), *cfg); err != nil {
+	if err := gen(abs.String(), path.Join(dir, cfg.Name), cfg, prevCfg); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func createFile(name, dirTMPL, dirTarget string, cfg models.Config, tmp *template.Template) error {
+func createFile(name, dirTMPL, dirTarget string, cfg *models.Config, tmp *template.Template) error {
 	f, err := os.Create(path.Clean(path.Join(dirTarget, name)))
 	if err != nil {
 		return err
@@ -356,29 +379,83 @@ func createFile(name, dirTMPL, dirTarget string, cfg models.Config, tmp *templat
 }
 
 // exec generate "name" template  in "dirTarget" directory
-func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
+func exec(name, dirTMPL, dirTarget string, cfg *models.Config, prevCfg *models.Config) error {
 	tmp, err := template.New(name).Funcs(goTmplFuncs).ParseFiles(path.Clean(path.Join(dirTMPL, name)))
 	if err != nil {
 		return err
 	}
 
-	if strings.HasPrefix(name, "range_models") {
+	if strings.HasPrefix(name, "zero_migration") {
+		counter := 0
+		// TODO
+		// if cfg.Debug {
+		// 	counter = 1
+		// }
+		err := cfg.ForEachModel(func(modelName string, model *models.Model) error {
+			counter++
+			fileName := fmt.Sprintf("%05d_%s.sql", counter, shared.NameSQL(modelName))
+			cfg.CurModel = modelName
+			cfg.NewModelObj = model
+			return createFile(fileName, dirTMPL, dirTarget, cfg, tmp)
+		})
+		if err != nil {
+			return err
+		}
+	} else if strings.HasPrefix(name, "range_models") {
 		switch {
 		case strings.HasSuffix(name, ".sql.gotmpl"):
-			counter := 0
-			if cfg.Debug {
-				counter = 1
-			}
-			for i := 0; i <= cfg.MaxDeepNesting; i++ {
-				for modelName, model := range cfg.Models {
-					if model.DeepNesting == i {
-						counter++
-						fileName := fmt.Sprintf("%05d_%s.sql", counter, parser.NameSQL(modelName))
-						cfg.CurModel = modelName
-						if err := createFile(fileName, dirTMPL, dirTarget, cfg, tmp); err != nil {
-							return err
-						}
+			if prevCfg != nil {
+				// this is for tracking deleted models
+				checkedModels := make(map[string]struct{})
+
+				log.Printf("Previous configuration found, last DB version is %d\n", cfg.LastMigrationVersion)
+
+				// check new config against previous one for new and modified models
+				err := cfg.ForEachModel(func(newModelName string, newModel *models.Model) (err error) {
+					oldModel, ok := prevCfg.Models[newModelName]
+					checkedModels[newModelName] = struct{}{}
+					if !ok {
+						// CREATE migration
+						cfg.LastMigrationVersion++
+						cfg.CurModel = newModelName
+						cfg.NewModelObj = newModel
+						cfg.OldModelObj = nil
+						fileName := fmt.Sprintf("%05d_create_%s.sql", cfg.LastMigrationVersion, shared.NameSQL(cfg.CurModel))
+						err = errWrapWithModel(createFile(fileName, dirTMPL, dirTarget, cfg, tmp), *newModel)
+						return
 					}
+					if !newModel.Equals(*oldModel) {
+						// ALTER migration
+						cfg.LastMigrationVersion++
+						cfg.CurModel = newModelName
+						cfg.NewModelObj = newModel
+						cfg.OldModelObj = oldModel
+						fileName := fmt.Sprintf("%05d_alter_%s.sql", cfg.LastMigrationVersion, shared.NameSQL(cfg.CurModel))
+						err = errWrapWithModel(createFile(fileName, dirTMPL, dirTarget, cfg, tmp), *newModel)
+						return
+					}
+					return
+				})
+				if err != nil {
+					return err
+				}
+
+				// check previous config against new one for deleted models
+				err = prevCfg.ForEachModel(func(oldModelName string, oldModel *models.Model) (err error) {
+					if _, ok := checkedModels[oldModelName]; !ok {
+						// DROP migration
+						cfg.LastMigrationVersion++
+						cfg.CurModel = oldModelName
+						cfg.NewModelObj = nil
+						cfg.OldModelObj = oldModel
+						fileName := fmt.Sprintf("%05d_drop_%s.sql", cfg.LastMigrationVersion, shared.NameSQL(cfg.CurModel))
+						err = errWrapWithModel(createFile(fileName, dirTMPL, dirTarget, cfg, tmp), *oldModel)
+						return
+					}
+					return
+				})
+				if err != nil {
+					return err
 				}
 			}
 		default:
@@ -389,7 +466,7 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 				if len(model.Methods) == 0 && strings.HasSuffix(name, "_test.go.gotmpl") {
 					continue
 				}
-				fileName := parser.NameSQL(modelName) + name[len("range_models"):len(name)-len(".gotmpl")]
+				fileName := shared.NameSQL(modelName) + name[len("range_models"):len(name)-len(".gotmpl")]
 				if strings.HasSuffix(name, "custom.go.gotmpl") && checkExistenseFile(path.Join(dirTarget, fileName)) {
 					file, err := ioutil.ReadFile(path.Join(dirTarget, fileName))
 					if err != nil {
@@ -470,7 +547,7 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 }
 
 // gen recursively browses folder with templates and run exec function for them
-func gen(dirTMPL, dirTarget string, cfg models.Config) error {
+func gen(dirTMPL, dirTarget string, cfg *models.Config, prevCfg *models.Config) error {
 	files, err := ioutil.ReadDir(dirTMPL)
 	if err != nil {
 		return err
@@ -478,11 +555,11 @@ func gen(dirTMPL, dirTarget string, cfg models.Config) error {
 
 	for _, info := range files {
 		if info.IsDir() {
-			if err := gen(path.Join(dirTMPL, info.Name()), path.Join(dirTarget, info.Name()), cfg); err != nil {
+			if err := gen(path.Join(dirTMPL, info.Name()), path.Join(dirTarget, info.Name()), cfg, prevCfg); err != nil {
 				return err
 			}
 		} else {
-			if err := exec(info.Name(), dirTMPL, dirTarget, cfg); err != nil {
+			if err := exec(info.Name(), dirTMPL, dirTarget, cfg, prevCfg); err != nil {
 				return err
 			}
 		}
@@ -490,49 +567,84 @@ func gen(dirTMPL, dirTarget string, cfg models.Config) error {
 	return nil
 }
 
+// TODO make abstration for dir tree with options like "clear"
 func buildTreeDirs(p, srvName string) error {
-	if err := ensureDir(p, srvName); err != nil {
+	if err := ensureDir(p, srvName, false); err != nil {
 		return err
 	}
-	if err := ensureDir(path.Join(p, srvName), "cmd"); err != nil {
+	if err := ensureDir(path.Join(p, srvName), "cmd", false); err != nil {
 		return err
 	}
-	if err := ensureDir(path.Join(p, srvName, "cmd"), "main"); err != nil {
+	if err := ensureDir(path.Join(p, srvName, "cmd"), "main", false); err != nil {
 		return err
 	}
-	if err := ensureDir(path.Join(p, srvName), "internal"); err != nil {
+	if err := ensureDir(path.Join(p, srvName), "internal", false); err != nil {
 		return err
 	}
-	if err := ensureDir(path.Join(p, srvName, "internal"), "app"); err != nil {
+	if err := ensureDir(path.Join(p, srvName, "internal"), "app", true); err != nil {
 		return err
 	}
-	if err := ensureDir(path.Join(p, srvName, "internal"), "api"); err != nil {
+	if err := ensureDir(path.Join(p, srvName, "internal"), "api", true); err != nil {
 		return err
 	}
-	if err := ensureDir(path.Join(p, srvName, "internal", "api"), "restapi"); err != nil {
+	if err := ensureDir(path.Join(p, srvName, "internal", "api"), "restapi", true); err != nil {
 		return err
 	}
-	if err := ensureDir(path.Join(p, srvName, "internal"), "dal"); err != nil {
+	if err := ensureDir(path.Join(p, srvName, "internal"), "dal", true); err != nil {
 		return err
 	}
-	if err := ensureDir(path.Join(p, srvName, "internal"), "def"); err != nil {
+	if err := ensureDir(path.Join(p, srvName, "internal"), "def", false); err != nil {
 		return err
 	}
-	if err := ensureDir(path.Join(p, srvName, "internal"), "types"); err != nil {
+	if err := ensureDir(path.Join(p, srvName), "migration", false); err != nil {
 		return err
 	}
-	if err := ensureDir(path.Join(p, srvName), "migration"); err != nil {
+	if err := ensureDir(path.Join(p, srvName, "internal"), "types", true); err != nil {
+		return err
+	}
+	if err := ensureDir(path.Join(p, srvName), "zero-migration", true); err != nil {
 		return err
 	}
 	return nil
 }
 
-func ensureDir(p, dirName string) error {
-	err := os.Mkdir(path.Clean(path.Join(p, dirName)), 0777)
-	if err == nil || os.IsExist(err) {
+func ensureDir(p, dirName string, clear bool) error {
+	fullPath := path.Clean(path.Join(p, dirName))
+	err := os.Mkdir(fullPath, 0777)
+	if err == nil {
+		return nil
+	}
+	if os.IsExist(err) {
+		if clear {
+			return clearDir(fullPath)
+		}
 		return nil
 	}
 	return err
+}
+
+func clearDir(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		// TODO this check should read input mask named something like "skipFiles []string"
+		if strings.HasSuffix(name, "custom.go") {
+			log.Printf("Skipped deletion of %s", name)
+			continue
+		}
+		err = os.RemoveAll(filepath.Join(dir, name))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func checkExistenseFile(file string) bool {
@@ -593,3 +705,28 @@ func (a *Customs) {{.Method}}{{.ModelName}}(m *app.{{.ModelName}}) error {
 	return nil
 }`
 )
+
+// TODO rework this function
+func lastMigrationVersion(p, srvName string) (int, error) {
+	dir := path.Join(p, srvName, "migration")
+	file, err := os.Open(dir)
+	if err != nil {
+		log.Fatalf("failed opening directory: %s", err)
+	}
+	defer file.Close()
+
+	ver := 0
+	list, err := file.Readdirnames(0)
+	if err != nil {
+		return 0, err
+	}
+	for _, name := range list {
+		if strings.HasSuffix(name, ".sql") {
+			v, _ := strconv.Atoi(name[:5])
+			if v > ver {
+				ver = v
+			}
+		}
+	}
+	return ver, nil
+}

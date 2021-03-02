@@ -47,7 +47,7 @@ func setupIntegration() {
 	dbCfg.DBName += "_" + dbSuffix
 
 	cfg.db = dbCfg
-	cfg.gooseDir = migrationDir
+	cfg.zeroMigrationsDir = migrationDir
 	cfg.api.Host = host
 	cfg.api.Port = unusedTCPPort(host)
 

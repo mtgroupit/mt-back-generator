@@ -33,7 +33,8 @@ var (
 	log = structlog.New()
 	cfg struct {
 		logLevel string
-		gooseDir string
+		zeroMigrationsDir string
+		migrationDir string
 		db       pqx.Config
 		api      api.Config
 		extauthEndpoint string{{if .Debug}}
@@ -42,9 +43,19 @@ var (
 )
 
 func init() {
-	cfg.db.SSLMode = pqx.SSLRequire
+	var dbSSLModeRequire bool
+
+	flag.BoolVar(&dbSSLModeRequire, "db.ssl-mode-is-req", def.DBSSLModeIsReq, "PostgreSQL SSL mode")
+
+	if dbSSLModeRequire {
+		cfg.db.SSLMode = pqx.SSLRequire
+	} else {
+		cfg.db.SSLMode = pqx.SSLDisable
+	}
+
 	flag.StringVar(&cfg.logLevel, "log.level", "debug", "log `level` (debug|info|warn|err)")
-	flag.StringVar(&cfg.gooseDir, "goose.dir", def.GooseDir, "goose migrations `dir`")
+	flag.StringVar(&cfg.zeroMigrationsDir, "goose.dir", def.ZeroMigrationsDir, "zero migrations `dir`")
+	flag.StringVar(&cfg.migrationDir, "db.migrations", def.MigrationsDir, "migrations `dir`")
 	flag.StringVar(&cfg.db.Host, "db.host", def.DBHost, "PostgreSQL `host`")
 	flag.IntVar(&cfg.db.Port, "db.port", def.DBPort, "PostgreSQL `port`")
 	flag.StringVar(&cfg.db.User, "db.user", def.DBUser, "PostgreSQL `user`")
@@ -83,7 +94,7 @@ func connect() (app.App,{{if .HaveCustomMethod}} app.Customs,{{end}} *extauthapi
 		return nil,{{if .HaveCustomMethod}} nil,{{end}} nil, fmt.Errorf("extauthapi: %v. Error can be if flag '%s' or environment variable '%s' is not set", err, ExtauthEndpointFlag, def.ExtauthEndpointEnvName)
 	}
 
-	a,{{if .HaveCustomMethod}} c,{{end}} err := dal.New(ctx, cfg.db, cfg.gooseDir{{if .Debug}}, cfg.resetDB{{end}})
+	a,{{if .HaveCustomMethod}} c,{{end}} err := dal.New(ctx, cfg.db, cfg.migrationDir, cfg.zeroMigrationsDir{{if .Debug}}, cfg.resetDB{{end}})
 	if err != nil {
 		return nil,{{if .HaveCustomMethod}} nil,{{end}} nil, err
 	}

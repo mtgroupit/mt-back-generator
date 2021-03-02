@@ -1,0 +1,61 @@
+FROM golang:1-buster as builder-french-back
+
+ARG GITHUB_USER=$GITHUB_USER
+ARG GITHUB_PASS=$GITHUB_PASS
+
+RUN printf "machine github.com\n\tlogin %s\n\tpassword %s" ${GITHUB_USER} ${GITHUB_PASS} >> ~/.netrc && \
+    apt-get update -yqq && \
+    apt-get install -yqq make git build-essential && \
+    apt-get clean && \
+    apt-get autoremove -yqq && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+COPY . /app/
+# COPY migration/*.sql /app/cmd/main/migration/
+# COPY Makefile /app/cmd/main
+
+# install go-swagger
+# RUN git clone https://github.com/go-swagger/go-swagger
+# WORKDIR /go-swagger/
+# RUN go install /go-swagger/cmd/swagger
+
+# install go-swagger
+RUN apt-get install gnupg ca-certificates
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 379CE192D401AB61
+RUN echo "deb https://dl.bintray.com/go-swagger/goswagger-debian ubuntu main" | tee /etc/apt/sources.list.d/goswagger.list
+RUN apt-get update 
+RUN apt-get install swagger
+
+WORKDIR /app/
+RUN chmod +x ./ci.build
+RUN ./ci.build
+
+COPY Makefile /app/cmd/main
+COPY migration/*.sql /app/cmd/main/migration/
+WORKDIR /app/cmd/main
+
+# RUN make build -B
+RUN make test
+# RUN make test-i
+RUN rm ~/.netrc
+
+EXPOSE 5432
+CMD ["./{{FormatName .Name}}"]
+
+
+FROM alpine:3  
+
+WORKDIR /app
+# COPY --from=builder-french-back /app/cmd/main/main /app/main
+COPY --from=builder-french-back /app/bin/{{FormatName .Name}} /app/{{FormatName .Name}}
+COPY --from=builder-french-back /app/cmd/main/migration/ /app/migration/
+
+RUN apk add --no-cache libc6-compat ca-certificates && \
+    addgroup -g 1090 -S thirsty_mayer && adduser -u 1090 -S thirsty_mayer  -G thirsty_mayer && \
+    chmod +x /app/{{FormatName .Name}}
+
+
+USER thirsty_mayer
+WORKDIR /app
+EXPOSE 9091
+CMD ["./{{FormatName .Name}}"] 
