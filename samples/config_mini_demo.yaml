@@ -55,6 +55,7 @@ models:
       - getMy
       - addMy
       - editMy
+      - editOrAddMy
       - editMy(defaultPhone, phones)[phones]
       - deleteMy
       - list
