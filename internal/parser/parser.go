@@ -141,7 +141,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			var prop models.MethodProps
 			if method == "delete" || method == "deleteMy" {
 				prop.HTTPMethod = "delete"
-			} else if method == "edit"  || method == "editMy" || isCustomEdit(method) {
+			} else if method == "edit" || method == "editMy" || isCustomEdit(method) {
 				prop.HTTPMethod = "put"
 			} else {
 				prop.HTTPMethod = "post"
@@ -428,9 +428,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					}
 				}
 				if options.TitleName != "ID" {
-					sqlAdd = append(sqlAdd, sqlName)
-					sqlAddExecParams = append(sqlAddExecParams, titleName)
-					countFields = append(countFields, fmt.Sprintf("$%d", count))
+					if sqlName != "created_by" {
+						sqlAdd = append(sqlAdd, sqlName)
+						sqlAddExecParams = append(sqlAddExecParams, titleName)
+						countFields = append(countFields, fmt.Sprintf("$%d", count))
+					}
 					count++
 					if isCreatedStandardColumn(column) {
 						countCreatedColumns++
@@ -466,6 +468,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			sqlAdd = append(sqlAdd, "id")
 			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
 		}
+		sqlAdd = append(sqlAdd, "created_by")
+		countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
 		if !model.Shared {
 			sqlAdd = append(sqlAdd, "isolated_entity_id")
 			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))

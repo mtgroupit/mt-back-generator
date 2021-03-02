@@ -2,6 +2,10 @@
 CREATE TABLE {{NameSQL $modelName}}s
 ({{range $j, $psqlParams := $model.Psql}}{{if not (and $psqlParams.IsArray $psqlParams.IsStruct)}}
     {{$psqlParams.SQLName}} {{$psqlParams.TypeSQL}}{{if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}{{if $psqlParams.Unique}} UNIQUE{{end}}{{if $psqlParams.IsStruct}}  REFERENCES {{NameSQL $psqlParams.Type}}s({{$psqlParams.FK}}){{end}},{{end}}{{end}}
+    {{- if not $model.HaveCreatedBy}}
+    created_by uuid NOT NULL,
+    {{- end}}
+    binded boolean NOT NULL DEFAULT false,
     deleted boolean NOT NULL DEFAULT false,
     deleted_at TIMESTAMP,
     deleted_by uuid{{if not $model.Shared}},

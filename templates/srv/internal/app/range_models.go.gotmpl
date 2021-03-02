@@ -21,18 +21,18 @@ type {{$modelName}} struct {
 		}
 	{{- end}}
 	{{- if IsAdd $method}}
-		func (a *app) {{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}id string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) (*{{$modelName}}, error) {
-			return a.appl.{{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}id, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
+		func (a *app) {{$method}}{{$modelName}}(profileID string, {{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) (*{{$modelName}}, error) {
+			return a.appl.{{$method}}{{$modelName}}(profileID, {{if not $model.Shared}}isolatedEntityID, {{end}}m)
 		}
 	{{- end}}
 	{{- if IsDelete $method}}
-		func (a *app) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, profileID string{{if not $model.Shared}}, isolatedEntityID string{{end}}) error {
-			return a.appl.{{$method}}{{$modelName}}(id, profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
+		func (a *app) {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}profileID string{{if not $model.Shared}}, isolatedEntityID string{{end}}) error {
+			return a.appl.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id, {{end}}profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
 		}
 	{{- end}}
 	{{- if IsEdit $method}}
-		func (a *app) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}} {
-			return a.appl.{{$method}}{{$modelName}}(id, {{if $model.HaveModifiedBy}}profID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
+		func (a *app) {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}{{if or (IsMyMethod $method) $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}} {
+			return a.appl.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id, {{end}}{{if or (IsMyMethod $method) $model.HaveModifiedBy}}profileID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
 		}
 	{{- end}}
 	{{- if IsList $method}}
