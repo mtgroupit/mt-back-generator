@@ -16,8 +16,8 @@ type {{$modelName}} struct {
 {{- range $i, $method := $model.Methods}}
 {{- if not (IsCustomMethod $method)}}
 	{{- if IsGet $method}}
-		func (a *app) {{$method}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) (*{{$modelName}}, error) {
-			return a.appl.{{$method}}{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}})
+		func (a *app) {{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID string{{end}}) (*{{$modelName}}, error) {
+			return a.appl.{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}id{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}})
 		}
 	{{- end}}
 	{{- if IsAdd $method}}
@@ -31,7 +31,7 @@ type {{$modelName}} struct {
 		}
 	{{- end}}
 	{{- if IsEdit $method}}
-		func (a *app) {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}{{if or (IsMyMethod $method) $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}} {
+		func (a *app) {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}} {
 			return a.appl.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id, {{end}}{{if or (IsMyMethod $method) $model.HaveModifiedBy}}profileID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
 		}
 	{{- end}}

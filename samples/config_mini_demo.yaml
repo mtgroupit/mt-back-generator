@@ -89,7 +89,7 @@ models:
 
   ourCompany:
     description: "ourCompany object"
-    id-from-isolated-entity: true
+    bind-to-isolated-entity: true
     columns:
       id:
         type: "uuid"

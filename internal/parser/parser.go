@@ -98,7 +98,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	}
 
 	for name, model := range cfg.Models {
-		if model.IDFromIsolatedEntity && model.Shared {
+		if model.BoundToIsolatedEntity && model.Shared {
 			return nil, errors.Errorf(`Model: "%s". Id from isolated entity available only for not shared models`, name)
 		}
 		if name == strings.Title(name) {
@@ -134,7 +134,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				cfg.HaveCustomMethod = true
 				model.HaveCustomMethod = true
 			}
-			if model.IDFromIsolatedEntity && !IsMyMethod(method) {
+			if model.BoundToIsolatedEntity && !IsMyMethod(method) {
 				return nil, errors.Errorf(`Model: "%s". "%s"  is invalid method for model with id from isolated entity. For model with id from isolated entity available only methods with "My" postfix`, name, method)
 			}
 
@@ -428,11 +428,13 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					}
 				}
 				if options.TitleName != "ID" {
-					if sqlName != "created_by" {
-						sqlAdd = append(sqlAdd, sqlName)
+					sqlAdd = append(sqlAdd, sqlName)
+					if sqlName == "created_by" {
+						sqlAddExecParams = append(sqlAddExecParams, "profileID")
+					} else {
 						sqlAddExecParams = append(sqlAddExecParams, titleName)
-						countFields = append(countFields, fmt.Sprintf("$%d", count))
 					}
+					countFields = append(countFields, fmt.Sprintf("$%d", count))
 					count++
 					if isCreatedStandardColumn(column) {
 						countCreatedColumns++
@@ -468,8 +470,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			sqlAdd = append(sqlAdd, "id")
 			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
 		}
-		sqlAdd = append(sqlAdd, "created_by")
-		countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
+		if !model.HaveCreatedBy {
+			sqlAdd = append(sqlAdd, "created_by")
+			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
+		}
 		if !model.Shared {
 			sqlAdd = append(sqlAdd, "isolated_entity_id")
 			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))

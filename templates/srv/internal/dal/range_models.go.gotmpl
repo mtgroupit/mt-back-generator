@@ -68,9 +68,9 @@ type {{$modelName}} struct {
 {{- range $i, $method := $model.Methods}}
 {{- if not (IsCustomMethod $method)}}
 	{{- if IsGet $method}}
-	func (a *App) {{$method}}{{$modelName}}({{if IsMyMethod $method}}profileID{{else}}id{{end}} {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
+	func (a *App) {{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}{{if IsMyMethod $method}}profileID{{else}}id{{end}} {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
 		{{- if IsMyMethod $method}}
-			id, err := a.getMy{{$modelName}}ID(profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
+			id, err := a.getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}profileID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}})
 			if err != nil {
 				return nil, err
 			}
@@ -81,7 +81,7 @@ type {{$modelName}} struct {
 	{{- if IsAdd $method}}
 	func (a *App) {{$method}}{{$modelName}}(profileID string, {{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) (*app.{{$modelName}}, error) {
 		{{- if IsMyMethod $method}}
-			_, err := a.getMy{{$modelName}}ID(profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
+			_, err := a.getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}profileID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}})
 			if err == nil {
 				return nil, app.ErrDuplicateID
 			}
@@ -94,7 +94,7 @@ type {{$modelName}} struct {
 			return nil, err
 		}
 		{{- if IsMyMethod $method}}
-			err = a.bindToProfile{{$modelName}}(id, profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
+			err = a.bindTo{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Profile{{end}}{{$modelName}}(id{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}})
 			if err != nil {
 				return nil, err
 			}
@@ -105,7 +105,7 @@ type {{$modelName}} struct {
 	{{- if IsDelete $method}}
 	func (a *App) {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}profileID string{{if not $model.Shared}}, isolatedEntityID string{{end}}) error {
 		{{- if IsMyMethod $method}}
-			id, err := a.getMy{{$modelName}}ID(profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
+			id, err := a.getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}profileID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}})
 			if err != nil {
 				return err
 			}
@@ -122,9 +122,9 @@ type {{$modelName}} struct {
 	}
 	{{- end}}
 	{{- if IsEdit $method}}
-	func (a *App) {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}{{if or (IsMyMethod $method) $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  {
+	func (a *App) {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  {
 		{{- if IsMyMethod $method}}
-			id, err := a.getMy{{$modelName}}ID(profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
+			id, err := a.getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}profileID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}})
 			if err != nil{{if eq $method "EditOrAddMy"}} && err != app.ErrNotFound{{end}} {
 				return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 			}
@@ -647,7 +647,7 @@ func (a *App) add{{$modelName}}(profileID string, {{if not $model.Shared}}isolat
 			{{$options.TitleName}}JSON, _ := json.Marshal(m.{{$options.TitleName}})
 		{{- end}}
 	{{- end}}
-	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{NameSQL $modelName}}s{{$model.SQLAddStr}} RETURNING id`, {{$model.SQLAddExecParams}}{{if $model.IDIsUUID}}, {{$modelName}}ID{{end}}, profileID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{NameSQL $modelName}}s{{$model.SQLAddStr}} RETURNING id`, {{$model.SQLAddExecParams}}{{if $model.IDIsUUID}}, {{$modelName}}ID{{end}}{{if not $model.HaveCreatedBy}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			return {{if $model.IDIsUUID}}""{{else}}0{{end}}, app.ErrDuplicateID
 		}
@@ -669,8 +669,8 @@ func (a *App) add{{$modelName}}(profileID string, {{if not $model.Shared}}isolat
 	return {{$modelName}}ID{{if $model.IDIsUUID}}{{end}}, nil
 }
 
-func (a *App) getMy{{$modelName}}ID(profileID{{if not $model.Shared}}, isolatedEntityID{{end}} string) (id string, err error) {
-	if err = a.db.Get(&id, `SELECT id FROM {{NameSQL $modelName}}s WHERE created_by=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}} AND NOT deleted AND binded`, profileID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+func (a *App) getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}profileID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}} string) (id string, err error) {
+	if err = a.db.Get(&id, `SELECT id FROM {{NameSQL $modelName}}s WHERE {{if not $model.BoundToIsolatedEntity}}created_by=$1{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}} AND {{end}}isolated_entity_id=${{if $model.BoundToIsolatedEntity}}1{{else}}2{{end}}{{end}} AND NOT deleted AND bound`{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
 		if err == sql.ErrNoRows {
 			return "", app.ErrNotFound
 		}
@@ -679,8 +679,8 @@ func (a *App) getMy{{$modelName}}ID(profileID{{if not $model.Shared}}, isolatedE
 	return
 }
 
-func (a *App) bindToProfile{{$modelName}}(id, profileID{{if not $model.Shared}}, isolatedEntityID{{end}} string) error {
-	res, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET binded=true WHERE id=$1 AND created_by=$2{{if not $model.Shared}} AND isolated_entity_id=$3{{end}} AND NOT deleted AND NOT binded`, id, profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
+func (a *App) bindTo{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Profile{{end}}{{$modelName}}(id{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}} string) error {
+	res, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET bound=true WHERE id=$1{{if not $model.BoundToIsolatedEntity}} AND created_by=$2{{end}}{{if not $model.Shared}} AND isolated_entity_id=${{if $model.BoundToIsolatedEntity}}2{{else}}3{{end}}{{end}} AND NOT deleted AND NOT bound`, id{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}})
 	if err != nil {
 		return err
 	}
