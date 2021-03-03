@@ -20,7 +20,7 @@ var (
 		{{$options.TitleName}}: {{if and (eq $column "id") (eq $options.Type "uuid")}}uuid.New().String(){{else}}{{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{GenAppTestValue $options}}{{end}}{{end}},
 		{{- end}}
 	}
-	{{- if not $model.IDFromIsolatedEntity}}
+	{{- if not $model.BoundToIsolatedEntity}}
 		test{{$modelName}}2 = &{{$modelName}}{  
 			{{- range $column, $options := $model.Columns}}
 			{{$options.TitleName}}: {{if and (eq $column "id") (eq $options.Type "uuid")}}uuid.New().String(){{else}}{{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}}{{end}},

@@ -80,16 +80,16 @@ type MethodProps struct {
 
 // Model - description one component of models
 type Model struct {
-	Description          string
-	Shared               bool
-	DetailedPagination   bool `yaml:"detailed-pagination"`
-	IDFromIsolatedEntity bool `yaml:"id-from-isolated-entity"`
-	ReturnWhenEdit       bool `yaml:"return-when-edit"`
-	Tags                 []string
-	Columns              map[string]Options
-	Fields               map[string]string
-	Psql                 []PsqlParams
-	DeepNesting          int
+	Description           string
+	Shared                bool
+	DetailedPagination    bool `yaml:"detailed-pagination"`
+	BoundToIsolatedEntity bool `yaml:"bind-to-isolated-entity"`
+	ReturnWhenEdit        bool `yaml:"return-when-edit"`
+	Tags                  []string
+	Columns               map[string]Options
+	Fields                map[string]string
+	Psql                  []PsqlParams
+	DeepNesting           int
 
 	HaveLazyLoading         bool
 	IDIsUUID                bool

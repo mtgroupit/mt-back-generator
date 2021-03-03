@@ -25,7 +25,7 @@ func Test{{$method}}{{$modelName}}Smoke(tt *testing.T) {
 	{{- end}}
 	{{- if IsEdit $method}}
 		addTestData(t)
-		t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID, {{if $model.HaveModifiedBy}}profID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}{{if $model.IDFromIsolatedEntity}}1{{else}}2{{end}}))
+		t.Nil(testApp.{{$method}}{{$modelName}}(test{{$modelName}}1.ID, {{if $model.HaveModifiedBy}}profID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}{{if $model.BoundToIsolatedEntity}}1{{else}}2{{end}}))
 	{{- end}}
 
 	{{- if IsList $method}}	

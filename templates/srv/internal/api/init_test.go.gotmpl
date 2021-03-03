@@ -47,13 +47,13 @@ var (
 
 {{- range $modelName, $model := $.Models}}
 	{{- $idType := (index $model.Columns "id").Type}}
-	test{{$modelName}}ID1 {{if eq $idType "int64"}}int64{{end}} = {{if eq $idType "uuid"}}{{if $model.IDFromIsolatedEntity}}isolatedEntityID{{else}}uuid.New().String(){{end}}{{else}}1{{end}}
+	test{{$modelName}}ID1 {{if eq $idType "int64"}}int64{{end}} = {{if eq $idType "uuid"}}{{if $model.BoundToIsolatedEntity}}isolatedEntityID{{else}}uuid.New().String(){{end}}{{else}}1{{end}}
 	test{{$modelName}}1 = &models.{{$modelName}}{  
 		{{- range $column, $options := $model.Columns}}
 		{{$options.TitleName}}: {{if eq $column "id"}}test{{$modelName}}ID1{{else}}{{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{GenApiTestValue $options}}{{end}}{{end}},
 		{{- end}}
 	}
-	{{- if not $model.IDFromIsolatedEntity}}
+	{{- if not $model.BoundToIsolatedEntity}}
 		test{{$modelName}}ID2 {{if eq $idType "int64"}}int64{{end}} = {{if eq $idType "uuid"}}uuid.New().String(){{else}}2{{end}}
 		test{{$modelName}}2 = &models.{{$modelName}}{  
 			{{- range $column, $options := $model.Columns}}
@@ -69,7 +69,7 @@ var (
 		{{- end}}
 		{{- end}}
 	}
-	{{- if not $model.IDFromIsolatedEntity}}
+	{{- if not $model.BoundToIsolatedEntity}}
 	testAdd{{$modelName}}2 = &models.{{$modelName}}Add{  
 		{{- range $column, $options := $model.Columns}}
 		{{- if and (ne $column "id") (not (IsStandardColumn $column))}}

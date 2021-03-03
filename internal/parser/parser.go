@@ -98,7 +98,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	}
 
 	for name, model := range cfg.Models {
-		if model.IDFromIsolatedEntity && model.Shared {
+		if model.BoundToIsolatedEntity && model.Shared {
 			return nil, errors.Errorf(`Model: "%s". Id from isolated entity available only for not shared models`, name)
 		}
 		if name == strings.Title(name) {
@@ -134,14 +134,14 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				cfg.HaveCustomMethod = true
 				model.HaveCustomMethod = true
 			}
-			if model.IDFromIsolatedEntity && !IsMyMethod(method) {
+			if model.BoundToIsolatedEntity && !IsMyMethod(method) {
 				return nil, errors.Errorf(`Model: "%s". "%s"  is invalid method for model with id from isolated entity. For model with id from isolated entity available only methods with "My" postfix`, name, method)
 			}
 
 			var prop models.MethodProps
-			if method == "delete" {
+			if method == "delete" || method == "deleteMy" {
 				prop.HTTPMethod = "delete"
-			} else if method == "edit" || isCustomEdit(method) {
+			} else if method == "edit" || method == "editMy" || isCustomEdit(method) {
 				prop.HTTPMethod = "put"
 			} else {
 				prop.HTTPMethod = "post"
@@ -429,7 +429,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 				if options.TitleName != "ID" {
 					sqlAdd = append(sqlAdd, sqlName)
-					sqlAddExecParams = append(sqlAddExecParams, titleName)
+					if sqlName == "created_by" {
+						sqlAddExecParams = append(sqlAddExecParams, "profileID")
+					} else {
+						sqlAddExecParams = append(sqlAddExecParams, titleName)
+					}
 					countFields = append(countFields, fmt.Sprintf("$%d", count))
 					count++
 					if isCreatedStandardColumn(column) {
@@ -464,6 +468,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		model.SQLWhereParams = strings.Join(sqlWhereParams, " AND ")
 		if model.IDIsUUID {
 			sqlAdd = append(sqlAdd, "id")
+			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
+		}
+		if !model.HaveCreatedBy {
+			sqlAdd = append(sqlAdd, "created_by")
 			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
 		}
 		if !model.Shared {

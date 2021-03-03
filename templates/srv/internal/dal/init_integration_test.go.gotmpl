@@ -34,7 +34,7 @@ var (
 			{{- end}}
 		{{- end}}
 	}
-	{{- if not $model.IDFromIsolatedEntity}}
+	{{- if not $model.BoundToIsolatedEntity}}
 		test{{$modelName}}2 = &app.{{$modelName}}{  
 			{{- range $column, $options := $model.Columns}}
 				{{- if not (and (eq $column "id") (eq $options.Type "uuid"))}}
@@ -111,9 +111,9 @@ func addTestData(t *check.C){
 {{- range $i := Iterate $MaxDeepNesting}}
 	{{- range $modelName, $model := $.Models}}
 		{{- if eq $model.DeepNesting $i}}
-			{{if $model.IDIsUUID}}test{{$modelName}}1.ID{{else}}_{{end}}, err = testApp.add{{$modelName}}({{if $model.IDIsUUID}}{{if $model.IDFromIsolatedEntity}}isolatedEntityID{{else}}{{if HaveMyMethod $model.Methods}}profID1{{else}}uuid.New().String(){{end}}{{end}}, {{end}}{{if $model.HaveCreatedBy}}profID1, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}1)
+			{{if $model.IDIsUUID}}test{{$modelName}}1.ID{{else}}_{{end}}, err = testApp.add{{$modelName}}({{if $model.IDIsUUID}}{{if $model.BoundToIsolatedEntity}}isolatedEntityID{{else}}{{if HaveMyMethod $model.Methods}}profID1{{else}}uuid.New().String(){{end}}{{end}}, {{end}}{{if $model.HaveCreatedBy}}profID1, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}1)
 			t.Nil(err)
-			{{- if not $model.IDFromIsolatedEntity}}
+			{{- if not $model.BoundToIsolatedEntity}}
 				{{if $model.IDIsUUID}}test{{$modelName}}2.ID{{else}}_{{end}}, err = testApp.add{{$modelName}}({{if $model.IDIsUUID}}{{if HaveMyMethod $model.Methods}}profID2{{else}}uuid.New().String(){{end}}, {{end}}{{if $model.HaveCreatedBy}}profID2, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}2)
 				t.Nil(err)
 			{{- end}}

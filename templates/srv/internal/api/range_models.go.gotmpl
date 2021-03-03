@@ -16,7 +16,7 @@ import (
 		"{{.Module}}/internal/types"
 	{{- end}}
 
-	{{if or (HaveMyMethod $model.Methods) $model.HaveCreatedBy $model.HaveModifiedBy (and (not $model.Shared) ($model.Methods))}}extauthapi "{{.AuthSrv}}"{{end}}
+	{{if or (HaveMyMethod $model.Methods) $model.HaveCreatedBy $model.HaveModifiedBy (ContainsStr $model.Methods "Delete") (ContainsStr $model.Methods "Add") (and (not $model.Shared) ($model.Methods))}}extauthapi "{{.AuthSrv}}"{{end}}
 	{{- if $model.HaveEmail}}
 		"github.com/go-openapi/strfmt"
 	{{- end}}
@@ -35,7 +35,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 		{{- if or (IsMyMethod $method) (not $model.Shared)}}
 			prof := profile.(*extauthapi.Profile)
 		{{- end}}
-		c, err := svc.app.{{$method}}{{$modelName}}({{if IsMyMethod $method}}{{if $model.IDFromIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}}{{if not $model.Shared}}, prof.IsolatedEntityID.String(){{end}})
+		c, err := svc.app.{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}{{if IsMyMethod $method}}prof.ID.String(){{else}}params.Body.ID{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}prof.IsolatedEntityID.String(){{end}})
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -50,15 +50,13 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 				Message: swag.String(err.Error()),
 			})
 		case err == nil:
-		log.Info("{{$method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}{{if $model.IDFromIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}})
+		log.Info("{{$method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}{{if $model.BoundToIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}})
 			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c))
 		}
 	{{- end}}
 	{{- if IsAdd $method}}
-		{{- if or (IsMyMethod $method) $model.HaveCreatedBy (not $model.Shared)}}
-			prof := profile.(*extauthapi.Profile)
-		{{- end}}
-		c, err := svc.app.{{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}{{if $model.IDFromIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}, {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}app{{$modelName}}Add(params.Body))
+		prof := profile.(*extauthapi.Profile)
+		c, err := svc.app.{{$method}}{{$modelName}}(prof.ID.String(), {{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}app{{$modelName}}Add(params.Body))
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -80,10 +78,8 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 		}
 	{{- end}}
 	{{- if IsDelete $method}}
-		{{- if or (IsMyMethod $method) (not $model.Shared)}}
-			prof := profile.(*extauthapi.Profile)
-		{{- end}}
-		err := svc.app.{{$method}}{{$modelName}}({{if IsMyMethod $method}}{{if $model.IDFromIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}}{{if not $model.Shared}}, prof.IsolatedEntityID.String(){{end}})
+		prof := profile.(*extauthapi.Profile)
+		err := svc.app.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}params.Body.ID, {{end}}prof.ID.String(){{if not $model.Shared}}, prof.IsolatedEntityID.String(){{end}})
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -98,7 +94,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 				Message: swag.String(err.Error()),
 			})
 		case err == nil:
-			log.Info("{{$method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}{{if $model.IDFromIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}})
+			log.Info("{{$method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}{{if $model.BoundToIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}})
 			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}NoContent()
 		}
 	{{- end}}
@@ -138,7 +134,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 				{{- end}}
 			{{- end}}
 		{{- end}}
-		{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if IsMyMethod $method}}{{if $model.IDFromIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}}, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}{{if IsCustomEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
+		{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}params.Body.ID, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}{{if IsCustomEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
