@@ -28,18 +28,18 @@ mockgen -source=./internal/app/app_custom.go -destination=./internal/app/custom_
 mockgen -source=./internal/api/auth.go -destination=./internal/api/auth_mock.generated.go -package=api
 echo "Mock generate stopped"
 
-go fmt ./...
-go get ./...
-
-rm -rf bin/
-mkdir bin/
-
 if !(grep -q 'insteadOf = https://github.com/' ~/.gitconfig) || !(grep -q 'url "git@github.com:"' ~/.gitconfig)
 then
     git config --global --add url."git@github.com:".insteadOf "https://github.com/"
     echo "Git: will now use SSH URL instead of HTTPS for github.com"
 fi
 export GOSUMDB=off
+
+go fmt ./...
+go get ./...
+
+rm -rf bin/
+mkdir bin/
 
 go build -o ./bin/{{FormatName .Name}} ./cmd/main/*
 
