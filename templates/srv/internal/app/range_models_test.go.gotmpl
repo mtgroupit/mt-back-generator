@@ -24,11 +24,11 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 
 	a := New(mockApp{{if $haveCustomMethod}}, mockCust{{end}})
 
-	{{- if IsGet $method}}
-	mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any(){{if not $model.Shared}}, gomock.Any(){{end}}).Return(test{{$modelName}}1, nil)
-	b, err := a.{{$method}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.Shared}}, isolatedEntityID{{end}})
-	t.Nil(err)
-	t.DeepEqual(test{{$modelName}}1, b)
+	{{- if IsGet $method}} 
+		mockApp.EXPECT().{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}gomock.Any(){{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}gomock.Any(){{end}}).Return(test{{$modelName}}1, nil)
+		b, err := a.{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}test{{$modelName}}1.ID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}})
+		t.Nil(err)
+		t.DeepEqual(test{{$modelName}}1, b)
 	{{- end}}
 	{{- if IsAdd $method}}
 	mockApp.EXPECT().{{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return(test{{$modelName}}1, nil)

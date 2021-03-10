@@ -28,7 +28,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 		{{- if not (IsMyMethod $method)}}
 			params.Body.ID = test{{$modelName}}ID1
 		{{- end}}
-		mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any(){{if not $model.Shared}}, gomock.Any(){{end}}).Return(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}}), nil)
+		mockApp.EXPECT().{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}gomock.Any(){{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}gomock.Any(){{end}}).Return(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}}), nil)
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
