@@ -6,26 +6,24 @@ import (
 
 // Options contain properties of column
 type Options struct {
-	TitleName string
-	Type      string
-	GoType    string
-	Format    string
-	Enum      string
-
+	TitleName        string
+	Type             string
+	GoType           string
+	Format           string
+	Enum             string
+	Unique           bool
+	Length           int64
+	Default          string
 	SortOn           bool     `yaml:"sort-on"`
 	SortDefault      bool     `yaml:"sort-default"`
 	SortOrderDefault string   `yaml:"sort-order-default"`
 	SortBy           []string `yaml:"sort-by"`
-
-	StrictFilter bool `yaml:"strict-filter"`
+	StrictFilter     bool     `yaml:"strict-filter"`
 
 	NestedSorts []string
 	IsStruct    bool
 	IsArray     bool
 	Pk          string
-	Unique      bool
-	Length      int64
-	Default     string
 }
 
 // PsqlParams - contain properties for postgres generate
@@ -82,15 +80,15 @@ type MethodProps struct {
 type Model struct {
 	Description           string
 	Shared                bool
-	DetailedPagination    bool `yaml:"detailed-pagination"`
-	BoundToIsolatedEntity bool `yaml:"bind-to-isolated-entity"`
-	ReturnWhenEdit        bool `yaml:"return-when-edit"`
 	Tags                  []string
+	BoundToIsolatedEntity bool `yaml:"bind-to-isolated-entity"`
+	DetailedPagination    bool `yaml:"detailed-pagination"`
+	ReturnWhenEdit        bool `yaml:"return-when-edit"`
 	Columns               map[string]Options
-	Fields                map[string]string
-	Psql                  []PsqlParams
-	DeepNesting           int
 
+	TitleName               string
+	Fields                  map[string]string
+	DeepNesting             int
 	HaveLazyLoading         bool
 	IDIsUUID                bool
 	HaveEmail               bool
@@ -100,19 +98,18 @@ type Model struct {
 	HaveCustomMethod        bool
 	HaveArrayOfStandardType bool
 
+	HaveCreatedAt  bool
+	HaveCreatedBy  bool
+	HaveModifiedAt bool
+	HaveModifiedBy bool
+
+	Psql              []PsqlParams
 	SQLSelectStr      string
 	SQLWhereParams    string
 	SQLAddStr         string
 	SQLEditStr        string
 	SQLAddExecParams  string
 	SQLEditExecParams string
-
-	TitleName string
-
-	HaveCreatedAt  bool
-	HaveCreatedBy  bool
-	HaveModifiedAt bool
-	HaveModifiedBy bool
 
 	Binds        []Bind
 	Methods      []string
@@ -121,8 +118,9 @@ type Model struct {
 
 // Function contain input and output params
 type Function struct {
-	In          map[string]string
-	Out         map[string]string
+	In  map[string]string
+	Out map[string]string
+
 	InStr       string
 	InStrParams string
 	OutStr      string
@@ -150,13 +148,14 @@ type ExtraTable struct {
 
 // Config - description service, models and functions from yaml file
 type Config struct {
-	Name             string
-	Module           string
-	AuthSrv          string `yaml:"auth-srv"`
-	Description      string
-	Debug            bool
-	Models           map[string]Model
-	Functions        map[string]Function
+	Name        string
+	Module      string
+	AuthSrv     string `yaml:"auth-srv"`
+	Description string
+	Debug       bool
+	Models      map[string]Model
+	Functions   map[string]Function
+
 	HaveListMethod   bool
 	HaveCustomMethod bool
 	HaveFloatArr     bool
