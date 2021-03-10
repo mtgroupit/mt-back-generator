@@ -21,7 +21,7 @@ var (
 	intNumbericTypes      = []string{"int", "int32", "int64"}
 	fractionNumbericTypes = []string{"float", "decimal"}
 	standardNumbericTypes = append(intNumbericTypes, fractionNumbericTypes...)
-	standardTypes         = append([]string{"string"}, standardNumbericTypes...)
+	standardTypes         = append([]string{"string", "bool"}, standardNumbericTypes...)
 )
 
 const (
