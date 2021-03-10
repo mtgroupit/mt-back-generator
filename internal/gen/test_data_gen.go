@@ -89,33 +89,40 @@ func genAppTestArray(columnOptions models.Options) string {
 
 func genTestValue(columnOptions models.Options) (str string) {
 	gofakeit.Seed(time.Now().UnixNano())
-	switch columnOptions.GoType {
-	case "string":
-		switch columnOptions.Format {
-		case "date-time":
-			dateTime := strfmt.NewDateTime()
-			dateTime.Scan(gofakeit.Date())
-			str = dateTime.String()
-		case "email":
-			str = gofakeit.Email()
-		case "url":
-			str = gofakeit.URL()
-		case "phone":
-			str = gofakeit.Phone()
-		default:
-			str = gofakeit.Word()
+	if len(columnOptions.Enum) > 0 {
+		str = columnOptions.Enum[gofakeit.Number(0, len(columnOptions.Enum)-1)]
+		if columnOptions.GoType == "string" {
+			str = fmt.Sprintf(`"%s"`, str)
 		}
-		str = fmt.Sprintf(`"%s"`, str)
-	case "int", "int32", "int64":
-		str = fmt.Sprintf("%d", gofakeit.Int32())
-	case "float32", "float64":
-		str = fmt.Sprintf("%.2f", gofakeit.Float32Range(1.0, 1000.0))
-	case "bool":
-		str = fmt.Sprintf("%t", gofakeit.Bool())
-	case parser.TypesPrefix + "Decimal":
-		str = fmt.Sprintf("%sNewDecimal(%.2f)", parser.TypesPrefix, gofakeit.Float64Range(1.0, 1000.0))
-	default:
-		str = fmt.Sprintf("interface{}.(%s)", columnOptions.GoType)
+	} else {
+		switch columnOptions.GoType {
+		case "string":
+			switch columnOptions.Format {
+			case "date-time":
+				dateTime := strfmt.NewDateTime()
+				dateTime.Scan(gofakeit.Date())
+				str = dateTime.String()
+			case "email":
+				str = gofakeit.Email()
+			case "url":
+				str = gofakeit.URL()
+			case "phone":
+				str = gofakeit.Phone()
+			default:
+				str = gofakeit.Word()
+			}
+			str = fmt.Sprintf(`"%s"`, str)
+		case "int", "int32", "int64":
+			str = fmt.Sprintf("%d", gofakeit.Int32())
+		case "float32", "float64":
+			str = fmt.Sprintf("%.2f", gofakeit.Float32Range(1.0, 1000.0))
+		case "bool":
+			str = fmt.Sprintf("%t", gofakeit.Bool())
+		case parser.TypesPrefix + "Decimal":
+			str = fmt.Sprintf("%sNewDecimal(%.2f)", parser.TypesPrefix, gofakeit.Float64Range(1.0, 1000.0))
+		default:
+			str = fmt.Sprintf("interface{}.(%s)", columnOptions.GoType)
+		}
 	}
 	return
 }
