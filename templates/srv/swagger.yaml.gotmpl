@@ -103,7 +103,7 @@ paths:
                       default: {{.Default}}
                       {{- end}}
                       {{- if $options.Enum}}
-                      enum: {{$options.Enum}}
+                      enum: {{EnumPrint $options.Enum}}
                       {{- end}}
                   {{- end}}
                 {{- end}}
@@ -306,7 +306,7 @@ definitions:
           default: {{.Default}}
         {{- end}}
         {{- if $options.Enum}}
-          enum: {{$options.Enum}}
+          enum: {{EnumPrint $options.Enum}}
         {{- end}}
       {{- else}}
       {{$name}}:
@@ -321,7 +321,7 @@ definitions:
         default: {{.Default}}
         {{- end}}
         {{- if $options.Enum}}
-        enum: {{$options.Enum}}
+        enum: {{EnumPrint $options.Enum}}
         {{- end}}
       {{- end}}
     {{- end}}
@@ -358,7 +358,7 @@ definitions:
           default: {{.Default}}
         {{- end}}
         {{- if $options.Enum}}
-          enum: {{$options.Enum}}
+          enum: {{EnumPrint $options.Enum}}
         {{- end}}
       {{- else}}
         type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}}
@@ -372,7 +372,7 @@ definitions:
         default: {{.Default}}
         {{- end}}
         {{- if $options.Enum}}
-        enum: {{$options.Enum}}
+        enum: {{EnumPrint $options.Enum}}
         {{- end}}
       {{- end}}
     {{- end}}

@@ -37,11 +37,11 @@ models:
         type: "decimal"
       multiplierSalary:
         type: "float"
-        enum: "[1, 2.5, 5.9]"
+        enum: [1, 2.5, 5.9]
         default: "1"
       status:
         type: "string"
-        enum: "['working', 'onVacation']"
+        enum: ['working', 'onVacation']
       company:
         type: "model.company"
         sort-on: true

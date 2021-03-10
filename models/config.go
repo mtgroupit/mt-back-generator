@@ -10,7 +10,7 @@ type Options struct {
 	Type             string
 	GoType           string
 	Format           string
-	Enum             string
+	Enum             []string
 	Unique           bool
 	Length           int64
 	Default          string
