@@ -38,11 +38,12 @@ import (
 
 var (
 	isolatedEntityID = uuid.New().String()
-	profID           = uuid.New().String()
+	profileID           = uuid.New().String()
 	sess             = extauthapi.SessionCookieName + "=sess"
 	profile          = &extauthapi.Profile{
-		ID:    extauthapi.MustParseID(profID),
+		ID:    extauthapi.MustParseID(profileID),
 		Authn: true,
+		IsolatedEntityID: extauthapi.MustParseID(isolatedEntityID),
 	}
 
 {{- range $modelName, $model := $.Models}}

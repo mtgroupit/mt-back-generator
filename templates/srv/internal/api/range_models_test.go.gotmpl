@@ -39,7 +39,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 	{{- end}}
 	{{- if IsAdd $method}}	
 		params.Body = testAdd{{$modelName}}1
-		mockApp.EXPECT().{{$method}}{{$modelName}}({{if or (IsMyMethod $method) $model.HaveCreatedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}}), nil)
+		mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any(), {{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}}), nil)
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
