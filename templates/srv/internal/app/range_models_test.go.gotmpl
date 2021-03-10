@@ -42,12 +42,12 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 	t.Nil(err)
 	{{- end}}
 	{{- if IsEdit $method}}
-	mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any(), {{if $model.HaveModifiedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}test{{$modelName}}2, {{end}}nil)
-	{{if $model.ReturnWhenEdit}}b, {{end}}err := a.{{$method}}{{$modelName}}(test{{$modelName}}1.ID, {{if $model.HaveModifiedBy}}profileID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}1)
-	t.Nil(err)
-	{{- if $model.ReturnWhenEdit}}
-	t.DeepEqual(test{{$modelName}}2, b)
-	{{- end}}
+		mockApp.EXPECT().{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}gomock.Any(), {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}test{{$modelName}}2, {{end}}nil)
+		{{if $model.ReturnWhenEdit}}b, {{end}}err := a.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}test{{$modelName}}1.ID, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profileID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}1)
+		t.Nil(err)
+		{{- if $model.ReturnWhenEdit}}
+			t.DeepEqual(test{{$modelName}}2, b)
+		{{- end}}
 	{{- end}}
 
 	{{- if IsList $method}}

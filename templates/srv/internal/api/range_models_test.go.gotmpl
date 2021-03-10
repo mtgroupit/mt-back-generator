@@ -74,24 +74,27 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 					{{- end}}
 				},
 			}
-		{{- if $model.ReturnWhenEdit}}
-			test{{$modelName}}1Edited := *test{{$modelName}}1
-			{{- range $name, $options := $model.Columns}}
-				{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}
-					test{{$modelName}}1Edited.{{$options.TitleName}}{{if $options.IsStruct}}.ID{{end}} = test{{$modelName}}1.{{$options.TitleName}}{{if $options.IsStruct}}.ID{{end}}
+			{{- if $model.ReturnWhenEdit}}
+				test{{$modelName}}1Edited := test{{$modelName}}1
+				{{- range $name, $options := $model.Columns}}
+					{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}
+						test{{$modelName}}1Edited.{{$options.TitleName}}{{if $options.IsStruct}}.ID{{end}} = test{{$modelName}}1.{{$options.TitleName}}{{if $options.IsStruct}}.ID{{end}}
+					{{- end}}
 				{{- end}}
 			{{- end}}
-		{{- end}}
 		{{- else}}
-			params.Body = test{{$modelName}}1
+			params.Body.Data = testAdd{{$modelName}}1
+			{{- if not (IsMyMethod $method)}}
+				params.Body.ID = test{{$modelName}}1.ID
+			{{- end}}
 		{{- end}}
-		mockApp.EXPECT().{{$method}}{{$modelName}}({{if IsMyMethod $method}}gomock.Any(){{else}}gomock.Any(){{end}}, {{if $model.HaveModifiedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}app{{$modelName}}(&test{{$modelName}}1Edited{{if $model.HaveLazyLoading}}, true{{end}}), {{end}}nil)
+		mockApp.EXPECT().{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}gomock.Any(), {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}app{{$modelName}}(test{{$modelName}}1{{if IsCustomEdit $method}}Edited{{end}}{{if $model.HaveLazyLoading}}, true{{end}}), {{end}}nil)
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
 			{{if $model.ReturnWhenEdit}}geted{{else}}_{{end}}, err := c.{{if $model.Tags}}{{index $model.Tags 0}}{{else}}Operations{{end}}.{{$method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
 			t.Nil(err)
 			{{- if $model.ReturnWhenEdit}}
-				t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(&test{{$modelName}}1Edited{{if $model.HaveLazyLoading}}, true{{end}})))
+				t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if IsCustomEdit $method}}Edited{{end}}{{if $model.HaveLazyLoading}}, true{{end}})))
 			{{- end}}
 		})
 	{{- end}}
