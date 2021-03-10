@@ -246,6 +246,18 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				if err = enumValidate(options.Enum, options.Type); err != nil {
 					return nil, errors.Wrapf(err, `Model: "%s". Column: "%s". Column type: "%s"`, name, column, options.Type)
 				}
+				if options.Default != "" {
+					found := false
+					for _, e := range options.Enum {
+						if e == options.Default {
+							found = true
+							break
+						}
+					}
+					if !found {
+						return nil, errors.Errorf(`Model: "%s". Column: "%s". Default should be one of: %s`, name, column, strings.Join(options.Enum, ", "))
+					}
+				}
 			}
 
 			if options.IsStruct {
