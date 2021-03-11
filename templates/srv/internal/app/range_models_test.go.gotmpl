@@ -37,9 +37,9 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 		t.DeepEqual(test{{$modelName}}1, b)
 	{{- end}}
 	{{- if IsDelete $method}}
-	mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any(){{if not $model.Shared}}, gomock.Any(){{end}}).Return(nil)
-	err := a.{{$method}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.Shared}}, isolatedEntityID{{end}})
-	t.Nil(err)
+		mockApp.EXPECT().{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}gomock.Any(), {{end}}gomock.Any(){{if not $model.Shared}}, gomock.Any(){{end}}).Return(nil)
+		err := a.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}test{{$modelName}}1.ID, {{end}}profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
+		t.Nil(err)
 	{{- end}}
 	{{- if IsEdit $method}}
 		mockApp.EXPECT().{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}gomock.Any(), {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}test{{$modelName}}2, {{end}}nil)

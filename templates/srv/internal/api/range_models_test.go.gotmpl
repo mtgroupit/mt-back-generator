@@ -52,7 +52,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 		{{- if not (IsMyMethod $method)}}
 			params.Body.ID = test{{$modelName}}1.ID
 		{{- end}}
-		mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any(){{if not $model.Shared}}, gomock.Any(){{end}}).Return(nil)
+		mockApp.EXPECT().{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}gomock.Any(), {{end}}gomock.Any(){{if not $model.Shared}}, gomock.Any(){{end}}).Return(nil)
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
