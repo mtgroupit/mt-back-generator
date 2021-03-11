@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:12
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: back
+
+  back:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - "9091:9091"
+    environment:
+      MSRV_PORT: "9091"
+      MSRV_AUTH_EXTAUTH_INT_PORT: "8080"
+      MSRV_RESET_DB: "false"
+      MSRV_DB_HOST: db
+      MSRV_DB_PORT: "5432"
+      MSRV_DB_USER: postgres
+      MSRV_DB_PASS: postgres
+      MSRV_DB_NAME: back
+      MSRV_CORS_ALLOWED_ORIGIN: http://localhost
+      MSRV_DB_SSL_MODE_IS_REQUIRE: "false"
