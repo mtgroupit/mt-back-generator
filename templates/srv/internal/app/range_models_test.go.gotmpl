@@ -22,7 +22,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 	mockCust := NewMockCustoms(ctrl)
 	{{- end}}
 
-	a := New(mockApp{{if $haveCustomMethod}}, mockCust{{end}})
+	a{{if $haveCustomMethod}}, _{{end}} := New(mockApp{{if $haveCustomMethod}}, mockCust{{end}})
 
 	{{- if IsGet $method}} 
 		mockApp.EXPECT().{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}gomock.Any(){{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}gomock.Any(){{end}}).Return(test{{$modelName}}1, nil)
