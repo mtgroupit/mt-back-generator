@@ -311,6 +311,9 @@ var goTmplFuncs = template.FuncMap{
 	},
 	"GenApiTestValue": genApiTestValue,
 	"GenAppTestValue": genAppTestValue,
+	"EnumPrint": func(enum []string) string {
+		return fmt.Sprintf(`[%s]`, strings.Join(enum, ", "))
+	},
 }
 
 // Srv - generate dir with service

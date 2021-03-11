@@ -13,7 +13,7 @@ package dal
 import (
 	"database/sql"
 	"strings"
-{{- if $haveNestedSorts}}
+{{- if and $model.HaveListMethod $haveNestedSorts}}
 	"sort"
 {{- end}}
 {{- if or $model.HaveCreatedAt $model.HaveModifiedAt (ContainsStr $model.Methods "Delete") (ContainsStr $model.Methods "DeleteMy")}}

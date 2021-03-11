@@ -12,7 +12,7 @@ import (
 
 var (
 	isolatedEntityID = uuid.New().String()
-	profID = uuid.New().String()
+	profileID = uuid.New().String()
 
 {{- range $modelName, $model := $.Models}}
 	test{{$modelName}}1 = &{{$modelName}}{  

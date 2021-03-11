@@ -21,7 +21,7 @@ var (
 	intNumbericTypes      = []string{"int", "int32", "int64"}
 	fractionNumbericTypes = []string{"float", "decimal"}
 	standardNumbericTypes = append(intNumbericTypes, fractionNumbericTypes...)
-	standardTypes         = append([]string{"string"}, standardNumbericTypes...)
+	standardTypes         = append([]string{"string", "bool"}, standardNumbericTypes...)
 )
 
 const (
@@ -239,12 +239,24 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			}
 
-			if options.Enum != "" {
+			if len(options.Enum) > 0 {
 				if column == "id" {
 					return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum available only for not id columns`, name, column)
 				}
 				if err = enumValidate(options.Enum, options.Type); err != nil {
 					return nil, errors.Wrapf(err, `Model: "%s". Column: "%s". Column type: "%s"`, name, column, options.Type)
+				}
+				if options.Default != "" {
+					found := false
+					for _, e := range options.Enum {
+						if e == options.Default {
+							found = true
+							break
+						}
+					}
+					if !found {
+						return nil, errors.Errorf(`Model: "%s". Column: "%s". Default should be one of: %s`, name, column, strings.Join(options.Enum, ", "))
+					}
 				}
 			}
 
@@ -667,24 +679,20 @@ func isCustomList(method string) bool {
 	return regexp.MustCompile(`^list\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
 }
 
-func enumValidate(enum, columnType string) error {
+func enumValidate(enum []string, columnType string) error {
 	if isStandardType(columnType) {
+		if len(enum) == 0 {
+			return errors.New(`Enum must has one or more elements`)
+		}
 		if columnType == "string" {
-			return stringEnumValidate(enum)
+			return nil
 		}
 		return numberEnumValidate(enum, columnType)
 	}
 	return errors.Errorf(`Enum available only for standard types: %s`, strings.Join(standardTypes, ", "))
 }
 
-func stringEnumValidate(enum string) error {
-	if regexp.MustCompile(`^\[\s*('.+'\s*,\s*)*'.+'+\s*\]$`).Match([]byte(enum)) {
-		return nil
-	}
-	return errors.Errorf(`Incorrect enum. Enum for string type must be in this format: ['asc', 'desc'] and inputed as string`)
-}
-
-func numberEnumValidate(enum, columnType string) error {
+func numberEnumValidate(enum []string, columnType string) error {
 	switch {
 	case isIntNumbericType(columnType):
 		return intNumbericEnumValidate(enum)
@@ -695,18 +703,24 @@ func numberEnumValidate(enum, columnType string) error {
 	}
 }
 
-func intNumbericEnumValidate(enum string) error {
-	if regexp.MustCompile(`^\[\s*([0-9]+\s*,\s*)*[0-9]+\s*\]$`).Match([]byte(enum)) {
-		return nil
+func intNumbericEnumValidate(enum []string) error {
+	for _, e := range enum {
+		_, err := strconv.Atoi(e)
+		if err != nil {
+			return errors.Wrapf(err, `Incorrect enum. Enum for types %s must be in this format: [1, 2, 3]`, strings.Join(intNumbericTypes, ", "))
+		}
 	}
-	return errors.Errorf(`Incorrect enum. Enum for types %s must be in this format: [1, 2, 3] and inputed as string`, strings.Join(intNumbericTypes, ", "))
+	return nil
 }
 
-func fractionNumbericEnumValidate(enum string) error {
-	if regexp.MustCompile(`^\[\s*(([0-9]?(\.[0-9]+)?)+\s*,\s*)*([0-9]?(\.[0-9]+)?)\s*\]$`).Match([]byte(enum)) {
-		return nil
+func fractionNumbericEnumValidate(enum []string) error {
+	for _, e := range enum {
+		_, err := strconv.ParseFloat(e, 64)
+		if err != nil {
+			return errors.Wrapf(err, `Incorrect enum. Enum for types %s must be in this format: [1.1, 2, 0.3, .44]`, strings.Join(fractionNumbericTypes, ", "))
+		}
 	}
-	return errors.Errorf(`Incorrect enum. Enum for types %s must be in this format: [1.1, 2, 0.3, .44] and inputed as string`, strings.Join(fractionNumbericTypes, ", "))
+	return nil
 }
 
 // LowerTitle cancels strings.Title

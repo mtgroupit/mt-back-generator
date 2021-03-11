@@ -43,13 +43,13 @@ type AccessManager struct {
     Add bool 
     AccessManager bool
 }
-{{if .HaveListMethod}}
+
 type Filter struct {
 	Key     string
 	Include bool
 	Value   string
 }
-{{end}}
+
 type app struct {
 	appl App{{if .HaveCustomMethod}}
 	cust Customs{{end}}

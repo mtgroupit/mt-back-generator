@@ -38,11 +38,12 @@ import (
 
 var (
 	isolatedEntityID = uuid.New().String()
-	profID           = uuid.New().String()
+	profileID           = uuid.New().String()
 	sess             = extauthapi.SessionCookieName + "=sess"
 	profile          = &extauthapi.Profile{
-		ID:    extauthapi.MustParseID(profID),
+		ID:    extauthapi.MustParseID(profileID),
 		Authn: true,
+		IsolatedEntityID: extauthapi.MustParseID(isolatedEntityID),
 	}
 
 {{- range $modelName, $model := $.Models}}
@@ -111,6 +112,9 @@ func testNewServer(t *check.C) (string, func(), *app.MockApp, *MockAuthSvc) {
 	ctrl := gomock.NewController(t)
 
 	mockApp := app.NewMockApp(ctrl)
+	{{- if .HaveCustomMethod}}
+	mockCust := app.NewMockCustoms(ctrl)
+	{{- end}}
 	mockExtAuthSvc := NewMockAuthSvc(ctrl)
 
 	port , err := freeport.GetFreePort()
@@ -118,7 +122,7 @@ func testNewServer(t *check.C) (string, func(), *app.MockApp, *MockAuthSvc) {
 		log.Fatal(err)
 	}
 	
-	server, err := NewServer(mockApp, mockExtAuthSvc, Config{
+	server, err := NewServer(mockApp, {{if .HaveCustomMethod}}mockCust, {{end}}mockExtAuthSvc, Config{
 		Host:     "localhost",
 		Port:     port,
 		BasePath: def.APIBasePath,
