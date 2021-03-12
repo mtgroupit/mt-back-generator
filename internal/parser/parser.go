@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	isCorrectName          = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]+$`).MatchString
+	isCorrectName          = regexp.MustCompile(`^[a-z][A-Za-z0-9]+$`).MatchString
 	correctNameDescription = "A valid name must contain only letters and numbers in camelCase"
 
 	intNumbericTypes      = []string{"int", "int32", "int64"}
@@ -80,21 +80,11 @@ func ReadYAMLCfg(file string) (*models.Config, error) {
 
 // HandleCfg handles models.Config for fill config fields for templates
 func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
-	if err = validateCustomTypes(inCfg.CustomTypes); err != nil {
+	if err = validate(inCfg); err != nil {
 		return
 	}
 
 	cfg = inCfg
-
-	if cfg.Name == "" {
-		return nil, errors.New("name is empty")
-	}
-	if cfg.Module == "" {
-		return nil, errors.New("module is empty")
-	}
-	if cfg.AuthSrv == "" {
-		return nil, errors.New("auth-srv is empty")
-	}
 
 	cfg.Description = strconv.Quote(cfg.Description)
 
@@ -106,20 +96,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	}
 
 	for name, model := range cfg.Models {
-		if model.BoundToIsolatedEntity && model.Shared {
-			return nil, errors.Errorf(`Model: "%s". Id from isolated entity available only for not shared models`, name)
-		}
-		if name == strings.Title(name) {
-			return nil, errors.Errorf(`Model "%s" starts with captial letter, please rename it to "%s" starting with small letter`, name, LowerTitle(name))
-		}
-		if !isCorrectName(name) {
-			return nil, errors.Errorf(`"%s" is invalid name for model. %s`, name, correctNameDescription)
-		}
 		model.TitleName = strings.Title(name)
-
-		if len(model.Columns) == 0 {
-			return nil, errors.Errorf(`Model "%s" has no any columns`, name)
-		}
 
 		for i := range model.Tags {
 			cfg.Tags[LowerTitle(model.Tags[i])] = struct{}{}
@@ -129,21 +106,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		var props []models.MethodProps
 		for _, method := range model.Methods {
 			if isCustomMethod(method) {
-				switch {
-				case strings.HasPrefix(method, "list") && strings.Contains(method, "("):
-					return nil, errors.Errorf(`Model: "%s". "%s"  is invalid as a custom list. A valid custom list shouldn't contain spaces before brackets. Correct method pattern: "list(column1, column3*, model1*(column1, model1(column1, column2))), where * means the field can be sorted by"`, name, method)
-				case strings.HasPrefix(method, "edit") && strings.Contains(method, "("):
-					return nil, errors.Errorf(`Model: "%s". "%s"  is invalid as a custom edit. A valid custom edit shouldn't contain spaces before brackets. Correct method pattern: "edit(column1, column2)"`, name, method)
-				default:
-					if !isCorrectName(method) {
-						return nil, errors.Errorf(`Model: "%s". "%s"  is invalid name for method. %s`, name, method, correctNameDescription)
-					}
-				}
 				cfg.HaveCustomMethod = true
 				model.HaveCustomMethod = true
-			}
-			if model.BoundToIsolatedEntity && !IsMyMethod(method) {
-				return nil, errors.Errorf(`Model: "%s". "%s"  is invalid method for model with id from isolated entity. For model with id from isolated entity available only methods with "My" postfix`, name, method)
 			}
 
 			var prop models.MethodProps
@@ -165,7 +129,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 		psql := []models.PsqlParams{}
 		var indexLastNotArrOfStruct int
-		var haveDefaultSort bool
 		for column, options := range model.Columns {
 			switch column {
 			case "createdAt":
@@ -183,11 +146,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				options.Type = "string"
 				model.HaveModifiedBy = true
 			}
-			if !isCorrectName(column) {
-				return nil, errors.Errorf(`Model: "%s". "%s"  is invalid name for column. %s`, name, column, correctNameDescription)
-			}
 			if options.IsStruct, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
-				return
+				return nil, errors.Wrapf(err, `Model: "%s". Column: "%s"`, name, column)
 			}
 
 			if strings.HasPrefix(options.GoType, TypesPrefix) {
@@ -196,36 +156,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			}
 
 			if options.SortDefault {
-				if options.IsStruct {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". Structure can not be as default column for sorting`, name, column)
-				}
-				if options.IsArray {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". Array can not be as default column for sorting`, name, column)
-				}
-				if !options.SortOn {
-					return nil, errors.Errorf(`Model: "%s". Column "%s" can not be as default column for sorting because sorting is not enabled for this column`, name, column)
-				}
-				if haveDefaultSort {
-					return nil, errors.Errorf(`Model "%s" has multiple columns as default for sorting, model should has one column as default for sorting`, name)
-				}
 				if options.SortOrderDefault != "" {
 					orderDefault := strings.ToTitle(options.SortOrderDefault)
 					if orderDefault == "ASC" || orderDefault == "DESC" {
 						options.SortOrderDefault = orderDefault
-					} else {
-						return nil, errors.Errorf(`Model: "%s". Column: "%s". "%s" can not be as default order for sorting. Order for sorting can be only "ASC" or "DESC"`, name, column, options.SortOrderDefault)
 					}
-				}
-				haveDefaultSort = true
-			} else {
-				if options.SortOrderDefault != "" {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". Default order for sorting allow only for fields which set as default for sorting`, name, column)
-				}
-			}
-
-			if options.StrictFilter {
-				if options.Type != "string" && options.GoType != "string" {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". "strict-sorting" option not available for non "string" columns`, name, column)
 				}
 			}
 
@@ -247,35 +182,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			}
 
-			if len(options.Enum) > 0 {
-				if column == "id" {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum available only for not id columns`, name, column)
-				}
-				if err = enumValidate(options.Enum, options.Type); err != nil {
-					return nil, errors.Wrapf(err, `Model: "%s". Column: "%s". Column type: "%s"`, name, column, options.Type)
-				}
-				if options.Default != "" {
-					found := false
-					for _, e := range options.Enum {
-						if e == options.Default {
-							found = true
-							break
-						}
-					}
-					if !found {
-						return nil, errors.Errorf(`Model: "%s". Column: "%s". Default should be one of: %s`, name, column, strings.Join(options.Enum, ", "))
-					}
-				}
-			}
-
 			if options.IsStruct {
 				model.HaveLazyLoading = true
 
 				modelNameForBind := LowerTitle(options.GoType)
-
-				if modelForBind, ok := cfg.Models[modelNameForBind]; ok && !modelForBind.Shared && model.Shared {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". "%s" is invalid type for column. Shared models can not use non-shared models as column type`, name, column, options.Type)
-				}
 
 				err = cfg.AddBind(modelNameForBind, models.Bind{
 					ModelName: name,
@@ -333,8 +243,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 					pp.Type = "int64"
 					pp.TypeSQL = "SERIAL"
-				default:
-					return nil, errors.Errorf(`Model: "%s". "%s"  is invalid type for id. Valid types is 'int64' and 'uuid'`, name, options.Type)
 				}
 				options.TitleName = "ID"
 
@@ -565,6 +473,136 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	return
 }
 
+func validate(cfg *models.Config) error {
+	if cfg.Name == "" {
+		return errors.New("name is empty")
+	}
+	if cfg.Module == "" {
+		return errors.New("module is empty")
+	}
+	if cfg.AuthSrv == "" {
+		return errors.New("auth-srv is empty")
+	}
+
+	if err := validateModels(cfg); err != nil {
+		return err
+	}
+	if err := validateCustomTypes(cfg.CustomTypes); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateModels(cfg *models.Config) error {
+	for name, model := range cfg.Models {
+		if model.BoundToIsolatedEntity && model.Shared {
+			return errors.Errorf(`Model: "%s". Id from isolated entity available only for not shared models`, name)
+		}
+		if !isCorrectName(name) {
+			return errors.Errorf(`"%s" is invalid name for model. %s`, name, correctNameDescription)
+		}
+		if len(model.Columns) == 0 {
+			return errors.Errorf(`Model "%s" has no any columns`, name)
+		}
+
+		for _, method := range model.Methods {
+			if isCustomMethod(method) {
+				switch {
+				case strings.HasPrefix(method, "list") && strings.Contains(method, "("):
+					return errors.Errorf(`Model: "%s". "%s"  is invalid as a custom list. A valid custom list shouldn't contain spaces before brackets. Correct method pattern: "list(column1, column3*, model1*(column1, model1(column1, column2))), where * means the field can be sorted by"`, name, method)
+				case strings.HasPrefix(method, "edit") && strings.Contains(method, "("):
+					return errors.Errorf(`Model: "%s". "%s"  is invalid as a custom edit. A valid custom edit shouldn't contain spaces before brackets. Correct method pattern: "edit(column1, column2)"`, name, method)
+				default:
+					if !isCorrectName(method) {
+						return errors.Errorf(`Model: "%s". "%s"  is invalid name for method. %s`, name, method, correctNameDescription)
+					}
+				}
+			}
+			if model.BoundToIsolatedEntity && !IsMyMethod(method) {
+				return errors.Errorf(`Model: "%s". "%s"  is invalid method for model with id from isolated entity. For model with id from isolated entity available only methods with "My" postfix`, name, method)
+			}
+		}
+
+		haveDefaultSort := false
+		for column, options := range model.Columns {
+			if !isCorrectName(column) {
+				return errors.Errorf(`Model: "%s". "%s"  is invalid name for column. %s`, name, column, correctNameDescription)
+			}
+
+			if !IsStandardColumn(column) {
+				if column == "id" {
+					if !(options.Type == "uuid" || options.Type == "int64") {
+						return errors.Errorf(`Model: "%s". "%s"  is invalid type for id. Valid types is 'int64' or 'uuid'`, name, options.Type)
+					}
+				} else {
+					if strings.HasPrefix(options.Type, arrayTypePrefix) {
+						options.Type = options.Type[len(arrayTypePrefix):]
+					}
+					goType := convertTypeToGoType(options.Type)
+					lowerTitleGoType := LowerTitle(goType)
+					if strings.HasPrefix(options.Type, structTypePrefix) {
+						if _, ok := cfg.Models[lowerTitleGoType]; !ok {
+							return errors.Errorf(`Model: "%s". Column "%s" refers to "%s" model which is not described anywhere`, name, column, lowerTitleGoType)
+						}
+					} else {
+						if !isStandardType(options.Type) {
+							return errors.Errorf(`Model: "%s". Column: "%s". "%s" is not correct type. You can use only one of standarad types %s or refers to any other model`, name, column, goType, strings.Join(standardTypes, ", "))
+						}
+					}
+				}
+			}
+
+			if len(options.Enum) > 0 {
+				if column == "id" {
+					return errors.Errorf(`Model: "%s". Column: "%s". Enum available only for not id columns`, name, column)
+				}
+			}
+
+			if options.IsStruct {
+				modelNameForBind := LowerTitle(options.GoType)
+				if modelForBind, ok := cfg.Models[modelNameForBind]; ok && !modelForBind.Shared && model.Shared {
+					return errors.Errorf(`Model: "%s". Column: "%s". "%s" is invalid type for column. Shared models can not use non-shared models as column type`, name, column, options.Type)
+				}
+			}
+
+			if options.SortDefault {
+				if options.IsStruct {
+					return errors.Errorf(`Model: "%s". Column: "%s". Structure can not be as default column for sorting`, name, column)
+				}
+				if options.IsArray {
+					return errors.Errorf(`Model: "%s". Column: "%s". Array can not be as default column for sorting`, name, column)
+				}
+				if !options.SortOn {
+					return errors.Errorf(`Model: "%s". Column "%s" can not be as default column for sorting because sorting is not enabled for this column`, name, column)
+				}
+				if haveDefaultSort {
+					return errors.Errorf(`Model "%s" has multiple columns as default for sorting, model should has one column as default for sorting`, name)
+				}
+				if options.SortOrderDefault != "" {
+					orderDefault := strings.ToTitle(options.SortOrderDefault)
+					if !(orderDefault == "ASC" || orderDefault == "DESC") {
+						return errors.Errorf(`Model: "%s". Column: "%s". "%s" can not be as default order for sorting. Order for sorting can be only "ASC" or "DESC"`, name, column, options.SortOrderDefault)
+					}
+				}
+				haveDefaultSort = true
+			} else {
+				if options.SortOrderDefault != "" {
+					return errors.Errorf(`Model: "%s". Column: "%s". Default order for sorting allow only for fields which set as default for sorting`, name, column)
+				}
+			}
+
+			if options.StrictFilter && options.Type != "string" {
+				return errors.Errorf(`Model: "%s". Column: "%s". "strict-sorting" option not available for non "string" columns`, name, column)
+			}
+
+			if err := validateOptions(options); err != nil {
+				return errors.Wrapf(err, `Model: "%s". Column: "%s"`, name, column)
+			}
+		}
+	}
+	return nil
+}
+
 func validateCustomTypes(customTypes map[string]models.CustomType) error {
 	for customTypeName, customType := range customTypes {
 		if !isCorrectName(customTypeName) {
@@ -599,7 +637,7 @@ func validateOptions(options models.Options) error {
 	if err := validateFormats(options.Type, options.Format); err != nil {
 		return err
 	}
-	if err := enumValidate(options.Enum, options.Type); err != nil {
+	if err := validateEnum(options.Enum, options.Type); err != nil {
 		return err
 	}
 	if err := validateDefault(options); err != nil {
@@ -628,6 +666,50 @@ func validateFormats(typeName, format string) error {
 	}
 	if !validFormat {
 		return errors.Errorf(`Type "%s" do not support format: "%s"`, typeName, format)
+	}
+	return nil
+}
+
+func validateEnum(enum []string, columnType string) error {
+	if len(enum) == 0 {
+		return nil
+	}
+	if isStandardType(columnType) {
+		if columnType == "string" {
+			return nil
+		}
+		return validateNumberEnum(enum, columnType)
+	}
+	return errors.Errorf(`Enum available only for standard types: %s`, strings.Join(standardTypes, ", "))
+}
+
+func validateNumberEnum(enum []string, columnType string) error {
+	switch {
+	case isIntNumbericType(columnType):
+		return intNumbericEnumValidate(enum)
+	case isFractionNumbericType(columnType):
+		return fractionNumbericEnumValidate(enum)
+	default:
+		return errors.Errorf(`Enum of numbers available only for standard numberic types: %s`, strings.Join(standardNumbericTypes, ", "))
+	}
+}
+
+func intNumbericEnumValidate(enum []string) error {
+	for _, e := range enum {
+		_, err := strconv.Atoi(e)
+		if err != nil {
+			return errors.Wrapf(err, `Incorrect enum. Enum for types %s must be in this format: [1, 2, 3]`, strings.Join(intNumbericTypes, ", "))
+		}
+	}
+	return nil
+}
+
+func fractionNumbericEnumValidate(enum []string) error {
+	for _, e := range enum {
+		_, err := strconv.ParseFloat(e, 64)
+		if err != nil {
+			return errors.Wrapf(err, `Incorrect enum. Enum for types %s must be in this format: [1.1, 2, 0.3, .44]`, strings.Join(fractionNumbericTypes, ", "))
+		}
 	}
 	return nil
 }
@@ -720,12 +802,12 @@ func parseColumnType(columnType string, cfg *models.Config) (bool, bool, string,
 	switch {
 	case strings.HasPrefix(columnType, structTypePrefix):
 		if _, ok := cfg.Models[lowerTitleGoType]; !ok {
-			return false, false, "", errors.Errorf(`One of the fields refers to "%s" model which is not described anywhere`, lowerTitleGoType)
+			return false, false, "", errors.Errorf(`Field refers to "%s" model which is not described anywhere`, lowerTitleGoType)
 		}
 		return true, false, goType, nil
 	case strings.HasPrefix(columnType, arrayOfStructTypePrefix):
 		if _, ok := cfg.Models[lowerTitleGoType]; !ok {
-			return false, false, "", errors.Errorf(`One of the fields refers to "%s" model which is not described anywhere`, lowerTitleGoType)
+			return false, false, "", errors.Errorf(`Fields refers to "%s" model which is not described anywhere`, lowerTitleGoType)
 		}
 		return true, true, goType, nil
 	case strings.HasPrefix(columnType, arrayTypePrefix) && !strings.HasPrefix(columnType, arrayOfStructTypePrefix):
@@ -788,50 +870,6 @@ func isCustomEdit(method string) bool {
 
 func isCustomList(method string) bool {
 	return regexp.MustCompile(`^list\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
-}
-
-func enumValidate(enum []string, columnType string) error {
-	if len(enum) == 0 {
-		return nil
-	}
-	if isStandardType(columnType) {
-		if columnType == "string" {
-			return nil
-		}
-		return numberEnumValidate(enum, columnType)
-	}
-	return errors.Errorf(`Enum available only for standard types: %s`, strings.Join(standardTypes, ", "))
-}
-
-func numberEnumValidate(enum []string, columnType string) error {
-	switch {
-	case isIntNumbericType(columnType):
-		return intNumbericEnumValidate(enum)
-	case isFractionNumbericType(columnType):
-		return fractionNumbericEnumValidate(enum)
-	default:
-		return errors.Errorf(`Enum of numbers available only for standard numberic types: %s`, strings.Join(standardNumbericTypes, ", "))
-	}
-}
-
-func intNumbericEnumValidate(enum []string) error {
-	for _, e := range enum {
-		_, err := strconv.Atoi(e)
-		if err != nil {
-			return errors.Wrapf(err, `Incorrect enum. Enum for types %s must be in this format: [1, 2, 3]`, strings.Join(intNumbericTypes, ", "))
-		}
-	}
-	return nil
-}
-
-func fractionNumbericEnumValidate(enum []string) error {
-	for _, e := range enum {
-		_, err := strconv.ParseFloat(e, 64)
-		if err != nil {
-			return errors.Wrapf(err, `Incorrect enum. Enum for types %s must be in this format: [1.1, 2, 0.3, .44]`, strings.Join(fractionNumbericTypes, ", "))
-		}
-	}
-	return nil
 }
 
 // LowerTitle cancels strings.Title
