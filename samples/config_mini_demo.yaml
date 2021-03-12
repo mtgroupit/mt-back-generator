@@ -3,6 +3,7 @@ module: "demo"
 description: "demo generated app"
 debug: true # used for create flag and env variable for reset database
 auth-srv: "github.com/mtgroupit/mt-mock-extauthapi"
+
 models:
 
   employee:
@@ -27,6 +28,7 @@ models:
       defaultPhone:
         type: "string"
         format: "phone"
+        default: "qwe"
       phones:
         type: "[]string"
       department:
@@ -138,3 +140,27 @@ models:
       - delete
       - list
     
+custom-types:
+  
+  custType:
+    description: "qeqwe"
+    fields:
+      qwe:
+        type: "string"
+        format: "url"
+      qwe2:
+        type: "[]string"
+        format: "url"
+      asd:
+        type: "string"
+        format: "phone"
+  
+  custType2:
+    description: "qeqwe"
+    fields:
+      qwe:
+        type: "string"
+        format: "date-time"
+        default: "2002-03-01T13:45:30.936Z"
+      asd:
+        type: "[]bool"

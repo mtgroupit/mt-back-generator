@@ -154,6 +154,7 @@ type Config struct {
 	Description string
 	Debug       bool
 	Models      map[string]Model
+	CustomTypes map[string]CustomType `yaml:"custom-types"`
 	Functions   map[string]Function
 
 	HaveListMethod   bool
@@ -182,4 +183,10 @@ func (c *Config) AddBind(nameModelTo string, bind Bind) error {
 	modelTo.Binds = append(modelTo.Binds, bind)
 	c.Models[nameModelTo] = modelTo
 	return nil
+}
+
+// CustomType - describes custom types
+type CustomType struct {
+	Description string
+	Fields      map[string]Options
 }

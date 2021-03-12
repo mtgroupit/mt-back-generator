@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/mtgroupit/mt-back-generator/models"
 
 	"github.com/fatih/camelcase"
@@ -16,12 +17,15 @@ import (
 )
 
 var (
-	isCorrectName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]+$`).MatchString
+	isCorrectName          = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]+$`).MatchString
+	correctNameDescription = "A valid name must contain only letters and numbers in camelCase"
 
 	intNumbericTypes      = []string{"int", "int32", "int64"}
 	fractionNumbericTypes = []string{"float", "decimal"}
 	standardNumbericTypes = append(intNumbericTypes, fractionNumbericTypes...)
 	standardTypes         = append([]string{"string", "bool"}, standardNumbericTypes...)
+
+	formats = map[string][]string{"string": {"date-time", "email", "phone", "url"}}
 )
 
 const (
@@ -76,6 +80,10 @@ func ReadYAMLCfg(file string) (*models.Config, error) {
 
 // HandleCfg handles models.Config for fill config fields for templates
 func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
+	if err = validateCustomTypes(inCfg.CustomTypes); err != nil {
+		return
+	}
+
 	cfg = inCfg
 
 	if cfg.Name == "" {
@@ -105,7 +113,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			return nil, errors.Errorf(`Model "%s" starts with captial letter, please rename it to "%s" starting with small letter`, name, LowerTitle(name))
 		}
 		if !isCorrectName(name) {
-			return nil, errors.Errorf(`"%s" is invalid name for model. A valid name must contain only letters and numbers in camelCase`, name)
+			return nil, errors.Errorf(`"%s" is invalid name for model. %s`, name, correctNameDescription)
 		}
 		model.TitleName = strings.Title(name)
 
@@ -128,7 +136,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					return nil, errors.Errorf(`Model: "%s". "%s"  is invalid as a custom edit. A valid custom edit shouldn't contain spaces before brackets. Correct method pattern: "edit(column1, column2)"`, name, method)
 				default:
 					if !isCorrectName(method) {
-						return nil, errors.Errorf(`Model: "%s". "%s"  is invalid name for method. A valid name must contain only letters and numbers in camelCase`, name, method)
+						return nil, errors.Errorf(`Model: "%s". "%s"  is invalid name for method. %s`, name, method, correctNameDescription)
 					}
 				}
 				cfg.HaveCustomMethod = true
@@ -176,7 +184,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				model.HaveModifiedBy = true
 			}
 			if !isCorrectName(column) {
-				return nil, errors.Errorf(`Model: "%s". "%s"  is invalid name for column. A valid name must contain only letters and numbers in camelCase`, name, column)
+				return nil, errors.Errorf(`Model: "%s". "%s"  is invalid name for column. %s`, name, column, correctNameDescription)
 			}
 			if options.IsStruct, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
 				return
@@ -557,6 +565,109 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	return
 }
 
+func validateCustomTypes(customTypes map[string]models.CustomType) error {
+	for customTypeName, customType := range customTypes {
+		if !isCorrectName(customTypeName) {
+			return errors.Errorf(`"%s" is invalid name for custom type. %s`, customTypeName, correctNameDescription)
+		}
+		if len(customType.Fields) == 0 {
+			return errors.Errorf(`Custom type "%s" has no any fields`, customTypeName)
+		}
+		for fieldName, options := range customType.Fields {
+			if !isCorrectName(fieldName) {
+				return errors.Errorf(`Custom type: "%s". "%s" is invalid name for field. %s`, customTypeName, fieldName, correctNameDescription)
+			}
+			if strings.HasPrefix(options.Type, arrayTypePrefix) {
+				options.Type = options.Type[len(arrayTypePrefix):]
+			}
+			if !isStandardType(options.Type) {
+				_, ok := customTypes[options.Type]
+				if !ok {
+					return errors.Errorf(`Custom type: "%s". Field: "%s". Custom type fields must have standard or other custom types. "%s" is not valid type`, customTypeName, fieldName, options.Type)
+				}
+			}
+
+			if err := validateOptions(options); err != nil {
+				return errors.Wrapf(err, `Custom type: "%s". Field: "%s"`, customTypeName, fieldName)
+			}
+		}
+	}
+	return nil
+}
+
+func validateOptions(options models.Options) error {
+	if err := validateFormats(options.Type, options.Format); err != nil {
+		return err
+	}
+	if err := enumValidate(options.Enum, options.Type); err != nil {
+		return err
+	}
+	if err := validateDefault(options); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateFormats(typeName, format string) error {
+	if format == "" {
+		return nil
+	}
+	if strings.HasPrefix(typeName, arrayTypePrefix) {
+		typeName = typeName[len(arrayTypePrefix):]
+	}
+
+	typeFormats, ok := formats[typeName]
+	if !ok {
+		return errors.Errorf(`Type "%s" do not support formats`, typeName)
+	}
+	validFormat := false
+	for i := range typeFormats {
+		if format == typeFormats[i] {
+			validFormat = true
+		}
+	}
+	if !validFormat {
+		return errors.Errorf(`Type "%s" do not support format: "%s"`, typeName, format)
+	}
+	return nil
+}
+
+func validateDefault(options models.Options) error {
+	if options.Default == "" {
+		return nil
+	}
+
+	if len(options.Enum) > 0 {
+		found := false
+		for _, e := range options.Enum {
+			if e == options.Default {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return errors.Errorf(`Default ("%s") should be one from enum: %s`, options.Default, strings.Join(options.Enum, ", "))
+		}
+	}
+
+	if options.Format != "" {
+		valid := false
+		switch options.Format {
+		case "date-time":
+			valid = strfmt.IsDateTime(options.Default)
+		case "email":
+			valid = strfmt.IsEmail(options.Default)
+		default:
+			valid = true
+		}
+		if !valid {
+			return errors.Errorf(`Default ("%s") should match the %s format`, options.Default, options.Format)
+		}
+	}
+
+	return nil
+}
+
 func setDeepNesting(cfg *models.Config) (err error) {
 	for name, model := range cfg.Models {
 		model.DeepNesting, err = countDeepNesting(name, cfg)
@@ -680,10 +791,10 @@ func isCustomList(method string) bool {
 }
 
 func enumValidate(enum []string, columnType string) error {
+	if len(enum) == 0 {
+		return nil
+	}
 	if isStandardType(columnType) {
-		if len(enum) == 0 {
-			return errors.New(`Enum must has one or more elements`)
-		}
 		if columnType == "string" {
 			return nil
 		}
