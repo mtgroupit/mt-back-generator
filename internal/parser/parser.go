@@ -30,13 +30,16 @@ var (
 
 const (
 	structTypePrefix        = "model."
+	customTypePrefix        = "custom."
 	arrayTypePrefix         = "[]"
 	arrayOfStructTypePrefix = arrayTypePrefix + structTypePrefix
+	arrayOfCustomTypePrefix = arrayTypePrefix + customTypePrefix
 
 	TypesPrefix = "types."
 )
 
-func isStandardType(t string) bool {
+// IsStandardType checks standard type or not
+func IsStandardType(t string) bool {
 	for i := range standardTypes {
 		if t == standardTypes[i] {
 			return true
@@ -95,6 +98,68 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		return
 	}
 
+	for customTypeName, customType := range cfg.CustomTypes {
+		for field, options := range customType.Fields {
+			if options.IsCustom, options.IsArray, options.GoType, err = parseFieldType(options.Type, cfg.CustomTypes); err != nil {
+				return nil, errors.Wrapf(err, `Custom type: "%s". Field: "%s"`, customTypeName, field)
+			}
+
+			if strings.HasPrefix(options.GoType, TypesPrefix) {
+				cfg.HaveTypesInCustomTypes = true
+			}
+			if options.Default != ""{
+				switch options.Format {
+				case "date-time", "email":
+					cfg.HaveConvInCustomTypes = true
+				default:
+					cfg.HaveSwagInCustomTypes = true
+				}
+			}
+
+			if options.Format == "email" {
+				cfg.HaveEmailInCustomTypes = true
+			}
+
+			if options.IsCustom {
+				options.Type = LowerTitle(options.GoType)
+			} else {
+				if options.Type == "int" {
+					options.Type = "int32"
+					options.GoType = "int32"
+				}
+				if options.IsArray {
+					switch options.GoType {
+					case "int":
+						options.Type = "int32"
+						options.GoType = "int32"
+					case "float64":
+						options.Type = "float"
+					case TypesPrefix + "Decimal":
+						options.Type = "decimal"
+					default:
+						options.Type = options.GoType
+					}
+				}
+
+				switch options.Type {
+				case "int32", "int64":
+					options.Format = options.Type
+					options.Type = "integer"
+				case "bool":
+					options.Type = "boolean"
+				case "float":
+					options.Format = "float"
+				}
+
+				if isFractionNumbericType(options.Type) {
+					options.Type = "number"
+				}
+			}
+
+			customType.Fields[field] = options
+		}
+	}
+
 	for name, model := range cfg.Models {
 		model.TitleName = strings.Title(name)
 
@@ -146,7 +211,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				options.Type = "string"
 				model.HaveModifiedBy = true
 			}
-			if options.IsStruct, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
+			if options.IsStruct, options.IsCustom, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
 				return nil, errors.Wrapf(err, `Model: "%s". Column: "%s"`, name, column)
 			}
 
@@ -222,13 +287,14 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					cfg.ExtraTables = append(cfg.ExtraTables, et)
 				}
 			} else {
-				if options.IsArray {
-					model.HaveArrayOfStandardType = true
+				if options.IsArray || options.IsCustom {
+					model.HaveJSON = true
 				}
 			}
 
 			pp := models.PsqlParams{}
 			pp.IsArray = options.IsArray
+			pp.IsCustom = options.IsCustom
 			pp.IsStruct = options.IsStruct
 			if column == "id" {
 				switch options.Type {
@@ -254,7 +320,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				} else {
 					options.TitleName = strings.Title(column)
 				}
-				if options.IsStruct {
+				if options.IsStruct || options.IsCustom {
 					options.Type = LowerTitle(options.GoType)
 				} else {
 					if options.Type == "int" {
@@ -301,22 +367,21 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					} else {
 						pp.TypeSQL = "integer"
 					}
+				} else if pp.IsCustom || pp.IsArray {
+					pp.SQLName = NameSQL(column) + "_json"
+					pp.TypeSQL = "jsonb"
 				} else {
-					if pp.IsArray {
-						pp.SQLName = NameSQL(column) + "_json"
-						pp.TypeSQL = "jsonb"
-					} else {
-						pp.SQLName = NameSQL(column)
-						switch options.Type {
-						case "string":
-							pp.TypeSQL = "text"
-						case "number":
-							pp.TypeSQL = "numeric"
-						default:
-							pp.TypeSQL = options.Type
-						}
+					pp.SQLName = NameSQL(column)
+					switch options.Type {
+					case "string":
+						pp.TypeSQL = "text"
+					case "number":
+						pp.TypeSQL = "numeric"
+					default:
+						pp.TypeSQL = options.Type
 					}
 				}
+
 			}
 
 			model.Columns[column] = options
@@ -338,7 +403,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			if !options.IsStruct {
 				sqlName := NameSQL(options.TitleName)
 				titleName := options.TitleName
-				if options.IsArray {
+				if options.IsArray || options.IsCustom {
 					sqlName += "_json"
 					titleName += "JSON"
 				} else {
@@ -348,7 +413,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					titleName += ".Value()"
 				}
 				SQLSelect = append(SQLSelect, sqlName)
-				if !options.IsArray {
+				if !options.IsArray && !options.IsCustom {
 					if options.Type != "string" || options.StrictFilter {
 						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, sqlName, column, "not_"+column, "not_"+column, sqlName, "not_"+column))
 					} else {
@@ -544,9 +609,16 @@ func validateModels(cfg *models.Config) error {
 						if _, ok := cfg.Models[lowerTitleGoType]; !ok {
 							return errors.Errorf(`Model: "%s". Column "%s" refers to "%s" model which is not described anywhere`, name, column, lowerTitleGoType)
 						}
+					} else if strings.HasPrefix(options.Type, customTypePrefix) {
+						if _, ok := cfg.CustomTypes[lowerTitleGoType]; !ok {
+							return errors.Errorf(`Model: "%s". Column "%s" refers to "%s" custom type which is not described anywhere`, name, column, lowerTitleGoType)
+						}
 					} else {
-						if !isStandardType(options.Type) {
-							return errors.Errorf(`Model: "%s". Column: "%s". "%s" is not correct type. You can use only one of standarad types %s or refers to any other model`, name, column, goType, strings.Join(standardTypes, ", "))
+						if !IsStandardType(options.Type) {
+							_, ok := cfg.CustomTypes[options.Type]
+							if !ok {
+								return errors.Errorf(`Model: "%s". Column: "%s". "%s" is not correct type. You can use only one of standarad types %s, custom types or types refers to any other model`, name, column, goType, strings.Join(standardTypes, ", "))
+							}
 						}
 					}
 				}
@@ -615,11 +687,15 @@ func validateCustomTypes(customTypes map[string]models.CustomType) error {
 			if !isCorrectName(fieldName) {
 				return errors.Errorf(`Custom type: "%s". "%s" is invalid name for field. %s`, customTypeName, fieldName, correctNameDescription)
 			}
-			if strings.HasPrefix(options.Type, arrayTypePrefix) {
-				options.Type = options.Type[len(arrayTypePrefix):]
+			fieldType := options.Type
+			if strings.HasPrefix(fieldType, arrayTypePrefix) {
+				fieldType = fieldType[len(arrayTypePrefix):]
 			}
-			if !isStandardType(options.Type) {
-				_, ok := customTypes[options.Type]
+			if strings.HasPrefix(fieldType, customTypePrefix) {
+				fieldType = fieldType[len(customTypePrefix):]
+			}
+			if !IsStandardType(fieldType) {
+				_, ok := customTypes[fieldType]
 				if !ok {
 					return errors.Errorf(`Custom type: "%s". Field: "%s". Custom type fields must have standard or other custom types. "%s" is not valid type`, customTypeName, fieldName, options.Type)
 				}
@@ -674,7 +750,7 @@ func validateEnum(enum []string, columnType string) error {
 	if len(enum) == 0 {
 		return nil
 	}
-	if isStandardType(columnType) {
+	if IsStandardType(columnType) {
 		if columnType == "string" {
 			return nil
 		}
@@ -769,7 +845,7 @@ func countDeepNesting(model string, cfg *models.Config) (int, error) {
 	var err error
 	deepNesting := 0
 	for _, options := range cfg.Models[model].Columns {
-		if options.IsStruct, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
+		if options.IsStruct, _, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
 			return 0, err
 		}
 		if options.IsStruct {
@@ -796,27 +872,62 @@ func countDeepNesting(model string, cfg *models.Config) (int, error) {
 	return deepNesting, nil
 }
 
-func parseColumnType(columnType string, cfg *models.Config) (bool, bool, string, error) {
+func parseFieldType(fieldType string, customTypes map[string]models.CustomType) (bool, bool, string, error) {
+	goType := convertTypeToGoType(fieldType)
+	lowerTitleGoType := LowerTitle(goType)
+	switch {
+	case strings.HasPrefix(fieldType, customTypePrefix):
+		if _, ok := customTypes[lowerTitleGoType]; !ok {
+			return false, false, "", errors.Errorf(`Field refers to "%s" custom type which is not described anywhere`, lowerTitleGoType)
+		}
+		return true, false, goType, nil
+	case strings.HasPrefix(fieldType, arrayOfCustomTypePrefix):
+		if _, ok := customTypes[lowerTitleGoType]; !ok {
+			return false, false, "", errors.Errorf(`Fields refers to "%s" custom type which is not described anywhere`, lowerTitleGoType)
+		}
+		return true, true, goType, nil
+	case strings.HasPrefix(fieldType, arrayTypePrefix) && !strings.HasPrefix(fieldType, arrayOfCustomTypePrefix):
+		if IsStandardType(fieldType[len(arrayTypePrefix):]) {
+			return false, true, goType, nil
+		}
+
+		return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarad types %s or custom types`, goType, strings.Join(standardTypes, ", "))
+	default:
+		return false, false, goType, nil
+	}
+}
+
+func parseColumnType(columnType string, cfg *models.Config) (bool, bool, bool, string, error) {
 	goType := convertTypeToGoType(columnType)
 	lowerTitleGoType := LowerTitle(goType)
 	switch {
 	case strings.HasPrefix(columnType, structTypePrefix):
 		if _, ok := cfg.Models[lowerTitleGoType]; !ok {
-			return false, false, "", errors.Errorf(`Field refers to "%s" model which is not described anywhere`, lowerTitleGoType)
+			return false, false, false, "", errors.Errorf(`Field refers to "%s" model which is not described anywhere`, lowerTitleGoType)
 		}
-		return true, false, goType, nil
+		return true, false, false, goType, nil
 	case strings.HasPrefix(columnType, arrayOfStructTypePrefix):
 		if _, ok := cfg.Models[lowerTitleGoType]; !ok {
-			return false, false, "", errors.Errorf(`Fields refers to "%s" model which is not described anywhere`, lowerTitleGoType)
+			return false, false, false, "", errors.Errorf(`Fields refers to "%s" model which is not described anywhere`, lowerTitleGoType)
 		}
-		return true, true, goType, nil
-	case strings.HasPrefix(columnType, arrayTypePrefix) && !strings.HasPrefix(columnType, arrayOfStructTypePrefix):
-		if isStandardType(columnType[len(arrayTypePrefix):]) {
-			return false, true, goType, nil
+		return true, false, true, goType, nil
+	case strings.HasPrefix(columnType, customTypePrefix):
+		if _, ok := cfg.CustomTypes[lowerTitleGoType]; !ok {
+			return false, false, false, "", errors.Errorf(`Field refers to "%s" custom type which is not described anywhere`, lowerTitleGoType)
 		}
-		return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarad types %s or refers to any other model`, goType, strings.Join(standardTypes, ", "))
+		return false, true, false, goType, nil
+	case strings.HasPrefix(columnType, arrayOfCustomTypePrefix):
+		if _, ok := cfg.CustomTypes[lowerTitleGoType]; !ok {
+			return false, false, false, "", errors.Errorf(`Fields refers to "%s" custom type which is not described anywhere`, lowerTitleGoType)
+		}
+		return false, true, true, goType, nil
+	case strings.HasPrefix(columnType, arrayTypePrefix) && !strings.HasPrefix(columnType, arrayOfStructTypePrefix) && !strings.HasPrefix(columnType, arrayOfCustomTypePrefix):
+		if IsStandardType(columnType[len(arrayTypePrefix):]) {
+			return false, false, true, goType, nil
+		}
+		return false, false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarad types %s or refers to any other model`, goType, strings.Join(standardTypes, ", "))
 	default:
-		return false, false, goType, nil
+		return false, false, false, goType, nil
 	}
 }
 
@@ -826,7 +937,11 @@ func convertTypeToGoType(columnType string) string {
 		return strings.Title(columnType[len(structTypePrefix):])
 	case strings.HasPrefix(columnType, arrayOfStructTypePrefix):
 		return strings.Title(columnType[len(arrayOfStructTypePrefix):])
-	case strings.HasPrefix(columnType, arrayTypePrefix) && !strings.HasPrefix(columnType, arrayOfStructTypePrefix):
+	case strings.HasPrefix(columnType, customTypePrefix):
+		return strings.Title(columnType[len(customTypePrefix):])
+	case strings.HasPrefix(columnType, arrayOfCustomTypePrefix):
+		return strings.Title(columnType[len(arrayOfCustomTypePrefix):])
+	case strings.HasPrefix(columnType, arrayTypePrefix) && !strings.HasPrefix(columnType, arrayOfStructTypePrefix) && !strings.HasPrefix(columnType, arrayOfCustomTypePrefix):
 		return convertStandardTypeToGoType(columnType[len(arrayTypePrefix):])
 	default:
 		return convertStandardTypeToGoType(columnType)
@@ -1168,8 +1283,8 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 					if fields[j] == options.TitleName {
 						if !options.IsStruct {
 							sqlName := NameSQL(options.TitleName)
-							if options.IsArray {
-								result.MethodsProps[i].HaveArrayOfStandardType = true
+							if options.IsArray || options.IsCustom {
+								result.MethodsProps[i].HaveJSON = true
 								sqlName += "_json"
 							}
 							SQLSelect = append(SQLSelect, sqlName)

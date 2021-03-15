@@ -22,7 +22,7 @@ import (
 {{- if HaveListWithWarn $model}}
 	"fmt"
 {{- end}}
-{{- if or $model.HaveArrayOfStandardType (HaveColumnWithModelThatIsStructAndIsArray $model.Columns $.Models false true)}}
+{{- if or $model.HaveJSON (HaveColumnWithModelThatIsStructAndIsArray $model.Columns $.Models false true)}}
 	"encoding/json"
 {{- end}}
 
@@ -55,11 +55,16 @@ type {{$modelName}} struct {
 		{{- end}}
 		{{$psqlParams.Name}} {{if $psqlParams.IsArray}}[]{{end}}{{$psqlParams.Type}}
 	{{- else}}
-		{{- if not $psqlParams.IsArray}}
-			{{$psqlParams.Name}} {{if eq  $psqlParams.TypeSQL "uuid"}}uuid.UUID{{else}}{{DalType $psqlParams.Type}}{{end}} `db:"{{$psqlParams.SQLName}}"` 
-		{{- else}}
+		{{- if $psqlParams.IsCustom}}
 			{{$psqlParams.Name}}JSON []byte `db:"{{$psqlParams.SQLName}}"`
-			{{$psqlParams.Name}} []{{$psqlParams.Type}} 
+			{{$psqlParams.Name}} {{if $psqlParams.IsArray}}[]{{end}}app.{{$psqlParams.Type}} 
+		{{- else}}
+			{{- if not $psqlParams.IsArray}}
+				{{$psqlParams.Name}} {{if eq  $psqlParams.TypeSQL "uuid"}}uuid.UUID{{else}}{{DalType $psqlParams.Type}}{{end}} `db:"{{$psqlParams.SQLName}}"` 
+			{{- else}}
+				{{$psqlParams.Name}}JSON []byte `db:"{{$psqlParams.SQLName}}"`
+				{{$psqlParams.Name}} []{{$psqlParams.Type}} 
+			{{- end}}
 		{{- end}}
 	{{- end}}
 {{- end}}
@@ -137,7 +142,7 @@ type {{$modelName}} struct {
 						{{$column}}ID = m.{{$options.TitleName}}.ID
 					}
 				{{- end}}
-				{{- if and $options.IsArray (not $options.IsStruct)}}
+				{{- if or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom}}
 					{{$options.TitleName}}JSON, _ := json.Marshal(m.{{$options.TitleName}})
 				{{- end}}
 			{{- end}}
@@ -294,10 +299,10 @@ type {{$modelName}} struct {
 			ms = append(ms, m)
 		}
 
-		{{- if or (and (not (IsCustomList $method)) $model.HaveArrayOfStandardType) (and (IsCustomList $method) (index $model.MethodsProps $i).HaveArrayOfStandardType)}}
+		{{- if or (and (not (IsCustomList $method)) $model.HaveJSON) (and (IsCustomList $method) (index $model.MethodsProps $i).HaveJSON)}}
 			for i := range ms { 
 			{{- range $column, $options := $model.Columns}}
-				{{- if or (and $options.IsArray (not $options.IsStruct) (not (IsCustomList $method))) (and (IsCustomList $method) (index (index $model.MethodsProps $i).ArrayColumns $column))}}
+				{{- if or (and (or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom) (not (IsCustomList $method))) (and (IsCustomList $method) (index (index $model.MethodsProps $i).ArrayColumns $column))}}
 					if err := json.Unmarshal(ms[i].{{$options.TitleName}}JSON, &ms[i].{{$options.TitleName}}); err != nil {
 						return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 					}
@@ -309,7 +314,7 @@ type {{$modelName}} struct {
 		result := []{{$modelName}}{}
 		{{- if $model.HaveLazyLoading}}
 			{{- if (IsCustomList $method)}}
-				{{- if or ((index $model.MethodsProps $i).NeedLazyLoading) ((index $model.MethodsProps $i).HaveArrayOfStandardType)}}
+				{{- if or ((index $model.MethodsProps $i).NeedLazyLoading) ((index $model.MethodsProps $i).HaveJSON)}}
 					for i := range ms {
 					{{- if (index $model.MethodsProps $i).NeedLazyLoading}}
 						if err := ms[i].LazyLoading{{$method}}({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
@@ -494,7 +499,7 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 						return
 					}
 					{{- range $column2, $options2 := $model2.Columns}}
-						{{- if and $options2.IsArray (not $options2.IsStruct)}}
+						{{- if  or (and $options2.IsArray (not $options2.IsStruct)) $options2.IsCustom}}
 							if err = json.Unmarshal({{$column}}.{{$options2.TitleName}}JSON, &{{$column}}.{{$options2.TitleName}}); err != nil {
 								return
 							}
@@ -514,7 +519,7 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 					return
 				}
 				{{- range $column2, $options2 := $model2.Columns}}
-					{{- if and $options2.IsArray (not $options2.IsStruct)}}
+					{{- if  or (and $options2.IsArray (not $options2.IsStruct)) $options2.IsCustom}}
 						if err != sql.ErrNoRows {
 							if err = json.Unmarshal(m.{{$options.TitleName}}.{{$options2.TitleName}}JSON, &m.{{$options.TitleName}}.{{$options2.TitleName}}); err != nil {
 								return
@@ -613,7 +618,7 @@ func (a *App) get{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{en
 		return nil, err
 	}
 	{{- range $column, $options := $model.Columns}}
-		{{- if and $options.IsArray (not $options.IsStruct)}}
+		{{- if  or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom}}
 			if err := json.Unmarshal(m.{{$options.TitleName}}JSON, &m.{{$options.TitleName}}); err != nil {
 				return nil, err
 			}
@@ -643,7 +648,7 @@ func (a *App) add{{$modelName}}(profileID string, {{if not $model.Shared}}isolat
 				{{$column}}ID = m.{{$options.TitleName}}.ID
 			}
 		{{- end}}
-		{{- if and $options.IsArray (not $options.IsStruct)}}
+		{{- if  or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom}}
 			{{$options.TitleName}}JSON, _ := json.Marshal(m.{{$options.TitleName}})
 		{{- end}}
 	{{- end}}
@@ -735,8 +740,26 @@ func (m *{{$modelName}}) Filter(filter *app.Filter) (ok, filterIsValid bool) {
 			{{- if $options.IsArray}}
 			for _, elem := range m.{{$options.TitleName}} {
 			{{- end}}
-				value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{if eq $options.GoType "types.Decimal"}}Decimal.String(){{else}}{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}}{{end}})
-				if ({{if or (ne $options.Type "string") $options.StrictFilter}}value == filter.Value{{else}}contains(value, filter.Value){{end}} && filter.Include) || ({{if or (ne $options.Type "string") $options.StrictFilter}}value != filter.Value{{else}}!contains(value, filter.Value){{end}} && !filter.Include) {
+				{{- if $options.IsCustom}}
+					{{- if $options.IsArray}}
+						elemJSON, err := json.Marshal(elem)
+						if err != nil {
+							ok, filterIsValid = true, false
+							return
+						}
+						equal, err := areEqualJSON(filter.Value, string(elemJSON))
+					{{- else}}
+						equal, err := areEqualJSON(filter.Value, string(m.CustJSON))
+					{{- end}}
+					if err != nil {
+						ok, filterIsValid = true, false
+						return
+					}
+				{{- else}}
+					value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{if eq $options.GoType "types.Decimal"}}Decimal.String(){{else}}{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}}{{end}})
+					equal := {{if or (ne $options.Type "string") $options.StrictFilter}}value == filter.Value{{else}}contains(value, filter.Value){{end}}
+				{{- end}}
+				if (equal && filter.Include) || (!equal && !filter.Include) {
 					ok, filterIsValid = true, true
 				} else {
 					ok, filterIsValid = false, true

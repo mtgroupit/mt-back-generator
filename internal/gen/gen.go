@@ -39,7 +39,7 @@ var goTmplFuncs = template.FuncMap{
 		return strings.ToLower(in)
 	},
 	"LowerTitle":   parser.LowerTitle,
-	"Title":        strings.Title,
+	"Title":        nameToTitle,
 	"NameSQL":      parser.NameSQL,
 	"IsCustomList": isCustomList,
 	"IsCustomEdit": isCustomEdit,
@@ -135,7 +135,7 @@ var goTmplFuncs = template.FuncMap{
 				if method == method2 {
 					if model.HaveLazyLoading {
 						if isCustomList(method) {
-							if len(model.MethodsProps[i].FilteredFields) != 0 || model.MethodsProps[i].HaveArrayOfStandardType {
+							if len(model.MethodsProps[i].FilteredFields) != 0 || model.MethodsProps[i].HaveJSON {
 								return true
 							}
 							if !model.MethodsProps[i].NeedLazyLoading {
@@ -162,8 +162,16 @@ var goTmplFuncs = template.FuncMap{
 		}
 		return false
 	},
-	"ConvertApiToAppColumn": func(sourceStructName string, columnOptions models.Options) string {
-		appValue := sourceStructName + "." + columnOptions.TitleName
+	"ConvertApiToAppColumn": func(sourceStructName, column string, columnOptions models.Options) string {
+		appValue := sourceStructName + "." + nameToTitle(column)
+
+		if columnOptions.IsCustom {
+			var s string
+			if columnOptions.IsArray {
+				s = "s"
+			}
+			return fmt.Sprintf("app%s%s(%s)", columnOptions.GoType, s, appValue)
+		}
 
 		switch columnOptions.Format {
 		case "date-time":
@@ -215,10 +223,10 @@ var goTmplFuncs = template.FuncMap{
 
 		return appValue
 	},
-	"ConvertAppToApiColumn": func(columnOptions models.Options) string {
-		apiValue := "a." + columnOptions.TitleName
+	"ConvertAppToApiColumn": func(sourceStructName, column string, columnOptions models.Options) string {
+		apiValue := sourceStructName + "." + nameToTitle(column)
 
-		if columnOptions.IsStruct {
+		if columnOptions.IsStruct || columnOptions.IsCustom {
 			var s string
 			if columnOptions.IsArray {
 				s = "s"
@@ -277,6 +285,13 @@ var goTmplFuncs = template.FuncMap{
 	},
 	"ConvertDalToAppColumn": func(columnOptions models.Options) string {
 		appValue := "m." + columnOptions.TitleName
+
+		if columnOptions.IsCustom {
+			if columnOptions.IsArray {
+				return fmt.Sprintf("app.%ssToPointers(%s)", columnOptions.GoType, appValue)
+			}
+			return fmt.Sprintf("&%s", appValue)
+		}
 
 		if columnOptions.IsStruct {
 			var s string
@@ -580,6 +595,13 @@ func isAdd(method string) bool {
 func isList(method string) bool {
 	method = strings.ToLower(method)
 	return method == "list" || isCustomList(method)
+}
+
+func nameToTitle(name string) string {
+	if strings.ToLower(name) == "id" || strings.ToLower(name) == "url" {
+		return strings.ToTitle(name)
+	}
+	return strings.Title(name)
 }
 
 const (
