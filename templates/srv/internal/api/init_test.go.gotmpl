@@ -51,14 +51,14 @@ var (
 	test{{$modelName}}ID1 {{if eq $idType "int64"}}int64{{end}} = {{if eq $idType "uuid"}}{{if $model.BoundToIsolatedEntity}}isolatedEntityID{{else}}uuid.New().String(){{end}}{{else}}1{{end}}
 	test{{$modelName}}1 = &models.{{$modelName}}{  
 		{{- range $column, $options := $model.Columns}}
-		{{$options.TitleName}}: {{if eq $column "id"}}test{{$modelName}}ID1{{else}}{{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{GenApiTestValue $options}}{{end}}{{end}},
+		{{$options.TitleName}}: {{if eq $column "id"}}test{{$modelName}}ID1{{else}}{{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{GenApiTestValue $options}}{{end}}{{end}},
 		{{- end}}
 	}
 	{{- if not $model.BoundToIsolatedEntity}}
 		test{{$modelName}}ID2 {{if eq $idType "int64"}}int64{{end}} = {{if eq $idType "uuid"}}uuid.New().String(){{else}}2{{end}}
 		test{{$modelName}}2 = &models.{{$modelName}}{  
 			{{- range $column, $options := $model.Columns}}
-			{{$options.TitleName}}: {{if eq $column "id"}}test{{$modelName}}ID1{{else}}{{if $options.IsStruct}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{GenApiTestValue $options}}{{end}}{{end}},
+			{{$options.TitleName}}: {{if eq $column "id"}}test{{$modelName}}ID1{{else}}{{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{GenApiTestValue $options}}{{end}}{{end}},
 			{{- end}}
 		}
 		test{{$modelName}}s = []*models.{{$modelName}}{test{{$modelName}}1, test{{$modelName}}2}
@@ -66,7 +66,7 @@ var (
 	testAdd{{$modelName}}1 = &models.{{$modelName}}Add{  
 		{{- range $column, $options := $model.Columns}}
 		{{- if and (ne $column "id") (not (IsStandardColumn $column))}}
-		{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}[]{{if eq $idType "uuid"}}string{{else}}int64{{end}}{test{{$options.GoType}}ID1, test{{$options.GoType}}ID2}{{else}}test{{$options.GoType}}1.ID{{end}}{{else}}{{GenApiTestValue $options}}{{end}},
+		{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}[]{{if eq $idType "uuid"}}string{{else}}int64{{end}}{test{{$options.GoType}}ID1, test{{$options.GoType}}ID2}{{else}}test{{$options.GoType}}1.ID{{end}}{{else}}{{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{GenApiTestValue $options}}{{end}}{{end}},
 		{{- end}}
 		{{- end}}
 	}
@@ -74,13 +74,29 @@ var (
 	testAdd{{$modelName}}2 = &models.{{$modelName}}Add{  
 		{{- range $column, $options := $model.Columns}}
 		{{- if and (ne $column "id") (not (IsStandardColumn $column))}}
-		{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}[]{{if eq $idType "uuid"}}string{{else}}int64{{end}}{test{{$options.GoType}}ID1, test{{$options.GoType}}ID2}{{else}}test{{$options.GoType}}2.ID{{end}}{{else}}{{GenApiTestValue $options}}{{end}},
+		{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}[]{{if eq $idType "uuid"}}string{{else}}int64{{end}}{test{{$options.GoType}}ID1, test{{$options.GoType}}ID2}{{else}}test{{$options.GoType}}2.ID{{end}}{{else}}{{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{GenApiTestValue $options}}{{end}}{{end}},
 		{{- end}}
 		{{- end}}
 	}
 	{{- end}}
 {{- end}}
-	{{if .HaveListMethod}}
+
+{{- range $customTypeName, $customType := $.CustomTypes}}
+	{{- $customTypeName = (Title $customTypeName)}}
+	test{{$customTypeName}}1 = &models.{{$customTypeName}}{  
+		{{- range $field, $options := $customType.Fields}}
+		{{Title $field}}: {{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{GenApiTestValue $options}}{{end}},
+		{{- end}}
+	}
+	test{{$customTypeName}}2 = &models.{{$customTypeName}}{  
+		{{- range $field, $options := $customType.Fields}}
+		{{Title $field}}: {{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{GenApiTestValue $options}}{{end}},
+		{{- end}}
+	}
+	test{{$customTypeName}}s = []*models.{{$customTypeName}}{test{{$customTypeName}}1, test{{$customTypeName}}2}
+{{- end}}
+
+{{if .HaveListMethod}}
 	offset int64 = 0
 	limit  int64 = 5
 
@@ -102,7 +118,7 @@ var (
 		LogicFilter: false,
 		SortBy: "ASC",
 	}
-	{{end}}
+{{end}}
 )
 
 func TestMain(m *testing.M) { testinit.Main(m) }
