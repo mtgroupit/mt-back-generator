@@ -31,6 +31,8 @@ models:
         default: "qwe"
       phones:
         type: "[]string"
+      links:
+        type: "custom.webContact"
       department:
         type: "string"
       age:
@@ -59,6 +61,7 @@ models:
       - editMy
       - editOrAddMy
       - editMy(defaultPhone, phones)[phones]
+      - editMy(links)
       - deleteMy
       - list
       - list(id, name*, company*(name, locations(id, name)))[withCompanyLocations]
@@ -81,6 +84,8 @@ models:
       locations:
         type: "[]model.location"
         default: 3
+      contacts:
+        type: "[]custom.contact"
     methods:
       - get
       - add
@@ -102,6 +107,7 @@ models:
     methods:
       - getMy
       - addMy
+      - editMy
       - deleteMy
 
   location:
@@ -142,25 +148,29 @@ models:
     
 custom-types:
   
-  custType:
-    description: "qeqwe"
+  contact:
+    description: "contact is type for storing contact information"
     fields:
-      qwe:
+      departure:
         type: "string"
-        format: "url"
-      qwe2:
-        type: "[]string"
-        format: "url"
-      asd:
+      phone:
         type: "string"
         format: "phone"
-  
-  custType2:
-    description: "qeqwe"
-    fields:
-      qwe:
+      email:
         type: "string"
-        format: "date-time"
-        default: "2002-03-01T13:45:30.936Z"
-      asd:
-        type: "[]bool"
+        format: "email"
+      web:
+        type: "custom.webContact"
+      
+  webContact:
+    description: "webContact "
+    fields:
+      facebook:
+        type: "string"
+        format: "url"
+      instagram:
+        type: "string"
+        format: "url"
+      other:
+        type: "string"
+        format: "url"
