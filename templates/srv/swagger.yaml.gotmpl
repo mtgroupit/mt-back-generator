@@ -92,6 +92,9 @@ paths:
                     type: array
                     items:
                     {{- end}}
+                    {{- if $options.IsCustom}}
+                      $ref: "#/definitions/{{$options.Type}}"
+                    {{- else}}
                       type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}} 
                       {{- if $options.Format}}
                       format: {{$options.Format}}
@@ -105,6 +108,7 @@ paths:
                       {{- if $options.Enum}}
                       enum: {{EnumPrint $options.Enum}}
                       {{- end}}
+                    {{- end}}
                   {{- end}}
                 {{- end}}
               {{- end}}

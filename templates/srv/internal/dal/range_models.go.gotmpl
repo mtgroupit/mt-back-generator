@@ -229,14 +229,14 @@ type {{$modelName}} struct {
 		mapQuery := map[string]interface{}{ 
 			{{- if IsCustomList $method}}
 				{{- range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
-					{{- if not (index (index $model.MethodsProps $i).ArrayColumns $column)}}
+					{{- if not (index (index $model.MethodsProps $i).JSONColumns $column)}}
 						"{{$column}}": nil,
 						"not_{{$column}}": nil,
 					{{- end}}
 				{{- end}}
 			{{- else}}
 				{{- range $column, $options := $model.Columns}}
-					{{- if not $options.IsArray}}
+					{{- if and (not $options.IsArray) (not $options.IsCustom)}}
 						"{{$column}}": nil,
 						"not_{{$column}}": nil,
 					{{- end}}
@@ -257,7 +257,7 @@ type {{$modelName}} struct {
 					switch filter.Key { 
 				{{- if IsCustomList $method}}
 					{{- range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
-						{{- if not (index (index $model.MethodsProps $i).ArrayColumns $column)}}
+						{{- if not (index (index $model.MethodsProps $i).JSONColumns $column)}}
 						case "{{$column}}":
 							if filter.Include {
 								mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
@@ -268,7 +268,7 @@ type {{$modelName}} struct {
 					{{- end}}
 				{{- else}}
 					{{- range $column, $options := $model.Columns}}
-						{{- if not $options.IsArray}}
+						{{- if  and (not $options.IsArray) (not $options.IsCustom)}}
 						case "{{$column}}":
 							if filter.Include {
 								mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
@@ -302,7 +302,7 @@ type {{$modelName}} struct {
 		{{- if or (and (not (IsCustomList $method)) $model.HaveJSON) (and (IsCustomList $method) (index $model.MethodsProps $i).HaveJSON)}}
 			for i := range ms { 
 			{{- range $column, $options := $model.Columns}}
-				{{- if or (and (or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom) (not (IsCustomList $method))) (and (IsCustomList $method) (index (index $model.MethodsProps $i).ArrayColumns $column))}}
+				{{- if or (and (or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom) (not (IsCustomList $method))) (and (IsCustomList $method) (index (index $model.MethodsProps $i).JSONColumns $column))}}
 					if err := json.Unmarshal(ms[i].{{$options.TitleName}}JSON, &ms[i].{{$options.TitleName}}); err != nil {
 						return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 					}
@@ -735,30 +735,13 @@ func (m *{{$modelName}}) NestedFilter(filter *app.Filter) (ok, filterIsValid boo
 func (m *{{$modelName}}) Filter(filter *app.Filter) (ok, filterIsValid bool) {
 	switch filter.Key {
 	{{- range $column, $options := $model.Columns}}
-		{{- if not $options.IsStruct}}
+		{{- if and (not $options.IsStruct) (not $options.IsCustom)}}
 		case "{{$column}}":
 			{{- if $options.IsArray}}
 			for _, elem := range m.{{$options.TitleName}} {
 			{{- end}}
-				{{- if $options.IsCustom}}
-					{{- if $options.IsArray}}
-						elemJSON, err := json.Marshal(elem)
-						if err != nil {
-							ok, filterIsValid = true, false
-							return
-						}
-						equal, err := areEqualJSON(filter.Value, string(elemJSON))
-					{{- else}}
-						equal, err := areEqualJSON(filter.Value, string(m.CustJSON))
-					{{- end}}
-					if err != nil {
-						ok, filterIsValid = true, false
-						return
-					}
-				{{- else}}
-					value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{if eq $options.GoType "types.Decimal"}}Decimal.String(){{else}}{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}}{{end}})
-					equal := {{if or (ne $options.Type "string") $options.StrictFilter}}value == filter.Value{{else}}contains(value, filter.Value){{end}}
-				{{- end}}
+				value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{if eq $options.GoType "types.Decimal"}}Decimal.String(){{else}}{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}}{{end}})
+				equal := {{if or (ne $options.Type "string") $options.StrictFilter}}value == filter.Value{{else}}contains(value, filter.Value){{end}}
 				if (equal && filter.Include) || (!equal && !filter.Include) {
 					ok, filterIsValid = true, true
 				} else {

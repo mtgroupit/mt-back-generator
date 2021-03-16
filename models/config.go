@@ -68,7 +68,7 @@ type MethodProps struct {
 	IsCustomList            bool
 	NeedLazyLoading         bool
 	HaveJSON                bool
-	ArrayColumns            map[string]bool
+	JSONColumns             map[string]bool
 	CustomListSQLSelect     string
 	CustomListSQLWhereProps string
 	CustomSQLEditStr        string

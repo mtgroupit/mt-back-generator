@@ -107,7 +107,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			if strings.HasPrefix(options.GoType, TypesPrefix) {
 				cfg.HaveTypesInCustomTypes = true
 			}
-			if options.Default != ""{
+			if options.Default != "" {
 				switch options.Format {
 				case "date-time", "email":
 					cfg.HaveConvInCustomTypes = true
@@ -1251,7 +1251,7 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 			fieldsFull := splitFields(fieldsStr)
 			fields := trimFieldsSuffix(fieldsFull)
 			haveID := false
-			result.MethodsProps[i].ArrayColumns = map[string]bool{}
+			result.MethodsProps[i].JSONColumns = map[string]bool{}
 			for j := range fields {
 				var needFilter bool
 				if strings.HasSuffix(fields[j], "*") {
@@ -1305,7 +1305,7 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 								structIsArr = true
 							}
 						}
-						result.MethodsProps[i].ArrayColumns[column] = options.IsArray
+						result.MethodsProps[i].JSONColumns[column] = options.IsArray || options.IsCustom
 					}
 				}
 
@@ -1390,7 +1390,7 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 						if !options.IsStruct {
 							sqlName := NameSQL(options.TitleName)
 							titleName := options.TitleName
-							if options.IsArray {
+							if options.IsArray || options.IsCustom {
 								sqlName += "_json"
 								titleName += "JSON"
 							} else {
