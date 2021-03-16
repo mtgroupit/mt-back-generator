@@ -28,7 +28,6 @@ models:
       defaultPhone:
         type: "string"
         format: "phone"
-        default: "qwe"
       phones:
         type: "[]string"
       links:
