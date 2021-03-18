@@ -8,8 +8,6 @@ models:
 
   employee:
     description: "employee object"
-    tags:
-      - Employee
     columns:
       id:
         type: "uuid"
@@ -111,6 +109,8 @@ models:
 
   location:
     description: "location object"
+    tags:
+      - Supporting
     shared: true
     columns:
       id:
@@ -126,6 +126,8 @@ models:
 
   document:
     description: "document object for save files"
+    tags:
+      - Supporting
     columns:
       id:
         type: "uuid"
