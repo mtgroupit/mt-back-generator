@@ -91,8 +91,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 	cfg.Description = strconv.Quote(cfg.Description)
 
-	cfg.Tags = make(map[string]struct{})
-
 	err = setDeepNesting(cfg)
 	if err != nil {
 		return
@@ -164,9 +162,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		model.TitleName = strings.Title(name)
 
 		for i := range model.Tags {
-			cfg.Tags[LowerTitle(model.Tags[i])] = struct{}{}
 			model.Tags[i] = strings.Title(model.Tags[i])
 		}
+		model.Tags = append([]string{strings.Title(name)}, model.Tags...)
 
 		var props []models.MethodProps
 		for _, method := range model.Methods {

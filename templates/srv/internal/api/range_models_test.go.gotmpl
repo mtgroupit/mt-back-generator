@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"{{.Module}}/internal/api/restapi/client"
-	{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}} {{end}}"{{.Module}}/internal/api/restapi/client/{{if $model.Tags}}{{NameSQL (index $model.Tags 0)}}{{else}}operations{{end}}"
+	{{LowerTitle $modelName}} "{{.Module}}/internal/api/restapi/client/{{NameSQL $modelName}}"
 	
 	cl "github.com/go-openapi/runtime/client"
 	"github.com/golang/mock/gomock"
@@ -23,7 +23,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 
 	mockExtAuthSvc.EXPECT().GetUserProfile(gomock.Any(), matchCookie(sess)).Return(profile, nil)
 
-	params := {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Params()
+	params := {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Params()
 	{{- if IsGet $method}}
 		{{- if not (IsMyMethod $method)}}
 			params.Body.ID = test{{$modelName}}ID1
@@ -32,7 +32,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
-			geted, err := c.{{if $model.Tags}}{{index $model.Tags 0}}{{else}}Operations{{end}}.{{$method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
+			geted, err := c.{{$model.TitleName}}.{{$method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
 			t.Nil(err)
 			t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}})))
 		})
@@ -43,7 +43,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
-			geted, err := c.{{if $model.Tags}}{{index $model.Tags 0}}{{else}}Operations{{end}}.{{$method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
+			geted, err := c.{{$model.TitleName}}.{{$method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
 			t.Nil(err)
 			t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}})))
 		})
@@ -56,17 +56,17 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
-			_, err := c.{{if $model.Tags}}{{index $model.Tags 0}}{{else}}Operations{{end}}.{{$method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
+			_, err := c.{{$model.TitleName}}.{{$method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
 			t.Nil(err)
 		})
 	{{- end}}
 	{{- if IsEdit $method}}
 		{{- if IsCustomEdit $method}}
-			params.Body = {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}Body{
+			params.Body = {{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}Body{
 				{{- if not (IsMyMethod $method)}}
 					ID: test{{$modelName}}1.ID,
 				{{- end}}
-				Data: &{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}ParamsBodyData{
+				Data: &{{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}ParamsBodyData{
 					{{- range $name, $options := $model.Columns}}
 						{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}
 							{{$options.TitleName}}: test{{$modelName}}1.{{$options.TitleName}}{{if $options.IsStruct}}.ID{{end}},
@@ -91,7 +91,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 		mockApp.EXPECT().{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}gomock.Any(), {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}app{{$modelName}}(test{{$modelName}}1{{if IsCustomEdit $method}}Edited{{end}}{{if $model.HaveLazyLoading}}, true{{end}}), {{end}}nil)
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
-			{{if $model.ReturnWhenEdit}}geted{{else}}_{{end}}, err := c.{{if $model.Tags}}{{index $model.Tags 0}}{{else}}Operations{{end}}.{{$method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
+			{{if $model.ReturnWhenEdit}}geted{{else}}_{{end}}, err := c.{{$model.TitleName}}.{{$method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
 			t.Nil(err)
 			{{- if $model.ReturnWhenEdit}}
 				t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if IsCustomEdit $method}}Edited{{end}}{{if $model.HaveLazyLoading}}, true{{end}})))
@@ -104,7 +104,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 
 	t.Run("", func(tt *testing.T) {
 		t := check.T(tt)
-		list, err := c.{{if $model.Tags}}{{index $model.Tags 0}}{{else}}Operations{{end}}.{{$method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
+		list, err := c.{{$model.TitleName}}.{{$method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
 		t.Nil(err)
 		t.DeepEqual(list.Payload.Items, api{{$modelName}}s(app{{$modelName}}s(test{{$modelName}}s{{if $model.HaveLazyLoading}}, true{{end}})))
 	})
@@ -115,7 +115,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 
 	t.Run("", func(tt *testing.T) {
 		t := check.T(tt)
-		_, err := c.{{if $model.Tags}}{{index $model.Tags 0}}{{else}}Operations{{end}}.{{$method}}{{$modelName}}(params)
+		_, err := c.{{$model.TitleName}}.{{$method}}{{$modelName}}(params)
 		t.Nil(err)
 	}){{end}} */}}
 }
