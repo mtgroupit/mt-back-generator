@@ -107,7 +107,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 			{{- range $name, $options := $model.Columns}}
 				{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}
 					{{- if and (not $options.IsStruct) (ne $name "id")}}
-						in.{{$options.TitleName}} = {{ConvertApiToAppColumn "params.Body.Data" $options}}
+						in.{{$options.TitleName}} = {{ConvertApiToAppColumn "params.Body.Data" $name $options}}
 					{{- end}}
 				{{- end}}
 			{{- end}}
@@ -266,7 +266,7 @@ func api{{$modelName}}(a *app.{{$modelName}}) *models.{{$modelName}} {
 	}
 	return &models.{{$modelName}}{
 		{{- range $name, $options := $model.Columns}}
-			{{$options.TitleName}}: {{ConvertAppToApiColumn $options}},
+			{{$options.TitleName}}: {{ConvertAppToApiColumn "a" $name $options}},
 		{{- end}}
 	}
 }
@@ -295,7 +295,7 @@ func app{{$modelName}}(a *models.{{$modelName}}{{if $model.HaveLazyLoading}}, wi
 	{{- end}}
 	{{- range $name, $options := $model.Columns}}
 		{{- if not $options.IsStruct}}
-			{{LowerTitle $modelName}}.{{$options.TitleName}} = {{ConvertApiToAppColumn "a" $options}}
+			{{LowerTitle $modelName}}.{{$options.TitleName}} = {{ConvertApiToAppColumn "a" $name $options}}
 		{{- end}}
 	{{- end}}
 	
@@ -318,7 +318,7 @@ func app{{$modelName}}Add(a *models.{{$modelName}}Add) *app.{{$modelName}} {
 
 	{{- range $name, $options := $model.Columns}}
 		{{- if and (not $options.IsStruct) (ne $name "id") (not (IsStandardColumn $name))}}
-			{{LowerTitle $modelName}}.{{$options.TitleName}} = {{ConvertApiToAppColumn "a" $options}}
+			{{LowerTitle $modelName}}.{{$options.TitleName}} = {{ConvertApiToAppColumn "a" $name $options}}
 		{{- end}}
 	{{- end}}
 	{{- range $name, $options := $model.Columns}}

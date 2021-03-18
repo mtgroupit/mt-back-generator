@@ -4,6 +4,8 @@ package dal
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -133,11 +135,6 @@ func toString(value interface{}) string {
 	return ""
 }
 
-// contains is equal to strings.Contains but case insensitive
-func contains(str, substr string) bool  {
-	return strings.Contains(strings.ToLower(str), strings.ToLower(substr))
-}
-
 func pagination(offset, limit, len int) (start, end int) {
 	if len > offset {
 		start = offset
@@ -150,4 +147,26 @@ func pagination(offset, limit, len int) (start, end int) {
 		start, end = 0, 0
 	}
 	return
+}
+
+// contains is equal to strings.Contains but case insensitive
+func contains(str, substr string) bool  {
+	return strings.Contains(strings.ToLower(str), strings.ToLower(substr))
+}
+
+func areEqualJSON(s1, s2 string) (bool, error) {
+	var o1 interface{}
+	var o2 interface{}
+
+	var err error
+	err = json.Unmarshal([]byte(s1), &o1)
+	if err != nil {
+		return false, err
+	}
+	err = json.Unmarshal([]byte(s2), &o2)
+	if err != nil {
+		return false, err
+	}
+
+	return reflect.DeepEqual(o1, o2), nil
 }

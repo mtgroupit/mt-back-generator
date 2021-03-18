@@ -22,6 +22,7 @@ type Options struct {
 
 	NestedSorts []string
 	IsStruct    bool
+	IsCustom    bool
 	IsArray     bool
 	Pk          string
 }
@@ -34,6 +35,7 @@ type PsqlParams struct {
 	Type     string
 	TypeSQL  string
 	IsArray  bool
+	IsCustom bool
 	IsStruct bool
 	FK       string
 	Last     bool
@@ -65,8 +67,8 @@ type MethodProps struct {
 	HTTPMethod              string
 	IsCustomList            bool
 	NeedLazyLoading         bool
-	HaveArrayOfStandardType bool
-	ArrayColumns            map[string]bool
+	HaveJSON                bool
+	JSONColumns             map[string]bool
 	CustomListSQLSelect     string
 	CustomListSQLWhereProps string
 	CustomSQLEditStr        string
@@ -86,17 +88,17 @@ type Model struct {
 	ReturnWhenEdit        bool `yaml:"return-when-edit"`
 	Columns               map[string]Options
 
-	TitleName               string
-	Fields                  map[string]string
-	DeepNesting             int
-	HaveLazyLoading         bool
-	IDIsUUID                bool
-	HaveEmail               bool
-	NeedConv                bool
-	NeedTypes               bool
-	HaveListMethod          bool
-	HaveCustomMethod        bool
-	HaveArrayOfStandardType bool
+	TitleName        string
+	Fields           map[string]string
+	DeepNesting      int
+	HaveLazyLoading  bool
+	IDIsUUID         bool
+	HaveEmail        bool
+	NeedConv         bool
+	NeedTypes        bool
+	HaveListMethod   bool
+	HaveCustomMethod bool
+	HaveJSON         bool
 
 	HaveCreatedAt  bool
 	HaveCreatedBy  bool
@@ -154,17 +156,22 @@ type Config struct {
 	Description string
 	Debug       bool
 	Models      map[string]Model
+	CustomTypes map[string]CustomType `yaml:"custom-types"`
 	Functions   map[string]Function
 
-	HaveListMethod   bool
-	HaveCustomMethod bool
-	HaveFloatArr     bool
-	HaveDateTime     bool
-	HaveEmail        bool
-	HaveTypes        bool
-	HaveConv         bool
-	HaveSwag         bool
-	MaxDeepNesting   int
+	HaveListMethod         bool
+	HaveCustomMethod       bool
+	HaveFloatArr           bool
+	HaveDateTime           bool
+	HaveEmail              bool
+	HaveEmailInCustomTypes bool
+	HaveTypes              bool
+	HaveTypesInCustomTypes bool
+	HaveConv               bool
+	HaveConvInCustomTypes  bool
+	HaveSwag               bool
+	HaveSwagInCustomTypes  bool
+	MaxDeepNesting         int
 
 	ExtraTables []ExtraTable
 
@@ -182,4 +189,10 @@ func (c *Config) AddBind(nameModelTo string, bind Bind) error {
 	modelTo.Binds = append(modelTo.Binds, bind)
 	c.Models[nameModelTo] = modelTo
 	return nil
+}
+
+// CustomType - describes custom types
+type CustomType struct {
+	Description string
+	Fields      map[string]Options
 }

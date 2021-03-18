@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/mtgroupit/mt-back-generator/models"
 
 	"github.com/fatih/camelcase"
@@ -16,23 +17,29 @@ import (
 )
 
 var (
-	isCorrectName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]+$`).MatchString
+	isCorrectName          = regexp.MustCompile(`^[a-z][A-Za-z0-9]+$`).MatchString
+	correctNameDescription = "A valid name must contain only letters and numbers in camelCase"
 
 	intNumbericTypes      = []string{"int", "int32", "int64"}
 	fractionNumbericTypes = []string{"float", "decimal"}
 	standardNumbericTypes = append(intNumbericTypes, fractionNumbericTypes...)
 	standardTypes         = append([]string{"string", "bool"}, standardNumbericTypes...)
+
+	formats = map[string][]string{"string": {"date-time", "email", "phone", "url"}}
 )
 
 const (
 	structTypePrefix        = "model."
+	customTypePrefix        = "custom."
 	arrayTypePrefix         = "[]"
 	arrayOfStructTypePrefix = arrayTypePrefix + structTypePrefix
+	arrayOfCustomTypePrefix = arrayTypePrefix + customTypePrefix
 
 	TypesPrefix = "types."
 )
 
-func isStandardType(t string) bool {
+// IsStandardType checks standard type or not
+func IsStandardType(t string) bool {
 	for i := range standardTypes {
 		if t == standardTypes[i] {
 			return true
@@ -76,17 +83,11 @@ func ReadYAMLCfg(file string) (*models.Config, error) {
 
 // HandleCfg handles models.Config for fill config fields for templates
 func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
-	cfg = inCfg
+	if err = validate(inCfg); err != nil {
+		return
+	}
 
-	if cfg.Name == "" {
-		return nil, errors.New("name is empty")
-	}
-	if cfg.Module == "" {
-		return nil, errors.New("module is empty")
-	}
-	if cfg.AuthSrv == "" {
-		return nil, errors.New("auth-srv is empty")
-	}
+	cfg = inCfg
 
 	cfg.Description = strconv.Quote(cfg.Description)
 
@@ -97,21 +98,70 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		return
 	}
 
-	for name, model := range cfg.Models {
-		if model.BoundToIsolatedEntity && model.Shared {
-			return nil, errors.Errorf(`Model: "%s". Id from isolated entity available only for not shared models`, name)
-		}
-		if name == strings.Title(name) {
-			return nil, errors.Errorf(`Model "%s" starts with captial letter, please rename it to "%s" starting with small letter`, name, LowerTitle(name))
-		}
-		if !isCorrectName(name) {
-			return nil, errors.Errorf(`"%s" is invalid name for model. A valid name must contain only letters and numbers in camelCase`, name)
-		}
-		model.TitleName = strings.Title(name)
+	for customTypeName, customType := range cfg.CustomTypes {
+		for field, options := range customType.Fields {
+			if options.IsCustom, options.IsArray, options.GoType, err = parseFieldType(options.Type, cfg.CustomTypes); err != nil {
+				return nil, errors.Wrapf(err, `Custom type: "%s". Field: "%s"`, customTypeName, field)
+			}
 
-		if len(model.Columns) == 0 {
-			return nil, errors.Errorf(`Model "%s" has no any columns`, name)
+			if strings.HasPrefix(options.GoType, TypesPrefix) {
+				cfg.HaveTypesInCustomTypes = true
+			}
+			if options.Default != "" {
+				switch options.Format {
+				case "date-time", "email":
+					cfg.HaveConvInCustomTypes = true
+				default:
+					cfg.HaveSwagInCustomTypes = true
+				}
+			}
+
+			if options.Format == "email" {
+				cfg.HaveEmailInCustomTypes = true
+			}
+
+			if options.IsCustom {
+				options.Type = LowerTitle(options.GoType)
+			} else {
+				if options.Type == "int" {
+					options.Type = "int32"
+					options.GoType = "int32"
+				}
+				if options.IsArray {
+					switch options.GoType {
+					case "int":
+						options.Type = "int32"
+						options.GoType = "int32"
+					case "float64":
+						options.Type = "float"
+					case TypesPrefix + "Decimal":
+						options.Type = "decimal"
+					default:
+						options.Type = options.GoType
+					}
+				}
+
+				switch options.Type {
+				case "int32", "int64":
+					options.Format = options.Type
+					options.Type = "integer"
+				case "bool":
+					options.Type = "boolean"
+				case "float":
+					options.Format = "float"
+				}
+
+				if isFractionNumbericType(options.Type) {
+					options.Type = "number"
+				}
+			}
+
+			customType.Fields[field] = options
 		}
+	}
+
+	for name, model := range cfg.Models {
+		model.TitleName = strings.Title(name)
 
 		for i := range model.Tags {
 			cfg.Tags[LowerTitle(model.Tags[i])] = struct{}{}
@@ -121,21 +171,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		var props []models.MethodProps
 		for _, method := range model.Methods {
 			if isCustomMethod(method) {
-				switch {
-				case strings.HasPrefix(method, "list") && strings.Contains(method, "("):
-					return nil, errors.Errorf(`Model: "%s". "%s"  is invalid as a custom list. A valid custom list shouldn't contain spaces before brackets. Correct method pattern: "list(column1, column3*, model1*(column1, model1(column1, column2))), where * means the field can be sorted by"`, name, method)
-				case strings.HasPrefix(method, "edit") && strings.Contains(method, "("):
-					return nil, errors.Errorf(`Model: "%s". "%s"  is invalid as a custom edit. A valid custom edit shouldn't contain spaces before brackets. Correct method pattern: "edit(column1, column2)"`, name, method)
-				default:
-					if !isCorrectName(method) {
-						return nil, errors.Errorf(`Model: "%s". "%s"  is invalid name for method. A valid name must contain only letters and numbers in camelCase`, name, method)
-					}
-				}
 				cfg.HaveCustomMethod = true
 				model.HaveCustomMethod = true
-			}
-			if model.BoundToIsolatedEntity && !IsMyMethod(method) {
-				return nil, errors.Errorf(`Model: "%s". "%s"  is invalid method for model with id from isolated entity. For model with id from isolated entity available only methods with "My" postfix`, name, method)
 			}
 
 			var prop models.MethodProps
@@ -157,7 +194,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 		psql := []models.PsqlParams{}
 		var indexLastNotArrOfStruct int
-		var haveDefaultSort bool
 		for column, options := range model.Columns {
 			switch column {
 			case "createdAt":
@@ -175,11 +211,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				options.Type = "string"
 				model.HaveModifiedBy = true
 			}
-			if !isCorrectName(column) {
-				return nil, errors.Errorf(`Model: "%s". "%s"  is invalid name for column. A valid name must contain only letters and numbers in camelCase`, name, column)
-			}
-			if options.IsStruct, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
-				return
+			if options.IsStruct, options.IsCustom, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
+				return nil, errors.Wrapf(err, `Model: "%s". Column: "%s"`, name, column)
 			}
 
 			if strings.HasPrefix(options.GoType, TypesPrefix) {
@@ -188,36 +221,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			}
 
 			if options.SortDefault {
-				if options.IsStruct {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". Structure can not be as default column for sorting`, name, column)
-				}
-				if options.IsArray {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". Array can not be as default column for sorting`, name, column)
-				}
-				if !options.SortOn {
-					return nil, errors.Errorf(`Model: "%s". Column "%s" can not be as default column for sorting because sorting is not enabled for this column`, name, column)
-				}
-				if haveDefaultSort {
-					return nil, errors.Errorf(`Model "%s" has multiple columns as default for sorting, model should has one column as default for sorting`, name)
-				}
 				if options.SortOrderDefault != "" {
 					orderDefault := strings.ToTitle(options.SortOrderDefault)
 					if orderDefault == "ASC" || orderDefault == "DESC" {
 						options.SortOrderDefault = orderDefault
-					} else {
-						return nil, errors.Errorf(`Model: "%s". Column: "%s". "%s" can not be as default order for sorting. Order for sorting can be only "ASC" or "DESC"`, name, column, options.SortOrderDefault)
 					}
-				}
-				haveDefaultSort = true
-			} else {
-				if options.SortOrderDefault != "" {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". Default order for sorting allow only for fields which set as default for sorting`, name, column)
-				}
-			}
-
-			if options.StrictFilter {
-				if options.Type != "string" && options.GoType != "string" {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". "strict-sorting" option not available for non "string" columns`, name, column)
 				}
 			}
 
@@ -239,35 +247,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			}
 
-			if len(options.Enum) > 0 {
-				if column == "id" {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". Enum available only for not id columns`, name, column)
-				}
-				if err = enumValidate(options.Enum, options.Type); err != nil {
-					return nil, errors.Wrapf(err, `Model: "%s". Column: "%s". Column type: "%s"`, name, column, options.Type)
-				}
-				if options.Default != "" {
-					found := false
-					for _, e := range options.Enum {
-						if e == options.Default {
-							found = true
-							break
-						}
-					}
-					if !found {
-						return nil, errors.Errorf(`Model: "%s". Column: "%s". Default should be one of: %s`, name, column, strings.Join(options.Enum, ", "))
-					}
-				}
-			}
-
 			if options.IsStruct {
 				model.HaveLazyLoading = true
 
 				modelNameForBind := LowerTitle(options.GoType)
-
-				if modelForBind, ok := cfg.Models[modelNameForBind]; ok && !modelForBind.Shared && model.Shared {
-					return nil, errors.Errorf(`Model: "%s". Column: "%s". "%s" is invalid type for column. Shared models can not use non-shared models as column type`, name, column, options.Type)
-				}
 
 				err = cfg.AddBind(modelNameForBind, models.Bind{
 					ModelName: name,
@@ -304,13 +287,14 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					cfg.ExtraTables = append(cfg.ExtraTables, et)
 				}
 			} else {
-				if options.IsArray {
-					model.HaveArrayOfStandardType = true
+				if options.IsArray || options.IsCustom {
+					model.HaveJSON = true
 				}
 			}
 
 			pp := models.PsqlParams{}
 			pp.IsArray = options.IsArray
+			pp.IsCustom = options.IsCustom
 			pp.IsStruct = options.IsStruct
 			if column == "id" {
 				switch options.Type {
@@ -325,8 +309,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 					pp.Type = "int64"
 					pp.TypeSQL = "SERIAL"
-				default:
-					return nil, errors.Errorf(`Model: "%s". "%s"  is invalid type for id. Valid types is 'int64' and 'uuid'`, name, options.Type)
 				}
 				options.TitleName = "ID"
 
@@ -338,7 +320,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				} else {
 					options.TitleName = strings.Title(column)
 				}
-				if options.IsStruct {
+				if options.IsStruct || options.IsCustom {
 					options.Type = LowerTitle(options.GoType)
 				} else {
 					if options.Type == "int" {
@@ -385,22 +367,21 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					} else {
 						pp.TypeSQL = "integer"
 					}
+				} else if pp.IsCustom || pp.IsArray {
+					pp.SQLName = NameSQL(column) + "_json"
+					pp.TypeSQL = "jsonb"
 				} else {
-					if pp.IsArray {
-						pp.SQLName = NameSQL(column) + "_json"
-						pp.TypeSQL = "jsonb"
-					} else {
-						pp.SQLName = NameSQL(column)
-						switch options.Type {
-						case "string":
-							pp.TypeSQL = "text"
-						case "number":
-							pp.TypeSQL = "numeric"
-						default:
-							pp.TypeSQL = options.Type
-						}
+					pp.SQLName = NameSQL(column)
+					switch options.Type {
+					case "string":
+						pp.TypeSQL = "text"
+					case "number":
+						pp.TypeSQL = "numeric"
+					default:
+						pp.TypeSQL = options.Type
 					}
 				}
+
 			}
 
 			model.Columns[column] = options
@@ -422,7 +403,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			if !options.IsStruct {
 				sqlName := NameSQL(options.TitleName)
 				titleName := options.TitleName
-				if options.IsArray {
+				if options.IsArray || options.IsCustom {
 					sqlName += "_json"
 					titleName += "JSON"
 				} else {
@@ -432,7 +413,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					titleName += ".Value()"
 				}
 				SQLSelect = append(SQLSelect, sqlName)
-				if !options.IsArray {
+				if !options.IsArray && !options.IsCustom {
 					if options.Type != "string" || options.StrictFilter {
 						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, sqlName, column, "not_"+column, "not_"+column, sqlName, "not_"+column))
 					} else {
@@ -557,6 +538,294 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	return
 }
 
+func validate(cfg *models.Config) error {
+	if cfg.Name == "" {
+		return errors.New("name is empty")
+	}
+	if cfg.Module == "" {
+		return errors.New("module is empty")
+	}
+	if cfg.AuthSrv == "" {
+		return errors.New("auth-srv is empty")
+	}
+
+	if err := validateModels(cfg); err != nil {
+		return err
+	}
+	if err := validateCustomTypes(cfg.CustomTypes); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateModels(cfg *models.Config) error {
+	for name, model := range cfg.Models {
+		if model.BoundToIsolatedEntity && model.Shared {
+			return errors.Errorf(`Model: "%s". Id from isolated entity available only for not shared models`, name)
+		}
+		if !isCorrectName(name) {
+			return errors.Errorf(`"%s" is invalid name for model. %s`, name, correctNameDescription)
+		}
+		if len(model.Columns) == 0 {
+			return errors.Errorf(`Model "%s" has no any columns`, name)
+		}
+
+		for _, method := range model.Methods {
+			if isCustomMethod(method) {
+				switch {
+				case strings.HasPrefix(method, "list") && strings.Contains(method, "("):
+					return errors.Errorf(`Model: "%s". "%s"  is invalid as a custom list. A valid custom list shouldn't contain spaces before brackets. Correct method pattern: "list(column1, column3*, model1*(column1, model1(column1, column2))), where * means the field can be sorted by"`, name, method)
+				case strings.HasPrefix(method, "edit") && strings.Contains(method, "("):
+					return errors.Errorf(`Model: "%s". "%s"  is invalid as a custom edit. A valid custom edit shouldn't contain spaces before brackets. Correct method pattern: "edit(column1, column2)"`, name, method)
+				default:
+					if !isCorrectName(method) {
+						return errors.Errorf(`Model: "%s". "%s"  is invalid name for method. %s`, name, method, correctNameDescription)
+					}
+				}
+			}
+			if model.BoundToIsolatedEntity && !IsMyMethod(method) {
+				return errors.Errorf(`Model: "%s". "%s"  is invalid method for model with id from isolated entity. For model with id from isolated entity available only methods with "My" postfix`, name, method)
+			}
+		}
+
+		haveDefaultSort := false
+		for column, options := range model.Columns {
+			if !isCorrectName(column) {
+				return errors.Errorf(`Model: "%s". "%s"  is invalid name for column. %s`, name, column, correctNameDescription)
+			}
+
+			if !IsStandardColumn(column) {
+				if column == "id" {
+					if !(options.Type == "uuid" || options.Type == "int64") {
+						return errors.Errorf(`Model: "%s". "%s"  is invalid type for id. Valid types is 'int64' or 'uuid'`, name, options.Type)
+					}
+				} else {
+					if strings.HasPrefix(options.Type, arrayTypePrefix) {
+						options.Type = options.Type[len(arrayTypePrefix):]
+					}
+					goType := convertTypeToGoType(options.Type)
+					lowerTitleGoType := LowerTitle(goType)
+					if strings.HasPrefix(options.Type, structTypePrefix) {
+						if _, ok := cfg.Models[lowerTitleGoType]; !ok {
+							return errors.Errorf(`Model: "%s". Column "%s" refers to "%s" model which is not described anywhere`, name, column, lowerTitleGoType)
+						}
+					} else if strings.HasPrefix(options.Type, customTypePrefix) {
+						if _, ok := cfg.CustomTypes[lowerTitleGoType]; !ok {
+							return errors.Errorf(`Model: "%s". Column "%s" refers to "%s" custom type which is not described anywhere`, name, column, lowerTitleGoType)
+						}
+					} else {
+						if !IsStandardType(options.Type) {
+							_, ok := cfg.CustomTypes[options.Type]
+							if !ok {
+								return errors.Errorf(`Model: "%s". Column: "%s". "%s" is not correct type. You can use only one of standarad types %s, custom types or types refers to any other model`, name, column, goType, strings.Join(standardTypes, ", "))
+							}
+						}
+					}
+				}
+			}
+
+			if len(options.Enum) > 0 {
+				if column == "id" {
+					return errors.Errorf(`Model: "%s". Column: "%s". Enum available only for not id columns`, name, column)
+				}
+			}
+
+			if options.IsStruct {
+				modelNameForBind := LowerTitle(options.GoType)
+				if modelForBind, ok := cfg.Models[modelNameForBind]; ok && !modelForBind.Shared && model.Shared {
+					return errors.Errorf(`Model: "%s". Column: "%s". "%s" is invalid type for column. Shared models can not use non-shared models as column type`, name, column, options.Type)
+				}
+			}
+
+			if options.SortDefault {
+				if options.IsStruct {
+					return errors.Errorf(`Model: "%s". Column: "%s". Structure can not be as default column for sorting`, name, column)
+				}
+				if options.IsArray {
+					return errors.Errorf(`Model: "%s". Column: "%s". Array can not be as default column for sorting`, name, column)
+				}
+				if !options.SortOn {
+					return errors.Errorf(`Model: "%s". Column "%s" can not be as default column for sorting because sorting is not enabled for this column`, name, column)
+				}
+				if haveDefaultSort {
+					return errors.Errorf(`Model "%s" has multiple columns as default for sorting, model should has one column as default for sorting`, name)
+				}
+				if options.SortOrderDefault != "" {
+					orderDefault := strings.ToTitle(options.SortOrderDefault)
+					if !(orderDefault == "ASC" || orderDefault == "DESC") {
+						return errors.Errorf(`Model: "%s". Column: "%s". "%s" can not be as default order for sorting. Order for sorting can be only "ASC" or "DESC"`, name, column, options.SortOrderDefault)
+					}
+				}
+				haveDefaultSort = true
+			} else {
+				if options.SortOrderDefault != "" {
+					return errors.Errorf(`Model: "%s". Column: "%s". Default order for sorting allow only for fields which set as default for sorting`, name, column)
+				}
+			}
+
+			if options.StrictFilter && options.Type != "string" {
+				return errors.Errorf(`Model: "%s". Column: "%s". "strict-sorting" option not available for non "string" columns`, name, column)
+			}
+
+			if err := validateOptions(options); err != nil {
+				return errors.Wrapf(err, `Model: "%s". Column: "%s"`, name, column)
+			}
+		}
+	}
+	return nil
+}
+
+func validateCustomTypes(customTypes map[string]models.CustomType) error {
+	for customTypeName, customType := range customTypes {
+		if !isCorrectName(customTypeName) {
+			return errors.Errorf(`"%s" is invalid name for custom type. %s`, customTypeName, correctNameDescription)
+		}
+		if len(customType.Fields) == 0 {
+			return errors.Errorf(`Custom type "%s" has no any fields`, customTypeName)
+		}
+		for fieldName, options := range customType.Fields {
+			if !isCorrectName(fieldName) {
+				return errors.Errorf(`Custom type: "%s". "%s" is invalid name for field. %s`, customTypeName, fieldName, correctNameDescription)
+			}
+			fieldType := options.Type
+			if strings.HasPrefix(fieldType, arrayTypePrefix) {
+				fieldType = fieldType[len(arrayTypePrefix):]
+			}
+			if strings.HasPrefix(fieldType, customTypePrefix) {
+				fieldType = fieldType[len(customTypePrefix):]
+			}
+			if !IsStandardType(fieldType) {
+				_, ok := customTypes[fieldType]
+				if !ok {
+					return errors.Errorf(`Custom type: "%s". Field: "%s". Custom type fields must have standard or other custom types. "%s" is not valid type`, customTypeName, fieldName, options.Type)
+				}
+			}
+
+			if err := validateOptions(options); err != nil {
+				return errors.Wrapf(err, `Custom type: "%s". Field: "%s"`, customTypeName, fieldName)
+			}
+		}
+	}
+	return nil
+}
+
+func validateOptions(options models.Options) error {
+	if err := validateFormats(options.Type, options.Format); err != nil {
+		return err
+	}
+	if err := validateEnum(options.Enum, options.Type); err != nil {
+		return err
+	}
+	if err := validateDefault(options); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateFormats(typeName, format string) error {
+	if format == "" {
+		return nil
+	}
+	if strings.HasPrefix(typeName, arrayTypePrefix) {
+		typeName = typeName[len(arrayTypePrefix):]
+	}
+
+	typeFormats, ok := formats[typeName]
+	if !ok {
+		return errors.Errorf(`Type "%s" do not support formats`, typeName)
+	}
+	validFormat := false
+	for i := range typeFormats {
+		if format == typeFormats[i] {
+			validFormat = true
+		}
+	}
+	if !validFormat {
+		return errors.Errorf(`Type "%s" do not support format: "%s"`, typeName, format)
+	}
+	return nil
+}
+
+func validateEnum(enum []string, columnType string) error {
+	if len(enum) == 0 {
+		return nil
+	}
+	if IsStandardType(columnType) {
+		if columnType == "string" {
+			return nil
+		}
+		return validateNumberEnum(enum, columnType)
+	}
+	return errors.Errorf(`Enum available only for standard types: %s`, strings.Join(standardTypes, ", "))
+}
+
+func validateNumberEnum(enum []string, columnType string) error {
+	switch {
+	case isIntNumbericType(columnType):
+		return intNumbericEnumValidate(enum)
+	case isFractionNumbericType(columnType):
+		return fractionNumbericEnumValidate(enum)
+	default:
+		return errors.Errorf(`Enum of numbers available only for standard numberic types: %s`, strings.Join(standardNumbericTypes, ", "))
+	}
+}
+
+func intNumbericEnumValidate(enum []string) error {
+	for _, e := range enum {
+		_, err := strconv.Atoi(e)
+		if err != nil {
+			return errors.Wrapf(err, `Incorrect enum. Enum for types %s must be in this format: [1, 2, 3]`, strings.Join(intNumbericTypes, ", "))
+		}
+	}
+	return nil
+}
+
+func fractionNumbericEnumValidate(enum []string) error {
+	for _, e := range enum {
+		_, err := strconv.ParseFloat(e, 64)
+		if err != nil {
+			return errors.Wrapf(err, `Incorrect enum. Enum for types %s must be in this format: [1.1, 2, 0.3, .44]`, strings.Join(fractionNumbericTypes, ", "))
+		}
+	}
+	return nil
+}
+
+func validateDefault(options models.Options) error {
+	if options.Default == "" {
+		return nil
+	}
+
+	if len(options.Enum) > 0 {
+		found := false
+		for _, e := range options.Enum {
+			if e == options.Default {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return errors.Errorf(`Default ("%s") should be one from enum: %s`, options.Default, strings.Join(options.Enum, ", "))
+		}
+	}
+
+	if options.Format != "" {
+		valid := false
+		switch options.Format {
+		case "date-time":
+			valid = strfmt.IsDateTime(options.Default)
+		case "email":
+			valid = strfmt.IsEmail(options.Default)
+		default:
+			valid = true
+		}
+		if !valid {
+			return errors.Errorf(`Default ("%s") should match the %s format`, options.Default, options.Format)
+		}
+	}
+
+	return nil
+}
+
 func setDeepNesting(cfg *models.Config) (err error) {
 	for name, model := range cfg.Models {
 		model.DeepNesting, err = countDeepNesting(name, cfg)
@@ -576,7 +845,7 @@ func countDeepNesting(model string, cfg *models.Config) (int, error) {
 	var err error
 	deepNesting := 0
 	for _, options := range cfg.Models[model].Columns {
-		if options.IsStruct, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
+		if options.IsStruct, _, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
 			return 0, err
 		}
 		if options.IsStruct {
@@ -603,27 +872,62 @@ func countDeepNesting(model string, cfg *models.Config) (int, error) {
 	return deepNesting, nil
 }
 
-func parseColumnType(columnType string, cfg *models.Config) (bool, bool, string, error) {
+func parseFieldType(fieldType string, customTypes map[string]models.CustomType) (bool, bool, string, error) {
+	goType := convertTypeToGoType(fieldType)
+	lowerTitleGoType := LowerTitle(goType)
+	switch {
+	case strings.HasPrefix(fieldType, customTypePrefix):
+		if _, ok := customTypes[lowerTitleGoType]; !ok {
+			return false, false, "", errors.Errorf(`Field refers to "%s" custom type which is not described anywhere`, lowerTitleGoType)
+		}
+		return true, false, goType, nil
+	case strings.HasPrefix(fieldType, arrayOfCustomTypePrefix):
+		if _, ok := customTypes[lowerTitleGoType]; !ok {
+			return false, false, "", errors.Errorf(`Fields refers to "%s" custom type which is not described anywhere`, lowerTitleGoType)
+		}
+		return true, true, goType, nil
+	case strings.HasPrefix(fieldType, arrayTypePrefix) && !strings.HasPrefix(fieldType, arrayOfCustomTypePrefix):
+		if IsStandardType(fieldType[len(arrayTypePrefix):]) {
+			return false, true, goType, nil
+		}
+
+		return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarad types %s or custom types`, goType, strings.Join(standardTypes, ", "))
+	default:
+		return false, false, goType, nil
+	}
+}
+
+func parseColumnType(columnType string, cfg *models.Config) (bool, bool, bool, string, error) {
 	goType := convertTypeToGoType(columnType)
 	lowerTitleGoType := LowerTitle(goType)
 	switch {
 	case strings.HasPrefix(columnType, structTypePrefix):
 		if _, ok := cfg.Models[lowerTitleGoType]; !ok {
-			return false, false, "", errors.Errorf(`One of the fields refers to "%s" model which is not described anywhere`, lowerTitleGoType)
+			return false, false, false, "", errors.Errorf(`Field refers to "%s" model which is not described anywhere`, lowerTitleGoType)
 		}
-		return true, false, goType, nil
+		return true, false, false, goType, nil
 	case strings.HasPrefix(columnType, arrayOfStructTypePrefix):
 		if _, ok := cfg.Models[lowerTitleGoType]; !ok {
-			return false, false, "", errors.Errorf(`One of the fields refers to "%s" model which is not described anywhere`, lowerTitleGoType)
+			return false, false, false, "", errors.Errorf(`Fields refers to "%s" model which is not described anywhere`, lowerTitleGoType)
 		}
-		return true, true, goType, nil
-	case strings.HasPrefix(columnType, arrayTypePrefix) && !strings.HasPrefix(columnType, arrayOfStructTypePrefix):
-		if isStandardType(columnType[len(arrayTypePrefix):]) {
-			return false, true, goType, nil
+		return true, false, true, goType, nil
+	case strings.HasPrefix(columnType, customTypePrefix):
+		if _, ok := cfg.CustomTypes[lowerTitleGoType]; !ok {
+			return false, false, false, "", errors.Errorf(`Field refers to "%s" custom type which is not described anywhere`, lowerTitleGoType)
 		}
-		return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarad types %s or refers to any other model`, goType, strings.Join(standardTypes, ", "))
+		return false, true, false, goType, nil
+	case strings.HasPrefix(columnType, arrayOfCustomTypePrefix):
+		if _, ok := cfg.CustomTypes[lowerTitleGoType]; !ok {
+			return false, false, false, "", errors.Errorf(`Fields refers to "%s" custom type which is not described anywhere`, lowerTitleGoType)
+		}
+		return false, true, true, goType, nil
+	case strings.HasPrefix(columnType, arrayTypePrefix) && !strings.HasPrefix(columnType, arrayOfStructTypePrefix) && !strings.HasPrefix(columnType, arrayOfCustomTypePrefix):
+		if IsStandardType(columnType[len(arrayTypePrefix):]) {
+			return false, false, true, goType, nil
+		}
+		return false, false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarad types %s or refers to any other model`, goType, strings.Join(standardTypes, ", "))
 	default:
-		return false, false, goType, nil
+		return false, false, false, goType, nil
 	}
 }
 
@@ -633,7 +937,11 @@ func convertTypeToGoType(columnType string) string {
 		return strings.Title(columnType[len(structTypePrefix):])
 	case strings.HasPrefix(columnType, arrayOfStructTypePrefix):
 		return strings.Title(columnType[len(arrayOfStructTypePrefix):])
-	case strings.HasPrefix(columnType, arrayTypePrefix) && !strings.HasPrefix(columnType, arrayOfStructTypePrefix):
+	case strings.HasPrefix(columnType, customTypePrefix):
+		return strings.Title(columnType[len(customTypePrefix):])
+	case strings.HasPrefix(columnType, arrayOfCustomTypePrefix):
+		return strings.Title(columnType[len(arrayOfCustomTypePrefix):])
+	case strings.HasPrefix(columnType, arrayTypePrefix) && !strings.HasPrefix(columnType, arrayOfStructTypePrefix) && !strings.HasPrefix(columnType, arrayOfCustomTypePrefix):
 		return convertStandardTypeToGoType(columnType[len(arrayTypePrefix):])
 	default:
 		return convertStandardTypeToGoType(columnType)
@@ -677,50 +985,6 @@ func isCustomEdit(method string) bool {
 
 func isCustomList(method string) bool {
 	return regexp.MustCompile(`^list\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
-}
-
-func enumValidate(enum []string, columnType string) error {
-	if isStandardType(columnType) {
-		if len(enum) == 0 {
-			return errors.New(`Enum must has one or more elements`)
-		}
-		if columnType == "string" {
-			return nil
-		}
-		return numberEnumValidate(enum, columnType)
-	}
-	return errors.Errorf(`Enum available only for standard types: %s`, strings.Join(standardTypes, ", "))
-}
-
-func numberEnumValidate(enum []string, columnType string) error {
-	switch {
-	case isIntNumbericType(columnType):
-		return intNumbericEnumValidate(enum)
-	case isFractionNumbericType(columnType):
-		return fractionNumbericEnumValidate(enum)
-	default:
-		return errors.Errorf(`Enum of numbers available only for standard numberic types: %s`, strings.Join(standardNumbericTypes, ", "))
-	}
-}
-
-func intNumbericEnumValidate(enum []string) error {
-	for _, e := range enum {
-		_, err := strconv.Atoi(e)
-		if err != nil {
-			return errors.Wrapf(err, `Incorrect enum. Enum for types %s must be in this format: [1, 2, 3]`, strings.Join(intNumbericTypes, ", "))
-		}
-	}
-	return nil
-}
-
-func fractionNumbericEnumValidate(enum []string) error {
-	for _, e := range enum {
-		_, err := strconv.ParseFloat(e, 64)
-		if err != nil {
-			return errors.Wrapf(err, `Incorrect enum. Enum for types %s must be in this format: [1.1, 2, 0.3, .44]`, strings.Join(fractionNumbericTypes, ", "))
-		}
-	}
-	return nil
 }
 
 // LowerTitle cancels strings.Title
@@ -987,7 +1251,7 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 			fieldsFull := splitFields(fieldsStr)
 			fields := trimFieldsSuffix(fieldsFull)
 			haveID := false
-			result.MethodsProps[i].ArrayColumns = map[string]bool{}
+			result.MethodsProps[i].JSONColumns = map[string]bool{}
 			for j := range fields {
 				var needFilter bool
 				if strings.HasSuffix(fields[j], "*") {
@@ -1019,8 +1283,8 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 					if fields[j] == options.TitleName {
 						if !options.IsStruct {
 							sqlName := NameSQL(options.TitleName)
-							if options.IsArray {
-								result.MethodsProps[i].HaveArrayOfStandardType = true
+							if options.IsArray || options.IsCustom {
+								result.MethodsProps[i].HaveJSON = true
 								sqlName += "_json"
 							}
 							SQLSelect = append(SQLSelect, sqlName)
@@ -1041,7 +1305,7 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 								structIsArr = true
 							}
 						}
-						result.MethodsProps[i].ArrayColumns[column] = options.IsArray
+						result.MethodsProps[i].JSONColumns[column] = options.IsArray || options.IsCustom
 					}
 				}
 
@@ -1126,7 +1390,7 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 						if !options.IsStruct {
 							sqlName := NameSQL(options.TitleName)
 							titleName := options.TitleName
-							if options.IsArray {
+							if options.IsArray || options.IsCustom {
 								sqlName += "_json"
 								titleName += "JSON"
 							} else {

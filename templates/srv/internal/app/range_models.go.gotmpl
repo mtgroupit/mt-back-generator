@@ -9,7 +9,7 @@ import (
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
 type {{$modelName}} struct {
 	{{- range $name, $options := $model.Columns}}
-		{{$options.TitleName}} {{if $options.IsArray}}[]{{end}}{{if $options.IsStruct}}*{{end}}{{$options.GoType}}
+		{{$options.TitleName}} {{if $options.IsArray}}[]{{end}}{{if or $options.IsStruct $options.IsCustom}}*{{end}}{{$options.GoType}}
 	{{- end}}
 }
 

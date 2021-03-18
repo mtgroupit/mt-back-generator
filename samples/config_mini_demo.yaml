@@ -3,6 +3,7 @@ module: "demo"
 description: "demo generated app"
 debug: true # used for create flag and env variable for reset database
 auth-srv: "github.com/mtgroupit/mt-mock-extauthapi"
+
 models:
 
   employee:
@@ -29,6 +30,8 @@ models:
         format: "phone"
       phones:
         type: "[]string"
+      links:
+        type: "custom.webContact"
       department:
         type: "string"
       age:
@@ -57,6 +60,7 @@ models:
       - editMy
       - editOrAddMy
       - editMy(defaultPhone, phones)[phones]
+      - editMy(links)
       - deleteMy
       - list
       - list(id, name*, company*(name, locations(id, name)))[withCompanyLocations]
@@ -79,6 +83,8 @@ models:
       locations:
         type: "[]model.location"
         default: 3
+      contacts:
+        type: "[]custom.contact"
     methods:
       - get
       - add
@@ -100,6 +106,7 @@ models:
     methods:
       - getMy
       - addMy
+      - editMy
       - deleteMy
 
   location:
@@ -138,3 +145,31 @@ models:
       - delete
       - list
     
+custom-types:
+  
+  contact:
+    description: "contact is type for storing contact information"
+    fields:
+      departure:
+        type: "string"
+      phone:
+        type: "string"
+        format: "phone"
+      email:
+        type: "string"
+        format: "email"
+      web:
+        type: "custom.webContact"
+      
+  webContact:
+    description: "webContact "
+    fields:
+      facebook:
+        type: "string"
+        format: "url"
+      instagram:
+        type: "string"
+        format: "url"
+      other:
+        type: "string"
+        format: "url"
