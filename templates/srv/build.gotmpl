@@ -41,5 +41,5 @@ go get ./...
 rm -rf bin/
 mkdir bin/
 
-go build -o ./bin/{{FormatName .Name}} ./cmd/main/*
+go build -o ./bin/{{.Name}} ./cmd/main/*
 

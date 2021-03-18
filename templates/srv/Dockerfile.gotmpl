@@ -14,14 +14,14 @@ WORKDIR /app
 
 COPY ./ ./
 
-RUN go build -o ./bin/{{FormatName .Name}} ./cmd/main/*
+RUN go build -o ./bin/{{.Name}} ./cmd/main/*
 
 
 FROM alpine:3  
 
-COPY --from=builder /app/bin/{{FormatName .Name}} /bin/{{FormatName .Name}}
+COPY --from=builder /app/bin/{{.Name}} /bin/{{.Name}}
 COPY --from=builder /app/migration/*.sql /migration/
 
 RUN apk add --no-cache libc6-compat ca-certificates
 
-CMD ["/bin/{{FormatName .Name}}"] 
+CMD ["/bin/{{.Name}}"] 

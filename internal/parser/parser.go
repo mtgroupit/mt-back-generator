@@ -89,6 +89,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 	cfg = inCfg
 
+	cfg.Name = formatName(cfg.Name)
+
 	cfg.Description = strconv.Quote(cfg.Description)
 
 	err = setDeepNesting(cfg)
@@ -822,6 +824,14 @@ func validateDefault(options models.Options) error {
 	}
 
 	return nil
+}
+
+func formatName(name string) string {
+	splitedName := regexp.MustCompile("[^a-zA-Z0-9]+").Split(name, -1)
+	for i := range splitedName {
+		splitedName[i] = strings.ToLower(splitedName[i])
+	}
+	return strings.Join(splitedName, "-")
 }
 
 func setDeepNesting(cfg *models.Config) (err error) {
