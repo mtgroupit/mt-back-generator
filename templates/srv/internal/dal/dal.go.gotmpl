@@ -31,15 +31,16 @@ const (
 
 var log = structlog.New()
 
-type App struct {
+type Repo struct {
 	db *sqlxx.DB
 }
-{{if .HaveCustomMethod}}
-type Customs struct {
-	db *sqlxx.DB
-	app *App
-}
-{{end}}
+
+{{- if .HaveCustomMethod}}
+	type CustomsRepo struct {
+		db *sqlxx.DB
+	}
+{{- end}}
+
 {{range $i, $et := $.ExtraTables}}
 type {{$et.RefTableOne}}{{$et.RefTableTwo}} struct{
     {{$et.RefTableOne}}ID {{if eq  $et.TypeIDOne "uuid"}}uuid.UUID{{else}}int64{{end}}  `db:"{{$et.FieldIDOne}}"`
@@ -82,21 +83,19 @@ func connect(ctx context.Context, cfg pqx.Config, migrationDir string{{if .Debug
 	return sqlxx.NewDB(sqlx.NewDb(db, "postgres")), nil
 }
 
-func New(ctx context.Context, dbCfg pqx.Config, migrationDir string{{if .Debug}}, resetDB bool{{end}}) (*App, {{if .HaveCustomMethod}}*Customs, {{end}}error) {
+func New(ctx context.Context, dbCfg pqx.Config, migrationDir string{{if .Debug}}, resetDB bool{{end}}) (*Repo, {{if .HaveCustomMethod}}*CustomsRepo, {{end}} error) {
 	db, err := connect(ctx, dbCfg, migrationDir{{if .Debug}}, resetDB{{end}})
 	if err != nil {
-		return nil,{{if .HaveCustomMethod}} nil, {{end}} err
-	}	
-	app := &App{
-		db: db,
+		return nil, {{if .HaveCustomMethod}}nil, {{end}}err
 	}
-	return app,{{if .HaveCustomMethod}} &Customs{
+	return &Repo{
 		db: db,
-		app: app,
-	}, {{end}} nil
+	}{{if .HaveCustomMethod}}, &CustomsRepo{
+		db: db,
+	}{{end}}, nil
 }
 
-func (a *App) Close() {
+func (a *Repo) Close() {
 	log.WarnIfFail(a.db.Close)
 }
 

@@ -73,7 +73,7 @@ type {{$modelName}} struct {
 {{- range $i, $method := $model.Methods}}
 {{- if not (IsCustomMethod $method)}}
 	{{- if IsGet $method}}
-	func (a *App) {{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}{{if IsMyMethod $method}}profileID{{else}}id{{end}} {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
+	func (a *Repo) {{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}{{if IsMyMethod $method}}profileID{{else}}id{{end}} {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
 		{{- if IsMyMethod $method}}
 			id, err := a.getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}profileID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}})
 			if err != nil {
@@ -84,7 +84,7 @@ type {{$modelName}} struct {
 	}
 	{{- end}}
 	{{- if IsAdd $method}}
-	func (a *App) {{$method}}{{$modelName}}(profileID string, {{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) (*app.{{$modelName}}, error) {
+	func (a *Repo) {{$method}}{{$modelName}}(profileID string, {{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) (*app.{{$modelName}}, error) {
 		{{- if IsMyMethod $method}}
 			_, err := a.getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}profileID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}})
 			if err == nil {
@@ -108,7 +108,7 @@ type {{$modelName}} struct {
 	}
 	{{- end}}
 	{{- if IsDelete $method}}
-	func (a *App) {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}profileID string{{if not $model.Shared}}, isolatedEntityID string{{end}}) error {
+	func (a *Repo) {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}profileID string{{if not $model.Shared}}, isolatedEntityID string{{end}}) error {
 		{{- if IsMyMethod $method}}
 			id, err := a.getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}profileID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}})
 			if err != nil {
@@ -127,7 +127,7 @@ type {{$modelName}} struct {
 	}
 	{{- end}}
 	{{- if IsEdit $method}}
-	func (a *App) {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  {
+	func (a *Repo) {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) {{if $model.ReturnWhenEdit}}(*app.{{$modelName}}, error){{else}}error{{end}}  {
 		{{- if IsMyMethod $method}}
 			id, err := a.getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}profileID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}})
 			if err != nil{{if eq $method "EditOrAddMy"}} && err != app.ErrNotFound{{end}} {
@@ -174,7 +174,7 @@ type {{$modelName}} struct {
 	}
 	{{- end}}
 	{{- if IsList $method}}
-	func (a *App) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*app.Filter, logicFilter bool, sortBy, orderBy string) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
+	func (a *Repo) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*app.Filter, logicFilter bool, sortBy, orderBy string) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
 		ms := []{{$modelName}}{}
 		warnings := []string{}
 
@@ -439,7 +439,7 @@ type {{$modelName}} struct {
 	{{- if and (IsCustomList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}
 		{{- range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
 		{{- if $nestedObj.IsFirstForLazyLoading}}
-			func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}})LazyLoading{{$method}}{{$nestedObj.Path}}({{if $nestedObj.Path}}{{if not  (index $.Models $nestedObj.ParentStruct).Shared}} isolatedEntityID string, {{end}}{{else}}{{if not $model.Shared}}isolatedEntityID string, {{end}}{{end}}a *App) (err error) { 
+			func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}})LazyLoading{{$method}}{{$nestedObj.Path}}({{if $nestedObj.Path}}{{if not  (index $.Models $nestedObj.ParentStruct).Shared}} isolatedEntityID string, {{end}}{{else}}{{if not $model.Shared}}isolatedEntityID string, {{end}}{{end}}a *Repo) (err error) { 
 		{{- end}} 
 			{{- $model2 := (index $.Models $nestedObj.Type)}}
 			{{- if  $nestedObj.IsArray}}
@@ -484,7 +484,7 @@ type {{$modelName}} struct {
 {{- end}}
 
 {{- if $model.HaveLazyLoading}}
-func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID string, {{end}}a *App) (err error) { 
+func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID string, {{end}}a *Repo) (err error) { 
 {{- range $modelName2, $model2 := $.Models}}
 	{{- range $column, $options := $model.Columns}}
 		{{- if eq $modelName2 $options.GoType}}
@@ -544,7 +544,7 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 
 {{- range $column, $options := $model.Columns}}
 {{- if  and $options.IsArray $options.IsStruct}}
-	func (a *App) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*app.{{$options.GoType}}) error {
+	func (a *Repo) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*app.{{$options.GoType}}) error {
 		for _, item := range items {
 			{{- $model2 := (index $.Models $options.GoType)}}
 			id, err := a.add{{$options.GoType}}({{if $model2.IDIsUUID}}uuid.New().String(), {{end}}{{if not $model2.Shared}}isolatedEntityID, {{end}}item)
@@ -578,7 +578,7 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 		return nil
 	}
 
-	func (a *App) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error {
+	func (a *Repo) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error {
 		for _, item := range items {
 			res, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1 AND {{NameSQL $column}}_id=$2{{if not $model.Shared}} AND isolated_entity_id=$3{{end}}`, id, item{{if not $model.Shared}}, isolatedEntityID{{end}})
 			if err != nil {
@@ -602,14 +602,14 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 {{- end}}
 {{- end}}
 
-func (a *App) {{$modelName}}AccessManager(am *app.AccessManager) error {
+func (a *Repo) {{$modelName}}AccessManager(am *app.AccessManager) error {
 	if _, err := a.db.Exec(`INSERT INTO {{NameSQL $modelName}}s_access VALUES ($1, $2, $3, $4, $5, $6, $7)`, am.User, am.Group, am.Read, am.Write, am.Delete, am.Add, am.AccessManager); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (a *App) get{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
+func (a *Repo) get{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
 	var m {{$modelName}}
 	if err := a.db.Get(&m, `SELECT {{$model.SQLSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}} AND NOT deleted`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
 		if err == sql.ErrNoRows {
@@ -632,7 +632,7 @@ func (a *App) get{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{en
 	return app{{$modelName}}(m), nil
 }
 
-func (a *App) add{{$modelName}}(profileID string, {{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) ({{if $model.IDIsUUID}}string{{else}}int64{{end}}, error) {
+func (a *Repo) add{{$modelName}}(profileID string, {{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) ({{if $model.IDIsUUID}}string{{else}}int64{{end}}, error) {
 	{{- if $model.IDIsUUID}}
 		{{$modelName}}ID := uuid.New().String()
 	{{- else}}
@@ -674,7 +674,7 @@ func (a *App) add{{$modelName}}(profileID string, {{if not $model.Shared}}isolat
 	return {{$modelName}}ID{{if $model.IDIsUUID}}{{end}}, nil
 }
 
-func (a *App) getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}profileID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}} string) (id string, err error) {
+func (a *Repo) getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}profileID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}} string) (id string, err error) {
 	if err = a.db.Get(&id, `SELECT id FROM {{NameSQL $modelName}}s WHERE {{if not $model.BoundToIsolatedEntity}}created_by=$1{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}} AND {{end}}isolated_entity_id=${{if $model.BoundToIsolatedEntity}}1{{else}}2{{end}}{{end}} AND NOT deleted AND bound`{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
 		if err == sql.ErrNoRows {
 			return "", app.ErrNotFound
@@ -684,7 +684,7 @@ func (a *App) getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}profi
 	return
 }
 
-func (a *App) bindTo{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Profile{{end}}{{$modelName}}(id{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}} string) error {
+func (a *Repo) bindTo{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Profile{{end}}{{$modelName}}(id{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}} string) error {
 	res, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET bound=true WHERE id=$1{{if not $model.BoundToIsolatedEntity}} AND created_by=$2{{end}}{{if not $model.Shared}} AND isolated_entity_id=${{if $model.BoundToIsolatedEntity}}2{{else}}3{{end}}{{end}} AND NOT deleted AND NOT bound`, id{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}})
 	if err != nil {
 		return err
@@ -697,7 +697,7 @@ func (a *App) bindTo{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Pro
 }
 
 {{- range $functionName, $function := $.Functions}}
-func (a *App) {{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$function.OutStrType}}, error){
+func (a *Repo) {{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$function.OutStrType}}, error){
 	{{- range $name, $type := $function.Out}}
 		var {{$name}} {{$type}}
 	{{- end}}

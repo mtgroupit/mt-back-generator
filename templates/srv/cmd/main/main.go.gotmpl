@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	testApp     *dal.App
+	testRepo     *dal.Repo
 	testAppl     app.App
 
 	log = structlog.New()
@@ -83,12 +83,12 @@ func connect() (app.App,{{if .HaveCustomMethod}} app.Customs,{{end}} *extauthapi
 		return nil,{{if .HaveCustomMethod}} nil,{{end}} nil, fmt.Errorf("extauthapi: %v. Error can be if flag '%s' or environment variable '%s' is not set", err, ExtauthEndpointFlag, def.ExtauthEndpointEnvName)
 	}
 
-	a,{{if .HaveCustomMethod}} c,{{end}} err := dal.New(ctx, cfg.db, cfg.gooseDir{{if .Debug}}, cfg.resetDB{{end}})
+	r, {{if .HaveCustomMethod}}cr, {{end}} err := dal.New(ctx, cfg.db, cfg.gooseDir{{if .Debug}}, cfg.resetDB{{end}})
 	if err != nil {
 		return nil,{{if .HaveCustomMethod}} nil,{{end}} nil, err
 	}
 	
-	app{{if .HaveCustomMethod}}, cust{{end}} := app.New(a{{if .HaveCustomMethod}}, c{{end}})
+	app{{if .HaveCustomMethod}}, cust{{end}} := app.New(r{{if .HaveCustomMethod}}, cr{{end}})
 	return app{{if .HaveCustomMethod}}, cust{{end}}, extAuthSvc, nil
 }
 
