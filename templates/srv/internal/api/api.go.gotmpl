@@ -9,9 +9,10 @@ import (
 	"{{.Module}}/internal/api/restapi/models"
 	"{{.Module}}/internal/api/restapi/restapi"
 	"{{.Module}}/internal/api/restapi/restapi/operations"
+	"{{.Module}}/internal/api/restapi/restapi/operations/standard"
 	{{$module := .Module}}
-	{{- range $tag, $_ := .Tags}}
-		{{$tag}} "{{$module}}/internal/api/restapi/restapi/operations/{{NameSQL $tag}}"
+	{{- range $name, $_ := .Models}}
+		{{LowerTitle $name}} "{{$module}}/internal/api/restapi/restapi/operations/{{NameSQL $name}}"
 	{{- end}}
 	"{{.Module}}/internal/app"
 	"github.com/rs/cors"
@@ -73,18 +74,18 @@ func NewServer(appl app.App,{{if .HaveCustomMethod}}cust app.Customs,{{end}} ext
 	api.CookieKeyAuth = svc.checkerAuth
 	api.CsrfTokenAuth = svc.csrfTokenAuth
 
-	api.HealthCheckHandler = operations.HealthCheckHandlerFunc(healthCheck)
+	api.StandardHealthCheckHandler = standard.HealthCheckHandlerFunc(healthCheck)
     {{- range $modelName, $model := $.Models}}
 		{{- range $i, $method := $model.Methods}}
-			api.{{if $model.Tags}}{{(index $model.Tags 0)}}{{end}}{{$method}}{{$model.TitleName}}Handler = {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}HandlerFunc(svc.{{$method}}{{$modelName}})
+			api.{{$model.TitleName}}{{$method}}{{$model.TitleName}}Handler = {{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}HandlerFunc(svc.{{$method}}{{$modelName}})
 		{{- end}}
 		{{- range $column, $options := $model.Columns}}
 			{{- if and $options.IsArray $options.IsStruct}}
-				api.{{if $model.Tags}}{{(index $model.Tags 0)}}{{end}}Add{{Title $column}}{{$model.TitleName}}Handler = {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.Add{{Title $column}}{{$model.TitleName}}HandlerFunc(svc.Add{{Title $column}}{{$modelName}})
-				api.{{if $model.Tags}}{{(index $model.Tags 0)}}{{end}}Delete{{Title $column}}{{$model.TitleName}}Handler = {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.Delete{{Title $column}}{{$model.TitleName}}HandlerFunc(svc.Delete{{Title $column}}{{$modelName}})
+				api.{{$model.TitleName}}Add{{Title $column}}{{$model.TitleName}}Handler = {{LowerTitle $modelName}}.Add{{Title $column}}{{$model.TitleName}}HandlerFunc(svc.Add{{Title $column}}{{$modelName}})
+				api.{{$model.TitleName}}Delete{{Title $column}}{{$model.TitleName}}Handler = {{LowerTitle $modelName}}.Delete{{Title $column}}{{$model.TitleName}}HandlerFunc(svc.Delete{{Title $column}}{{$modelName}})
 			{{- end}}
 		{{- end}}
-		api.{{if $model.Tags}}{{(index $model.Tags 0)}}{{end}}{{$model.TitleName}}AccessManagerHandler = {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$model.TitleName}}AccessManagerHandlerFunc(svc.{{$model.TitleName}}AccessManager)
+		api.{{$model.TitleName}}{{$model.TitleName}}AccessManagerHandler = {{LowerTitle $modelName}}.{{$model.TitleName}}AccessManagerHandlerFunc(svc.{{$model.TitleName}}AccessManager)
 	{{- end}}
 	{{- range $modelName, $model := $.Models}}
 		{{range $function, $_ := $.Functions}}
@@ -138,8 +139,8 @@ func NewServer(appl app.App,{{if .HaveCustomMethod}}cust app.Customs,{{end}} ext
 	return server, nil
 }
 
-func healthCheck(params operations.HealthCheckParams, profile interface{}) middleware.Responder {
-	return operations.NewHealthCheckOK().WithPayload(&operations.HealthCheckOKBody{Ok: true})
+func healthCheck(params standard.HealthCheckParams, profile interface{}) middleware.Responder {
+	return standard.NewHealthCheckOK().WithPayload(&standard.HealthCheckOKBody{Ok: true})
 }
 
 func appAccessManager(am *models.AccessManager) *app.AccessManager {

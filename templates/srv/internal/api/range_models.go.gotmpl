@@ -10,7 +10,7 @@ import (
 	"github.com/go-openapi/swag"
 {{end}}
 	"{{.Module}}/internal/api/restapi/models"
-	{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}} {{end}}"{{.Module}}/internal/api/restapi/restapi/operations{{if $model.Tags}}/{{NameSQL (index $model.Tags 0)}}{{end}}"
+	{{LowerTitle $modelName}} "{{.Module}}/internal/api/restapi/restapi/operations/{{NameSQL $modelName}}"
 	"{{.Module}}/internal/app"
 	{{- if $model.NeedTypes}}
 		"{{.Module}}/internal/types"
@@ -30,7 +30,7 @@ import (
 
 {{- range $i, $method := $model.Methods}}
 {{- if not (IsCustomMethod $method)}}
-func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
+func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
 	{{- if IsGet $method}}
 		{{- if or (IsMyMethod $method) (not $model.Shared)}}
 			prof := profile.(*extauthapi.Profile)
@@ -39,19 +39,19 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
-			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
 		case errors.Is(err, app.ErrNotFound):
 			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
-			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
+			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeNotFound.extra),
 				Message: swag.String(err.Error()),
 			})
 		case err == nil:
 		log.Info("{{$method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}{{if $model.BoundToIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}})
-			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c))
+			return {{LowerTitle $modelName}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c))
 		}
 	{{- end}}
 	{{- if IsAdd $method}}
@@ -60,21 +60,21 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
-			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
 		{{- if IsMyMethod $method}}
 			case errors.Is(err, app.ErrDuplicateID):
 				log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeDuplicateID.status, "code", codeDuplicateID.extra, "err", err)
-				return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeDuplicateID.status).WithPayload(&models.Error{
+				return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeDuplicateID.status).WithPayload(&models.Error{
 					Code:    swag.Int32(codeDuplicateID.extra),
 					Message: swag.String(err.Error()),
 				})
 		{{- end}}
 		case err == nil:
 			log.Info("{{$method}}{{$modelName}} ok")
-			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}Created().WithPayload(api{{$modelName}}(c))
+			return {{LowerTitle $modelName}}.New{{$method}}{{$model.TitleName}}Created().WithPayload(api{{$modelName}}(c))
 		}
 	{{- end}}
 	{{- if IsDelete $method}}
@@ -83,19 +83,19 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
-			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
 		case errors.Is(err, app.ErrNotFound):
 			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
-			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
+			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeNotFound.extra),
 				Message: swag.String(err.Error()),
 			})
 		case err == nil:
 			log.Info("{{$method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}{{if $model.BoundToIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}})
-			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}NoContent()
+			return {{LowerTitle $modelName}}.New{{$method}}{{$model.TitleName}}NoContent()
 		}
 	{{- end}}
 	{{- if IsEdit $method}}
@@ -138,19 +138,19 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
-			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
 		case errors.Is(err, app.ErrNotFound):
 			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
-			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
+			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeNotFound.extra),
 				Message: swag.String(err.Error()),
 			})
 		case err == nil:
 			log.Info("{{$method}}{{$modelName}} ok")
-			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK(){{if $model.ReturnWhenEdit}}.WithPayload(api{{$modelName}}(c)){{end}}
+			return {{LowerTitle $modelName}}.New{{$method}}{{$model.TitleName}}OK(){{if $model.ReturnWhenEdit}}.WithPayload(api{{$modelName}}(c)){{end}}
 		}
 	{{- end}}
 	{{- if  IsList $method}}
@@ -161,13 +161,13 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
-			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
 		case err == nil:
 			log.Info("{{$method}}{{$modelName}} ok")
-			return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(&{{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$method}}{{$model.TitleName}}OKBody{
+			return {{LowerTitle $modelName}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(&{{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}OKBody{
 				Items: api{{$modelName}}s(c),
 				Warnings: warnings,{{if $model.DetailedPagination}}
 				Count: int32(count),{{end}}
@@ -178,35 +178,35 @@ func (svc *service) {{$method}}{{$modelName}}(params {{if $model.Tags}}{{LowerTi
 {{- end}}
 {{- end}}
 {{range $column, $options := $model.Columns}} {{if and $options.IsArray $options.IsStruct}}
-func (svc *service) Add{{Title $column}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.Add{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
+func (svc *service) Add{{Title $column}}{{$modelName}}(params {{LowerTitle $modelName}}.Add{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
 	{{if or $model.HaveModifiedBy (not $model.Shared)}}prof := profile.(*extauthapi.Profile)
 	{{end}}err := svc.app.Add{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}params.Body.ItemsID, app{{$options.GoType}}sAdd(params.Body.Items))
 	switch {
 	default:
 		log.PrintErr("Add{{Title $column}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
-		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewAdd{{Title $column}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+		return {{LowerTitle $modelName}}.NewAdd{{Title $column}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 			Code:    swag.Int32(codeInternal.extra),
 			Message: swag.String("internal error"),
 		})
 	case errors.Is(err, app.ErrNotFound):
 		log.Info("Add{{Title $column}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
-		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewAdd{{Title $column}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
+		return {{LowerTitle $modelName}}.NewAdd{{Title $column}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
 			Code:    swag.Int32(codeNotFound.extra),
 			Message: swag.String(err.Error()),
 		})
 	case errors.Is(err, app.ErrNotFoundArrayItem):
 		log.Info("Add{{Title $column}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFoundArrayItem.status, "code", codeNotFoundArrayItem.extra, "err", err)
-		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewAdd{{Title $column}}{{$modelName}}Default(codeNotFoundArrayItem.status).WithPayload(&models.Error{
+		return {{LowerTitle $modelName}}.NewAdd{{Title $column}}{{$modelName}}Default(codeNotFoundArrayItem.status).WithPayload(&models.Error{
 			Code:    swag.Int32(codeNotFoundArrayItem.extra),
 			Message: swag.String(err.Error()),
 		})
 	case err == nil:
 		log.Info("Add{{Title $column}}{{$modelName}} ok")
-		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewAdd{{Title $column}}{{$modelName}}OK()
+		return {{LowerTitle $modelName}}.NewAdd{{Title $column}}{{$modelName}}OK()
 	}
 }
 
-func (svc *service) Delete{{Title $column}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.Delete{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
+func (svc *service) Delete{{Title $column}}{{$modelName}}(params {{LowerTitle $modelName}}.Delete{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
 	{{if or $model.HaveModifiedBy (not $model.Shared)}}prof := profile.(*extauthapi.Profile)
 	{{end}}err := svc.app.Delete{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}params.Body.Items)
 	if err != nil {
@@ -214,44 +214,44 @@ func (svc *service) Delete{{Title $column}}{{$modelName}}(params {{if $model.Tag
 	} else {
 		log.Info("Delete{{Title $column}}{{$modelName}} ok")
 	}
-	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewDelete{{Title $column}}{{$modelName}}OK()
+	return {{LowerTitle $modelName}}.NewDelete{{Title $column}}{{$modelName}}OK()
 	switch {
 	default:
 		log.PrintErr("Delete{{Title $column}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
-		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewDelete{{Title $column}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+		return {{LowerTitle $modelName}}.NewDelete{{Title $column}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 			Code:    swag.Int32(codeInternal.extra),
 			Message: swag.String("internal error"),
 		})
 	case errors.Is(err, app.ErrNotFound):
 		log.Info("Delete{{Title $column}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
-		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewDelete{{Title $column}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
+		return {{LowerTitle $modelName}}.NewDelete{{Title $column}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
 			Code:    swag.Int32(codeNotFound.extra),
 			Message: swag.String(err.Error()),
 		})
 	case err == nil:
 		log.Info("Delete{{Title $column}}{{$modelName}} ok")
-		return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.NewDelete{{Title $column}}{{$modelName}}OK()
+		return {{LowerTitle $modelName}}.NewDelete{{Title $column}}{{$modelName}}OK()
 	}
 }
 {{end}}{{end}}
-func (svc *service) {{$modelName}}AccessManager(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$modelName}}AccessManagerParams, profile interface{}) middleware.Responder {
+func (svc *service) {{$modelName}}AccessManager(params {{LowerTitle $modelName}}.{{$modelName}}AccessManagerParams, profile interface{}) middleware.Responder {
 	err := svc.app.{{$modelName}}AccessManager(appAccessManager(params.Body))
 	if err != nil {
 		log.Err("{{$modelName}}AccessManager error", err)
 	} else {
 		log.Info("{{$modelName}}AccessManager ok")
 	}
-	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$modelName}}AccessManagerOK()
+	return {{LowerTitle $modelName}}.New{{$modelName}}AccessManagerOK()
 }
 {{range $functionName, $function := $.Functions}}
-func (svc *service) {{$functionName}}{{$modelName}}(params {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.{{$modelName}}{{$functionName}}Params, profile interface{}) middleware.Responder {
+func (svc *service) {{$functionName}}{{$modelName}}(params {{LowerTitle $modelName}}.{{$modelName}}{{$functionName}}Params, profile interface{}) middleware.Responder {
 	{{$function.OutStr}}, err := svc.app.{{$functionName}}{{$modelName}}({{$function.InStrParams}})
 	if err != nil {
 		log.Err("{{$functionName}}{{$modelName}} error", err)
 	} else {
 		log.Info("{{$functionName}}{{$modelName}} ok")
 	}
-	return {{if $model.Tags}}{{LowerTitle (index $model.Tags 0)}}{{else}}operations{{end}}.New{{$modelName}}{{$functionName}}OK(){{if $function.HaveOut}}.WithPayload(&models.{{$functionName}}Params{
+	return {{LowerTitle $modelName}}.New{{$modelName}}{{$functionName}}OK(){{if $function.HaveOut}}.WithPayload(&models.{{$functionName}}Params{
 		{{range $name, $_ := $function.In}}
 		{{$name}}: params.Body.{{$name}},{{end}}
 		{{range $name, $_ := $function.Out}}

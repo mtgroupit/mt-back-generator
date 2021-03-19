@@ -27,6 +27,8 @@ security:
 paths:  
   /healthCheck:    
     get:
+      tags:
+        - Standard
       security:
         - {}
       operationId: healthCheck 
@@ -42,12 +44,10 @@ paths:
   {{- range $i, $method := $model.Methods}}
   /{{LowerTitle $modelName}}/{{LowerTitle $method}}:    
     {{(index $model.MethodsProps $i).HTTPMethod}}: 
-    {{- if $model.Tags}}
       tags:
       {{- range $_, $tag := $model.Tags}}
         - {{$tag}}
       {{- end}}
-    {{- end}}
       operationId: {{LowerTitle $method}}{{$model.TitleName}}
     {{- if not (or (eq $method "GetMy") (eq $method "DeleteMy"))}}
       parameters:
@@ -164,12 +164,10 @@ paths:
   {{- if and $options.IsStruct $options.IsArray}}
   /{{LowerTitle $modelName}}/add{{Title $column}}:    
     post:
-    {{- if $model.Tags}}
       tags:
       {{- range $_, $tag := $model.Tags}}
         - {{$tag}}
       {{- end}}
-    {{- end}}
       operationId: add{{Title $column}}{{$modelName}}
       parameters:
         - name: body
@@ -196,12 +194,10 @@ paths:
             $ref: "#/definitions/error"
   /{{LowerTitle $modelName}}/delete{{Title $column}}:    
     post:
-    {{- if $model.Tags}}
       tags:
       {{- range $_, $tag := $model.Tags}}
         - {{$tag}}
       {{- end}}
-    {{- end}}
       operationId: delete{{Title $column}}{{$modelName}}
       parameters:
         - name: body
@@ -226,12 +222,10 @@ paths:
   {{- end}}
   /{{LowerTitle $modelName}}/accessManager:    
     post:
-    {{- if $model.Tags}}
       tags:
       {{- range $_, $tag := $model.Tags}}
         - {{$tag}}
       {{- end}}
-    {{- end}}
       operationId: {{LowerTitle $modelName}}AccessManager
       parameters:
         - name: body

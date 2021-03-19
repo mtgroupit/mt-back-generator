@@ -89,9 +89,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 	cfg = inCfg
 
-	cfg.Description = strconv.Quote(cfg.Description)
+	cfg.Name = formatName(cfg.Name)
 
-	cfg.Tags = make(map[string]struct{})
+	cfg.Description = strconv.Quote(cfg.Description)
 
 	err = setDeepNesting(cfg)
 	if err != nil {
@@ -164,9 +164,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		model.TitleName = strings.Title(name)
 
 		for i := range model.Tags {
-			cfg.Tags[LowerTitle(model.Tags[i])] = struct{}{}
 			model.Tags[i] = strings.Title(model.Tags[i])
 		}
+		model.Tags = append([]string{strings.Title(name)}, model.Tags...)
 
 		var props []models.MethodProps
 		for _, method := range model.Methods {
@@ -824,6 +824,14 @@ func validateDefault(options models.Options) error {
 	}
 
 	return nil
+}
+
+func formatName(name string) string {
+	splitedName := regexp.MustCompile("[^a-zA-Z0-9]+").Split(name, -1)
+	for i := range splitedName {
+		splitedName[i] = strings.ToLower(splitedName[i])
+	}
+	return strings.Join(splitedName, "-")
 }
 
 func setDeepNesting(cfg *models.Config) (err error) {
