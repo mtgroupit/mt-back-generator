@@ -83,14 +83,16 @@ type Filter struct {
 
 type app struct {
 	repo     Repo
-    custRepo CustomsRepo
+    {{- if .HaveCustomMethod}}
+        custRepo CustomsRepo
+    {{- end}}
 }
 
-func New(r Repo, cr CustomsRepo) (App, Customs) {
+func New(r Repo{{if .HaveCustomMethod}}, cr CustomsRepo{{end}}) (App{{if .HaveCustomMethod}}, Customs{{end}}) {
 	return &app{
 		repo: r,
-	}, &app{
+	}{{if .HaveCustomMethod}}, &app{
 		repo: r,
         custRepo: cr,
-	}
+	}{{end}}
 }
