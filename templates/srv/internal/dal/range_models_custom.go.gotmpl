@@ -6,7 +6,7 @@ import (
 )
 
 {{range $i, $method := $model.Methods}}{{if (IsCustomMethod $method)}}
-func (a *Customs) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) error {
+func (a *CustomsRepo) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) error {
 	return nil
 }
 {{end}}{{end}}

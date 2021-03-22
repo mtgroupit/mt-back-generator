@@ -18,7 +18,7 @@ import (
 	{{- end}}
 )
 
-var testApp *App
+var testRepo *Repo
 var ctx = context.Background()
 
 var (
@@ -42,7 +42,7 @@ var (
 				{{- end}}
 			{{- end}}
 		}
-		test{{$modelName}}s = []*app.{{$modelName}}{test{{$modelName}}1, test{{$modelName}}2}
+		test{{$modelName}}s = []app.{{$modelName}}{test{{$modelName}}1, test{{$modelName}}2}
 	{{- end}}
 {{- end}}
 
@@ -58,7 +58,7 @@ var (
 		{{Title $field}}: {{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
 		{{- end}}
 	}
-	test{{$customTypeName}}s = []*app.{{$customTypeName}}{test{{$customTypeName}}1, test{{$customTypeName}}2}
+	test{{$customTypeName}}s = []app.{{$customTypeName}}{test{{$customTypeName}}1, test{{$customTypeName}}2}
 {{end}}
 
 	{{- if .HaveListMethod}}
@@ -68,7 +68,7 @@ var (
 	sortBy = ""
 	orderBy = "ASC"
 	
-	filters = []*app.Filter{
+	filters = []app.Filter{
 		&app.Filter{
 			Key: "ID",
 			Include: true,
@@ -108,14 +108,14 @@ func setupIntegration() {
 	testinit.Teardown(cleanup)
 	dbCfg.DBName += "_" + dbSuffix
 
-	testApp, {{if .HaveCustomMethod}}_,{{end}} err = New(ctx, dbCfg, migrationDir{{if .Debug}}, false{{end}})
+	testRepo, {{if .HaveCustomMethod}}_,{{end}} err = New(ctx, dbCfg, migrationDir{{if .Debug}}, false{{end}})
 	if err != nil {
 		testinit.Fatal(err)
 	}
-	testinit.Teardown(testApp.Close)
+	testinit.Teardown(testRepo.Close)
 }
 
-func (a *App) truncate() error {
+func (a *Repo) truncate() error {
 	_, err := a.db.Exec("TRUNCATE {{TruncateParams .Models}} RESTART IDENTITY CASCADE")
 	return err
 }
@@ -126,10 +126,10 @@ func addTestData(t *check.C){
 {{- range $i := Iterate $MaxDeepNesting}}
 	{{- range $modelName, $model := $.Models}}
 		{{- if eq $model.DeepNesting $i}}
-			{{if $model.IDIsUUID}}test{{$modelName}}1.ID{{else}}_{{end}}, err = testApp.add{{$modelName}}({{if $model.IDIsUUID}}{{if $model.BoundToIsolatedEntity}}isolatedEntityID{{else}}{{if HaveMyMethod $model.Methods}}profID1{{else}}uuid.New().String(){{end}}{{end}}, {{end}}{{if $model.HaveCreatedBy}}profID1, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}1)
+			{{if $model.IDIsUUID}}test{{$modelName}}1.ID{{else}}_{{end}}, err = testRepo.add{{$modelName}}({{if $model.IDIsUUID}}{{if $model.BoundToIsolatedEntity}}isolatedEntityID{{else}}{{if HaveMyMethod $model.Methods}}profID1{{else}}uuid.New().String(){{end}}{{end}}, {{end}}{{if $model.HaveCreatedBy}}profID1, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}1)
 			t.Nil(err)
 			{{- if not $model.BoundToIsolatedEntity}}
-				{{if $model.IDIsUUID}}test{{$modelName}}2.ID{{else}}_{{end}}, err = testApp.add{{$modelName}}({{if $model.IDIsUUID}}{{if HaveMyMethod $model.Methods}}profID2{{else}}uuid.New().String(){{end}}, {{end}}{{if $model.HaveCreatedBy}}profID2, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}2)
+				{{if $model.IDIsUUID}}test{{$modelName}}2.ID{{else}}_{{end}}, err = testRepo.add{{$modelName}}({{if $model.IDIsUUID}}{{if HaveMyMethod $model.Methods}}profID2{{else}}uuid.New().String(){{end}}, {{end}}{{if $model.HaveCreatedBy}}profID2, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}2)
 				t.Nil(err)
 			{{- end}}
 		{{- end}}
