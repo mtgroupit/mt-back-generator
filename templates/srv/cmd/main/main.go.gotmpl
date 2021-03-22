@@ -42,7 +42,15 @@ var (
 )
 
 func init() {
-	cfg.db.SSLMode = pqx.SSLRequire
+	var dbSSLModeRequire bool
+
+	flag.BoolVar(&dbSSLModeRequire, "db.ssl-mode-is-req", def.DBSSLModeIsReq, "PostgreSQL SSL mode")
+
+	if dbSSLModeRequire {
+		cfg.db.SSLMode = pqx.SSLRequire
+	} else {
+		cfg.db.SSLMode = pqx.SSLDisable
+	}
 	flag.StringVar(&cfg.logLevel, "log.level", "debug", "log `level` (debug|info|warn|err)")
 	flag.StringVar(&cfg.gooseDir, "goose.dir", def.GooseDir, "goose migrations `dir`")
 	flag.StringVar(&cfg.db.Host, "db.host", def.DBHost, "PostgreSQL `host`")
