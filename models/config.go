@@ -96,6 +96,7 @@ type Model struct {
 	HaveEmail        bool
 	NeedConv         bool
 	NeedTypes        bool
+	NeedTime         bool
 	HaveListMethod   bool
 	HaveCustomMethod bool
 	HaveJSON         bool
@@ -159,19 +160,20 @@ type Config struct {
 	CustomTypes map[string]CustomType `yaml:"custom-types"`
 	Functions   map[string]Function
 
-	HaveListMethod         bool
-	HaveCustomMethod       bool
-	HaveFloatArr           bool
-	HaveDateTime           bool
-	HaveEmail              bool
-	HaveEmailInCustomTypes bool
-	HaveTypes              bool
-	HaveTypesInCustomTypes bool
-	HaveConv               bool
-	HaveConvInCustomTypes  bool
-	HaveSwag               bool
-	HaveSwagInCustomTypes  bool
-	MaxDeepNesting         int
+	HaveListMethod            bool
+	HaveCustomMethod          bool
+	HaveFloatArr              bool
+	HaveDateTime              bool
+	HaveDateTimeInCustomTypes bool
+	HaveEmail                 bool
+	HaveEmailInCustomTypes    bool
+	HaveTypes                 bool
+	HaveTypesInCustomTypes    bool
+	HaveConv                  bool
+	HaveConvInCustomTypes     bool
+	HaveSwag                  bool
+	HaveSwagInCustomTypes     bool
+	MaxDeepNesting            int
 
 	ExtraTables []ExtraTable
 
@@ -194,4 +196,6 @@ func (c *Config) AddBind(nameModelTo string, bind Bind) error {
 type CustomType struct {
 	Description string
 	Fields      map[string]Options
+
+	NeedTime bool
 }

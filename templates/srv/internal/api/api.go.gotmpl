@@ -5,6 +5,9 @@ import (
 	"context"
 	"net/http"
 	"path"
+	{{- if .HaveDateTime}}
+		"time"
+	{{- end}}
 
 	"{{.Module}}/internal/api/restapi/models"
 	"{{.Module}}/internal/api/restapi/restapi"
@@ -170,24 +173,26 @@ func appAccessManager(am *models.AccessManager) *app.AccessManager {
 {{- end}}
 
 {{- if .HaveDateTime}}
-	func fromDateTimesArray(dts []strfmt.DateTime) (dates []string) {
+	func fromDateTimesArray(dts []strfmt.DateTime) (dates []time.Time) {
 		for _, date := range dts {
-			dates = append(dates, date.String())
+			dates = append(dates, fromDateTime(date))
 		}
 		return
 	}
 
-	func toDateTimesArray(dates []string) (dts []strfmt.DateTime) {
+	func fromDateTime(dt strfmt.DateTime) (date time.Time) {
+		date, _ = time.Parse(time.RFC3339, dt.String())
+		return
+	}
+
+	func toDateTimesArray(dates []time.Time) (dts []strfmt.DateTime) {
 		for _, date := range dates {
 			dts = append(dts, toDateTime(date))
 		}
 		return
 	}
 
-	func toDateTime(date string) (dt strfmt.DateTime) {
-		if date == "" {
-			return
-		}
+	func toDateTime(date interface{}) (dt strfmt.DateTime) {
 		dt.Scan(date)
 		return
 	}

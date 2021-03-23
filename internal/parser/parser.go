@@ -25,7 +25,8 @@ var (
 	standardNumbericTypes = append(intNumbericTypes, fractionNumbericTypes...)
 	standardTypes         = append([]string{"string", "bool"}, standardNumbericTypes...)
 
-	formats = map[string][]string{"string": {"date-time", "email", "phone", "url"}}
+	timeFormats = []string{"date-time"}
+	formats     = map[string][]string{"string": append([]string{"email", "phone", "url"}, timeFormats...)}
 )
 
 const (
@@ -66,6 +67,15 @@ func isFractionNumbericType(t string) bool {
 	return false
 }
 
+func isTimeFormat(format string) bool {
+	for i := range timeFormats {
+		if format == timeFormats[i] {
+			return true
+		}
+	}
+	return false
+}
+
 // ReadYAMLCfg create models.Config from configFile
 func ReadYAMLCfg(file string) (*models.Config, error) {
 	cfg := models.Config{}
@@ -100,7 +110,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 	for customTypeName, customType := range cfg.CustomTypes {
 		for field, options := range customType.Fields {
-			if options.IsCustom, options.IsArray, options.GoType, err = parseFieldType(options.Type, cfg.CustomTypes); err != nil {
+			if options.IsCustom, options.IsArray, options.GoType, err = parseFieldType(options, cfg.CustomTypes); err != nil {
 				return nil, errors.Wrapf(err, `Custom type: "%s". Field: "%s"`, customTypeName, field)
 			}
 
@@ -114,6 +124,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				default:
 					cfg.HaveSwagInCustomTypes = true
 				}
+			}
+
+			if options.Format == "date-time" {
+				cfg.HaveDateTimeInCustomTypes = true
 			}
 
 			if options.Format == "email" {
@@ -136,6 +150,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 						options.Type = "float"
 					case TypesPrefix + "Decimal":
 						options.Type = "decimal"
+					case "time.Time":
+						options.Type = "string"
 					default:
 						options.Type = options.GoType
 					}
@@ -211,7 +227,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				options.Type = "string"
 				model.HaveModifiedBy = true
 			}
-			if options.IsStruct, options.IsCustom, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
+			if options.IsStruct, options.IsCustom, options.IsArray, options.GoType, err = parseColumnType(options, cfg); err != nil {
 				return nil, errors.Wrapf(err, `Model: "%s". Column: "%s"`, name, column)
 			}
 
@@ -231,6 +247,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 			if options.Format == "date-time" {
 				cfg.HaveDateTime = true
+				model.NeedTime = true
 			}
 			if options.Format == "email" {
 				cfg.HaveEmail = true
@@ -337,6 +354,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 							cfg.HaveFloatArr = true
 						case TypesPrefix + "Decimal":
 							options.Type = "decimal"
+						case "time.Time":
+							options.Type = "string"
 						default:
 							options.Type = options.GoType
 						}
@@ -603,7 +622,7 @@ func validateModels(cfg *models.Config) error {
 					if strings.HasPrefix(options.Type, arrayTypePrefix) {
 						options.Type = options.Type[len(arrayTypePrefix):]
 					}
-					goType := convertTypeToGoType(options.Type)
+					goType := convertTypeToGoType(options.Type, options.Format)
 					lowerTitleGoType := LowerTitle(goType)
 					if strings.HasPrefix(options.Type, structTypePrefix) {
 						if _, ok := cfg.Models[lowerTitleGoType]; !ok {
@@ -853,7 +872,7 @@ func countDeepNesting(model string, cfg *models.Config) (int, error) {
 	var err error
 	deepNesting := 0
 	for _, options := range cfg.Models[model].Columns {
-		if options.IsStruct, _, options.IsArray, options.GoType, err = parseColumnType(options.Type, cfg); err != nil {
+		if options.IsStruct, _, options.IsArray, options.GoType, err = parseColumnType(options, cfg); err != nil {
 			return 0, err
 		}
 		if options.IsStruct {
@@ -880,8 +899,9 @@ func countDeepNesting(model string, cfg *models.Config) (int, error) {
 	return deepNesting, nil
 }
 
-func parseFieldType(fieldType string, customTypes map[string]models.CustomType) (bool, bool, string, error) {
-	goType := convertTypeToGoType(fieldType)
+func parseFieldType(options models.Options, customTypes map[string]models.CustomType) (bool, bool, string, error) {
+	fieldType := options.Type
+	goType := convertTypeToGoType(fieldType, options.Format)
 	lowerTitleGoType := LowerTitle(goType)
 	switch {
 	case strings.HasPrefix(fieldType, customTypePrefix):
@@ -905,8 +925,9 @@ func parseFieldType(fieldType string, customTypes map[string]models.CustomType) 
 	}
 }
 
-func parseColumnType(columnType string, cfg *models.Config) (bool, bool, bool, string, error) {
-	goType := convertTypeToGoType(columnType)
+func parseColumnType(options models.Options, cfg *models.Config) (bool, bool, bool, string, error) {
+	columnType := options.Type
+	goType := convertTypeToGoType(columnType, options.Format)
 	lowerTitleGoType := LowerTitle(goType)
 	switch {
 	case strings.HasPrefix(columnType, structTypePrefix):
@@ -939,7 +960,7 @@ func parseColumnType(columnType string, cfg *models.Config) (bool, bool, bool, s
 	}
 }
 
-func convertTypeToGoType(columnType string) string {
+func convertTypeToGoType(columnType, format string) string {
 	switch {
 	case strings.HasPrefix(columnType, structTypePrefix):
 		return strings.Title(columnType[len(structTypePrefix):])
@@ -950,13 +971,13 @@ func convertTypeToGoType(columnType string) string {
 	case strings.HasPrefix(columnType, arrayOfCustomTypePrefix):
 		return strings.Title(columnType[len(arrayOfCustomTypePrefix):])
 	case strings.HasPrefix(columnType, arrayTypePrefix) && !strings.HasPrefix(columnType, arrayOfStructTypePrefix) && !strings.HasPrefix(columnType, arrayOfCustomTypePrefix):
-		return convertStandardTypeToGoType(columnType[len(arrayTypePrefix):])
+		return convertStandardTypeToGoType(columnType[len(arrayTypePrefix):], format)
 	default:
-		return convertStandardTypeToGoType(columnType)
+		return convertStandardTypeToGoType(columnType, format)
 	}
 }
 
-func convertStandardTypeToGoType(columnType string) string {
+func convertStandardTypeToGoType(columnType, format string) string {
 	switch {
 	case columnType == "decimal":
 		return TypesPrefix + "Decimal"
@@ -964,6 +985,8 @@ func convertStandardTypeToGoType(columnType string) string {
 	// 	return TypesPrefix + "UUID"
 	case columnType == "float":
 		return "float64"
+	case columnType == "string" && isTimeFormat(format):
+		return "time.Time"
 	default:
 		return columnType
 	}

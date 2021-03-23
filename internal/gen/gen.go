@@ -181,7 +181,7 @@ var goTmplFuncs = template.FuncMap{
 				if columnOptions.Default != "" {
 					appValue = fmt.Sprintf("conv.DateTimeValue(%s)", appValue)
 				}
-				appValue = fmt.Sprintf("%s.String()", appValue)
+				appValue = fmt.Sprintf("fromDateTime(%s)", appValue)
 			}
 		case "email":
 			if columnOptions.IsArray {
@@ -310,6 +310,8 @@ var goTmplFuncs = template.FuncMap{
 			appValue = fmt.Sprintf("%s.String()", appValue)
 		case strings.HasPrefix(columnOptions.GoType, parser.TypesPrefix):
 			appValue = fmt.Sprintf("%s(%s.Decimal)", columnOptions.GoType, appValue)
+		case columnOptions.Format == "date-time":
+			appValue = fmt.Sprintf("%s.Time", appValue)
 		default:
 			appValue = fmt.Sprintf("%s.%s", appValue, strings.Title(columnOptions.GoType))
 		}
@@ -320,6 +322,8 @@ var goTmplFuncs = template.FuncMap{
 		switch psqlType {
 		case parser.TypesPrefix + "Decimal":
 			return fmt.Sprintf("%sNullDecimal", parser.TypesPrefix)
+		case "time.Time":
+			return "sql.NullTime"
 		default:
 			return fmt.Sprintf("sql.Null%s", strings.Title(psqlType))
 		}
