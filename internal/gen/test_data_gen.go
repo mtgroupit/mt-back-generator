@@ -44,6 +44,8 @@ func genApiTestArray(columnOptions models.Options) string {
 	switch columnOptions.Format {
 	case "date-time":
 		return fmt.Sprintf("[]strfmt.DateTime{%s}", strings.Join(arr, ", "))
+	case "date":
+		return fmt.Sprintf("[]strfmt.Date{%s}", strings.Join(arr, ", "))
 	case "email":
 		return fmt.Sprintf("[]strfmt.Email{%s}", strings.Join(arr, ", "))
 	case "float":
@@ -60,6 +62,11 @@ func genApiTestValueWithFormat(columnOptions models.Options) string {
 		testValue = fmt.Sprintf("toDateTime(%s)", testValue)
 		if columnOptions.Default != "" {
 			testValue = fmt.Sprintf("conv.DateTime(%s)", testValue)
+		}
+	case "date":
+		testValue = fmt.Sprintf("toDate(%s)", testValue)
+		if columnOptions.Default != "" {
+			testValue = fmt.Sprintf("conv.Date(%s)", testValue)
 		}
 	case "email":
 		testValue = fmt.Sprintf("strfmt.Email(%s)", testValue)
@@ -89,8 +96,7 @@ func genAppTestArray(columnOptions models.Options) string {
 
 func genAppTestValueWithFormat(columnOptions models.Options) string {
 	testValue := genTestValue(columnOptions)
-	switch columnOptions.Format {
-	case "date-time":
+	if parser.IsTimeFormat(columnOptions.Format) {
 		testValue = fmt.Sprintf("mustParseTime(%s)", testValue)
 	}
 	return testValue
@@ -111,6 +117,9 @@ func genTestValue(columnOptions models.Options) (str string) {
 				dateTime := strfmt.NewDateTime()
 				dateTime.Scan(gofakeit.Date())
 				str = dateTime.String()
+			case "date":
+				date := strfmt.Date(gofakeit.Date())
+				str = date.String()
 			case "email":
 				str = gofakeit.Email()
 			case "url":

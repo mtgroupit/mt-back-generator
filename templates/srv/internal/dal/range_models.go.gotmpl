@@ -740,7 +740,7 @@ func (m *{{$modelName}}) Filter(filter *app.Filter) (ok, filterIsValid bool) {
 			{{- if $options.IsArray}}
 			for _, elem := range m.{{$options.TitleName}} {
 			{{- end}}
-				value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{if eq $options.GoType "types.Decimal"}}Decimal.String(){{else}}{{if eq $options.Format "date-time"}}Time{{else}}{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}}{{end}}{{end}})
+				value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{if eq $options.GoType "types.Decimal"}}Decimal.String(){{else}}{{if (IsTimeFormat $options.Format)}}Time{{else}}{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}}{{end}}{{end}})
 				equal := {{if or (ne $options.Type "string") $options.StrictFilter}}value == filter.Value{{else}}contains(value, filter.Value){{end}}
 				if (equal && filter.Include) || (!equal && !filter.Include) {
 					ok, filterIsValid = true, true

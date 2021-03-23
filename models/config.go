@@ -160,20 +160,20 @@ type Config struct {
 	CustomTypes map[string]CustomType `yaml:"custom-types"`
 	Functions   map[string]Function
 
-	HaveListMethod            bool
-	HaveCustomMethod          bool
-	HaveFloatArr              bool
-	HaveDateTime              bool
-	HaveDateTimeInCustomTypes bool
-	HaveEmail                 bool
-	HaveEmailInCustomTypes    bool
-	HaveTypes                 bool
-	HaveTypesInCustomTypes    bool
-	HaveConv                  bool
-	HaveConvInCustomTypes     bool
-	HaveSwag                  bool
-	HaveSwagInCustomTypes     bool
-	MaxDeepNesting            int
+	HaveListMethod         bool
+	HaveCustomMethod       bool
+	HaveFloatArr           bool
+	HaveTime               bool
+	HaveTimeInCustomTypes  bool
+	HaveEmail              bool
+	HaveEmailInCustomTypes bool
+	HaveTypes              bool
+	HaveTypesInCustomTypes bool
+	HaveConv               bool
+	HaveConvInCustomTypes  bool
+	HaveSwag               bool
+	HaveSwagInCustomTypes  bool
+	MaxDeepNesting         int
 
 	ExtraTables []ExtraTable
 

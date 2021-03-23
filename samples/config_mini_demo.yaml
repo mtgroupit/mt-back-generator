@@ -18,7 +18,7 @@ models:
         sort-order-default: "ASC"
       dateOfBirth:
         type: "string"
-        format: "date-time"
+        format: "date"
       email:
         type: "string"
         format: "email"

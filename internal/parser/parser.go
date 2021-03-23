@@ -25,7 +25,7 @@ var (
 	standardNumbericTypes = append(intNumbericTypes, fractionNumbericTypes...)
 	standardTypes         = append([]string{"string", "bool"}, standardNumbericTypes...)
 
-	timeFormats = []string{"date-time"}
+	timeFormats = []string{"date", "date-time"}
 	formats     = map[string][]string{"string": append([]string{"email", "phone", "url"}, timeFormats...)}
 )
 
@@ -67,7 +67,8 @@ func isFractionNumbericType(t string) bool {
 	return false
 }
 
-func isTimeFormat(format string) bool {
+// IsTimeFormat return true if format is one of timeFormats value
+func IsTimeFormat(format string) bool {
 	for i := range timeFormats {
 		if format == timeFormats[i] {
 			return true
@@ -118,16 +119,16 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				cfg.HaveTypesInCustomTypes = true
 			}
 			if options.Default != "" {
-				switch options.Format {
-				case "date-time", "email":
+				if IsTimeFormat(options.Format) || options.Format == "email" {
 					cfg.HaveConvInCustomTypes = true
-				default:
+				} else {
 					cfg.HaveSwagInCustomTypes = true
 				}
+
 			}
 
-			if options.Format == "date-time" {
-				cfg.HaveDateTimeInCustomTypes = true
+			if IsTimeFormat(options.Format) {
+				cfg.HaveTimeInCustomTypes = true
 			}
 
 			if options.Format == "email" {
@@ -245,8 +246,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			}
 
-			if options.Format == "date-time" {
-				cfg.HaveDateTime = true
+			if IsTimeFormat(options.Format) {
+				cfg.HaveTime = true
 				model.NeedTime = true
 			}
 			if options.Format == "email" {
@@ -255,11 +256,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			}
 
 			if options.Default != "" {
-				switch options.Format {
-				case "date-time", "email":
+				if IsTimeFormat(options.Format) || options.Format == "email" {
 					cfg.HaveConv = true
 					model.NeedConv = true
-				default:
+				} else {
 					cfg.HaveSwag = true
 				}
 			}
@@ -393,7 +393,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					pp.SQLName = NameSQL(column)
 					switch options.Type {
 					case "string":
-						if isTimeFormat(options.Format) {
+						if IsTimeFormat(options.Format) {
 							pp.TypeSQL = "timestamp"
 						} else {
 							pp.TypeSQL = "text"
@@ -836,6 +836,8 @@ func validateDefault(options models.Options) error {
 		switch options.Format {
 		case "date-time":
 			valid = strfmt.IsDateTime(options.Default)
+		case "date":
+			valid = strfmt.IsDate(options.Default)
 		case "email":
 			valid = strfmt.IsEmail(options.Default)
 		default:
@@ -989,7 +991,7 @@ func convertStandardTypeToGoType(columnType, format string) string {
 	// 	return TypesPrefix + "UUID"
 	case columnType == "float":
 		return "float64"
-	case columnType == "string" && isTimeFormat(format):
+	case columnType == "string" && IsTimeFormat(format):
 		return "time.Time"
 	default:
 		return columnType

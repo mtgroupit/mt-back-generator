@@ -11,7 +11,7 @@ import (
 	extauthapi "{{.AuthSrv}}"
 
 	{{- $strfmtOn := false}}
-	{{- if .HaveDateTime}}
+	{{- if .HaveTime}}
 		"github.com/go-openapi/strfmt"
 		{{- $strfmtOn = true}}
 	{{- end}}
