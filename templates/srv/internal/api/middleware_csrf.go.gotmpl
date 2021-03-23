@@ -13,6 +13,8 @@ import (
 
 	extauthapi "{{.AuthSrv}}"
 	"github.com/powerman/structlog"
+	
+	"github.com/Lisss13/banks-backend/internal/def"
 )
 
 const (
@@ -64,8 +66,13 @@ func MakeCSRFToken(w http.ResponseWriter, r *http.Request) *CSRFToken {
 			Value:    t.encode(),
 			Secure:   true,
 			HttpOnly: true,
+			// TODO http.SameSiteNoneMode ?
 			SameSite: http.SameSiteLaxMode,
 			Path:     "/",
+		}
+		if def.DisableCookieSecure {
+			c.Secure = false
+			c.SameSite = http.SameSiteLaxMode
 		}
 		t.w.Header().Add("Set-Cookie", c.String())
 	}
