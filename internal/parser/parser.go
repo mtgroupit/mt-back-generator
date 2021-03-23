@@ -393,7 +393,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					pp.SQLName = NameSQL(column)
 					switch options.Type {
 					case "string":
-						pp.TypeSQL = "text"
+						if isTimeFormat(options.Format) {
+							pp.TypeSQL = "timestamp"
+						} else {
+							pp.TypeSQL = "text"
+						}
 					case "number":
 						pp.TypeSQL = "numeric"
 					default:
