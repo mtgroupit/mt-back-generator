@@ -437,7 +437,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 				SQLSelect = append(SQLSelect, sqlName)
 				if !options.IsArray && !options.IsCustom {
-					if options.Type != "string" || options.StrictFilter {
+					if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
 						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
 					} else {
 						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND (CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
@@ -1326,7 +1326,7 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 							}
 							SQLSelect = append(SQLSelect, sqlName)
 							if needFilter && !options.IsArray {
-								if options.Type != "string" || options.StrictFilter {
+								if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
 									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
 								} else {
 									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND (CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))

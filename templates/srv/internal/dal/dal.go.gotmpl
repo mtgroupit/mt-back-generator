@@ -130,6 +130,8 @@ func toString(value interface{}) string {
 			return "true"
 		}
 		return "false"
+	case time.Time:
+		return value.(time.Time).String()
 	}
 	return ""
 }
