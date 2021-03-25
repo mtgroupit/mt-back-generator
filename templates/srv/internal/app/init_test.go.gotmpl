@@ -2,6 +2,11 @@
 package app
 
 import (
+	{{- if .HaveTime}}
+		"time"
+		"github.com/go-openapi/strfmt"
+	{{- end}}
+
 	"github.com/google/uuid"
 	{{- if or .HaveTypes .HaveTypesInCustomTypes}}
 		"{{.Module}}/internal/types"
@@ -66,3 +71,13 @@ var (
 	}
 {{- end}}
 )
+
+{{- if .HaveTime}}
+	func mustParseTime(t string) time.Time {
+		date, err := time.Parse(time.RFC3339, t)
+		if err != nil {
+			date, _ = time.Parse(strfmt.RFC3339FullDate, t)
+		}
+		return date
+	}
+{{- end}}

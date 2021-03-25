@@ -5,6 +5,9 @@ import (
 	"context"
 	"net/http"
 	"path"
+	{{- if .HaveTime}}
+		"time"
+	{{- end}}
 
 	"{{.Module}}/internal/api/restapi/models"
 	"{{.Module}}/internal/api/restapi/restapi"
@@ -19,7 +22,7 @@ import (
 
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/runtime/middleware"
-	{{- if or .HaveDateTime .HaveEmail}}
+	{{- if or .HaveTime .HaveEmail}}
 		"github.com/go-openapi/strfmt"
 	{{- end}}
 	"github.com/pkg/errors"
@@ -169,25 +172,49 @@ func appAccessManager(am *models.AccessManager) *app.AccessManager {
 	}
 {{- end}}
 
-{{- if .HaveDateTime}}
-	func fromDateTimesArray(dts []strfmt.DateTime) (dates []string) {
+{{- if .HaveTime}}
+	func fromDateTimesArray(dts []strfmt.DateTime) (dates []time.Time) {
 		for _, date := range dts {
-			dates = append(dates, date.String())
+			dates = append(dates, fromDateTime(date))
 		}
 		return
 	}
 
-	func toDateTimesArray(dates []string) (dts []strfmt.DateTime) {
+	func fromDateTime(dt strfmt.DateTime) time.Time {
+		return time.Time(dt)
+	}
+
+	func toDateTimesArray(dates []time.Time) (dts []strfmt.DateTime) {
 		for _, date := range dates {
 			dts = append(dts, toDateTime(date))
 		}
 		return
 	}
 
-	func toDateTime(date string) (dt strfmt.DateTime) {
-		if date == "" {
-			return
+	func toDateTime(date interface{}) (dt strfmt.DateTime) {
+		dt.Scan(date)
+		return
+	}
+	
+	func fromDatesArray(ds []strfmt.Date) (dates []time.Time) {
+		for _, date := range ds {
+			dates = append(dates, fromDate(date))
 		}
+		return
+	}
+
+	func fromDate(d strfmt.Date) time.Time {
+		return time.Time(d)
+	}
+
+	func toDatesArray(dates []time.Time) (ds []strfmt.Date) {
+		for _, date := range dates {
+			ds = append(ds, toDate(date))
+		}
+		return
+	}
+
+	func toDate(date interface{}) (dt strfmt.Date) {
 		dt.Scan(date)
 		return
 	}

@@ -96,6 +96,7 @@ type Model struct {
 	HaveEmail        bool
 	NeedConv         bool
 	NeedTypes        bool
+	NeedTime         bool
 	HaveListMethod   bool
 	HaveCustomMethod bool
 	HaveJSON         bool
@@ -162,7 +163,8 @@ type Config struct {
 	HaveListMethod         bool
 	HaveCustomMethod       bool
 	HaveFloatArr           bool
-	HaveDateTime           bool
+	HaveTime               bool
+	HaveTimeInCustomTypes  bool
 	HaveEmail              bool
 	HaveEmailInCustomTypes bool
 	HaveTypes              bool
@@ -194,4 +196,6 @@ func (c *Config) AddBind(nameModelTo string, bind Bind) error {
 type CustomType struct {
 	Description string
 	Fields      map[string]Options
+
+	NeedTime bool
 }

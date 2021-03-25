@@ -2,7 +2,7 @@
 package api
 
 import (
-	{{$modelName}} "{{.Module}}/internal/api/restapi/restapi/operations/{{NameSQL $modelName}}"
+	{{LowerTitle $modelName}} "{{.Module}}/internal/api/restapi/restapi/operations/{{NameSQL $modelName}}"
 
 	"github.com/go-openapi/runtime/middleware" 
 )

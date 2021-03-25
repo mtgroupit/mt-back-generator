@@ -27,7 +27,7 @@ func genAppTestValue(columnOptions models.Options) string {
 	if columnOptions.IsArray {
 		return genAppTestArray(columnOptions)
 	}
-	return genTestValue(columnOptions)
+	return genAppTestValueWithFormat(columnOptions)
 }
 
 const (
@@ -44,6 +44,8 @@ func genApiTestArray(columnOptions models.Options) string {
 	switch columnOptions.Format {
 	case "date-time":
 		return fmt.Sprintf("[]strfmt.DateTime{%s}", strings.Join(arr, ", "))
+	case "date":
+		return fmt.Sprintf("[]strfmt.Date{%s}", strings.Join(arr, ", "))
 	case "email":
 		return fmt.Sprintf("[]strfmt.Email{%s}", strings.Join(arr, ", "))
 	case "float":
@@ -60,6 +62,11 @@ func genApiTestValueWithFormat(columnOptions models.Options) string {
 		testValue = fmt.Sprintf("toDateTime(%s)", testValue)
 		if columnOptions.Default != "" {
 			testValue = fmt.Sprintf("conv.DateTime(%s)", testValue)
+		}
+	case "date":
+		testValue = fmt.Sprintf("toDate(%s)", testValue)
+		if columnOptions.Default != "" {
+			testValue = fmt.Sprintf("conv.Date(%s)", testValue)
 		}
 	case "email":
 		testValue = fmt.Sprintf("strfmt.Email(%s)", testValue)
@@ -82,9 +89,17 @@ func genApiTestValueWithFormat(columnOptions models.Options) string {
 func genAppTestArray(columnOptions models.Options) string {
 	var arr []string
 	for i := gofakeit.Number(minLenthArray, maxLenthArray); i <= maxLenthArray; i++ {
-		arr = append(arr, genTestValue(columnOptions))
+		arr = append(arr, genAppTestValueWithFormat(columnOptions))
 	}
 	return fmt.Sprintf("[]%s{%s}", columnOptions.GoType, strings.Join(arr, ", "))
+}
+
+func genAppTestValueWithFormat(columnOptions models.Options) string {
+	testValue := genTestValue(columnOptions)
+	if parser.IsTimeFormat(columnOptions.Format) {
+		testValue = fmt.Sprintf("mustParseTime(%s)", testValue)
+	}
+	return testValue
 }
 
 func genTestValue(columnOptions models.Options) (str string) {
@@ -96,12 +111,15 @@ func genTestValue(columnOptions models.Options) (str string) {
 		}
 	} else {
 		switch columnOptions.GoType {
-		case "string":
+		case "string", "time.Time":
 			switch columnOptions.Format {
 			case "date-time":
 				dateTime := strfmt.NewDateTime()
 				dateTime.Scan(gofakeit.Date())
 				str = dateTime.String()
+			case "date":
+				date := strfmt.Date(gofakeit.Date())
+				str = date.String()
 			case "email":
 				str = gofakeit.Email()
 			case "url":
