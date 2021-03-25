@@ -437,10 +437,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 				SQLSelect = append(SQLSelect, sqlName)
 				if !options.IsArray && !options.IsCustom {
-					if options.Type != "string" || options.StrictFilter {
-						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, sqlName, column, "not_"+column, "not_"+column, sqlName, "not_"+column))
+					if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
+						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
 					} else {
-						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) LIKE LOWER(:%s)) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, column, sqlName, column, "not_"+column, "not_"+column, sqlName, "not_"+column))
+						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND (CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
 					}
 				}
 				if options.TitleName != "ID" {
@@ -466,7 +466,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			} else {
 				if !options.IsArray {
 					SQLSelect = append(SQLSelect, NameSQL(options.TitleName)+"_id")
-					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
+					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
 					sqlAdd = append(sqlAdd, NameSQL(options.TitleName)+"_id")
 					sqlAddExecParams = append(sqlAddExecParams, column+"ID")
 					sqlEditExecParams = append(sqlEditExecParams, column+"ID")
@@ -1326,17 +1326,17 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 							}
 							SQLSelect = append(SQLSelect, sqlName)
 							if needFilter && !options.IsArray {
-								if options.Type != "string" || options.StrictFilter {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, sqlName, column, "not_"+column, "not_"+column, sqlName, "not_"+column))
+								if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
 								} else {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) LIKE LOWER(:%s)) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, column, sqlName, column, "not_"+column, "not_"+column, sqlName, "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND (CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
 								}
 							}
 						} else {
 							if !options.IsArray {
 								SQLSelect = append(SQLSelect, NameSQL(options.TitleName)+"_id")
 								if needFilter {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s=:%s) AND ((COALESCE(:%s, '1')='1' AND COALESCE(:%s, '2')='2') OR %s<>:%s)`, column, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
 								}
 							} else {
 								structIsArr = true
