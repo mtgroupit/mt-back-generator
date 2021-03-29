@@ -156,8 +156,12 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 	{{- if  IsList $method}}
 		{{- if not $model.Shared}}
 			prof := profile.(*extauthapi.Profile)
-		{{- end}}
-		c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}({{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}*params.Body.Offset, params.Body.Limit, appFilters(params.Body.Filters), params.Body.LogicFilter, params.Body.SortBy, params.Body.OrderBy)
+		{{end}}
+		var offset int64 = 0
+		if params.Body.Offset != nil {
+			offset = *params.Body.Offset
+		}
+		c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}({{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}offset, params.Body.Limit, appFilters(params.Body.Filters), params.Body.LogicFilter, params.Body.SortBy, params.Body.OrderBy)
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
