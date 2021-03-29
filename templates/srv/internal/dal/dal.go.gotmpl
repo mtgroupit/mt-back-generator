@@ -137,6 +137,9 @@ func toString(value interface{}) string {
 }
 
 func pagination(offset, limit, len int) (start, end int) {
+	if limit == 0 {
+		limit = len
+	}
 	if len > offset {
 		start = offset
 		if len >= offset+limit {
