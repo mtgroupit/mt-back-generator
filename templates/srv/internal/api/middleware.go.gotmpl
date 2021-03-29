@@ -72,21 +72,6 @@ func makeAccessLog(basePath string) middlewareFunc {
 	}
 }
 
-// func middlewareError(w http.ResponseWriter, r *http.Request, code int, msg string) {
-// 	log := structlog.FromContext(r.Context(), nil)
-// 	log.Info("middleware error", def.LogHTTPStatus, code, "err", msg)
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(code)
-// 	err := json.NewEncoder(w).Encode(&models.Error{
-// 		Code:    swag.Int32(int32(code)),
-// 		Message: swag.String(msg),
-// 	})
-// 	if err != nil {
-// 		log.Warn("failed to respond with HTTP error", "err", err)
-// 	}
-// }
-
 func noCache(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Expires", "0")
