@@ -12,11 +12,14 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+      args: 
+        GITHUB_USER: ${GITHUB_USER:?}
+        GITHUB_PASS: ${GITHUB_PASS:?}
     ports:
       - "9091:9091"
     environment:
       MSRV_PORT: "9091"
-      MSRV_AUTH_EXTAUTH_INT_PORT: "8080"
+      MSRV_EXTAUTH_ENDPOINT: "http://127.0.0.1:9090"
       MSRV_RESET_DB: "false"
       MSRV_DB_HOST: db
       MSRV_DB_PORT: "5432"
