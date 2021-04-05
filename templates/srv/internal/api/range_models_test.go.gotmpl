@@ -100,7 +100,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 	{{- end}}
 	{{- if IsList $method}}
 	params.Body = testList
-	mockApp.EXPECT().{{$method}}{{$modelName}}({{if not $model.Shared}}gomock.Any(), {{end}}params.Body.Offset, *params.Body.Limit, appFilters(params.Body.Filters), params.Body.LogicFilter, params.Body.SortBy, params.Body.OrderBy).Return(app{{$modelName}}s(test{{$modelName}}s{{if $model.HaveLazyLoading}}, true{{end}}), {{if $model.DetailedPagination}}2, {{end}}[]string{}, nil)
+	mockApp.EXPECT().{{$method}}{{$modelName}}({{if not $model.Shared}}gomock.Any(), {{end}}*params.Body.Offset, params.Body.Limit, appFilters(params.Body.Filters), params.Body.LogicFilter, params.Body.SortBy, params.Body.OrderBy).Return(app{{$modelName}}s(test{{$modelName}}s{{if $model.HaveLazyLoading}}, true{{end}}), {{if $model.DetailedPagination}}2, {{end}}[]string{}, nil)
 
 	t.Run("", func(tt *testing.T) {
 		t := check.T(tt)
