@@ -69,7 +69,8 @@ type MethodProps struct {
 	NeedLazyLoading         bool
 	HaveJSON                bool
 	JSONColumns             map[string]bool
-	AdjustListSQLSelect     string
+	AdjustSQLSelect         string
+	AdjustGetJSONColumns    []string
 	AdjustListSQLWhereProps string
 	CustomSQLEditStr        string
 	CustomSQLExecParams     string

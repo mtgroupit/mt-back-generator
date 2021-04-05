@@ -49,12 +49,12 @@ paths:
         - {{$tag}}
       {{- end}}
       operationId: {{LowerTitle $method}}{{$model.TitleName}}
-    {{- if not (or (eq $method "GetMy") (eq $method "DeleteMy"))}}
+    {{- if not (or (and (IsGet $method) (IsMyMethod $method)) (eq $method "DeleteMy"))}}
       parameters:
         - name: body
           in: body
           schema: 
-      {{- if or (eq $method "Get") (eq $method "Delete")}}
+      {{- if or (and (IsGet $method) (not (IsMyMethod $method))) (eq $method "Delete")}}
             type: object
             properties:
               id:

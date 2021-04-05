@@ -80,7 +80,30 @@ type {{$modelName}} struct {
 				return nil, err
 			}
 		{{- end}}
-		return a.get{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}})
+		{{- if IsAdjustGet $method}}
+			var m {{$modelName}}
+			if err := a.db.Get(&m, `SELECT {{(index $model.MethodsProps $i).AdjustSQLSelect}} FROM {{NameSQL $modelName}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}} AND NOT deleted`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+				if err == sql.ErrNoRows {
+					return nil, app.ErrNotFound
+				} 
+				return nil, err
+			}
+			{{- range $column, $options := $model.Columns}}
+				{{- if and (ContainsStr (index $model.MethodsProps $i).AdjustGetJSONColumns $column) (or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom)}}
+					if err := json.Unmarshal(m.{{$options.TitleName}}JSON, &m.{{$options.TitleName}}); err != nil {
+						return nil, err
+					}
+				{{- end}}
+			{{- end}}
+			{{- if $model.HaveLazyLoading}}
+				if err := m.LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
+					return nil, err
+				}
+			{{- end}}
+			return app{{$modelName}}(m), nil
+		{{- else}}
+			return a.get{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}})
+		{{- end}}
 	}
 	{{- end}}
 	{{- if IsAdd $method}}
@@ -289,7 +312,7 @@ type {{$modelName}} struct {
 			}
 		{{- end}}
 		
-		rows, err := a.db.NamedQuery(`SELECT {{if  (IsAdjustList $method)}}{{(index $model.MethodsProps $i).AdjustListSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsAdjustList $method))}}WHERE {{end}}{{if  (IsAdjustList $method)}}{{(index $model.MethodsProps $i).AdjustListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} {{if not $model.Shared}}{{if or (index $model.MethodsProps $i).FilteredFields (not (IsAdjustList $method))}}AND{{else}}WHERE{{end}} isolated_entity_id=:isolated_entity_id{{end}} AND NOT deleted ` + orderQuery, mapQuery)
+		rows, err := a.db.NamedQuery(`SELECT {{if  (IsAdjustList $method)}}{{(index $model.MethodsProps $i).AdjustSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsAdjustList $method))}}WHERE {{end}}{{if  (IsAdjustList $method)}}{{(index $model.MethodsProps $i).AdjustListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} {{if not $model.Shared}}{{if or (index $model.MethodsProps $i).FilteredFields (not (IsAdjustList $method))}}AND{{else}}WHERE{{end}} isolated_entity_id=:isolated_entity_id{{end}} AND NOT deleted ` + orderQuery, mapQuery)
 		if err != nil {
 			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 		}

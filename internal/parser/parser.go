@@ -507,6 +507,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			return
 		}
 
+		if err = handleAdjustGets(cfg.Models, &model, name); err != nil {
+			return
+		}
+
 		if err = handleAdjustLists(cfg.Models, &model, name); err != nil {
 			return
 		}
@@ -597,9 +601,11 @@ func validateModels(cfg *models.Config) error {
 			if isCustomMethod(method) {
 				switch {
 				case strings.HasPrefix(method, "list") && strings.Contains(method, "("):
-					return errors.Errorf(`Model: "%s". "%s"  is invalid as a custom list. A valid custom list shouldn't contain spaces before brackets. Correct method pattern: "list(column1, column3*, model1*(column1, model1(column1, column2))), where * means the field can be sorted by"`, name, method)
+					return errors.Errorf(`Model: "%s". "%s"  is invalid as a adjust list. A valid adjust list shouldn't contain spaces before brackets. Correct method pattern: "list(column1, column3*, model1*(column1, model1(column1, column2))), where * means the field can be sorted by"`, name, method)
+				case strings.HasPrefix(method, "get") && strings.Contains(method, "("):
+					return errors.Errorf(`Model: "%s". "%s"  is invalid as a adjust get. A valid adjust get shouldn't contain spaces before brackets. Correct method pattern: "get(column1, column2)"`, name, method)
 				case strings.HasPrefix(method, "edit") && strings.Contains(method, "("):
-					return errors.Errorf(`Model: "%s". "%s"  is invalid as a custom edit. A valid custom edit shouldn't contain spaces before brackets. Correct method pattern: "edit(column1, column2)"`, name, method)
+					return errors.Errorf(`Model: "%s". "%s"  is invalid as a adjust edit. A valid adjust edit shouldn't contain spaces before brackets. Correct method pattern: "edit(column1, column2)"`, name, method)
 				default:
 					if !isCorrectName(method) {
 						return errors.Errorf(`Model: "%s". "%s"  is invalid name for method. %s`, name, method, correctNameDescription)
@@ -1001,7 +1007,8 @@ func convertStandardTypeToGoType(columnType, format string) string {
 // isCustomMethod return true if method is custom
 func isCustomMethod(method string) bool {
 	method = strings.ToLower(method)
-	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isAdjustList(method) || isAdjustEdit(method) || IsMyMethod(method) {
+	fmt.Println(method, isAdjustGet(method))
+	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isAdjustList(method) || isAdjustGet(method) || isAdjustEdit(method) || IsMyMethod(method) {
 		return false
 	}
 	return true
@@ -1010,14 +1017,18 @@ func isCustomMethod(method string) bool {
 // IsMyMethod return true if method is standard my method
 func IsMyMethod(method string) bool {
 	method = strings.ToLower(method)
-	if method == "getmy" || method == "addmy" || method == "deletemy" || method == "editmy" || method == "editoraddmy" || regexp.MustCompile(`^editmy.+`).Match([]byte(method)) {
+	if method == "getmy" || method == "addmy" || method == "deletemy" || method == "editmy" || method == "editoraddmy" || regexp.MustCompile(`^getmy.+`).Match([]byte(method)) || regexp.MustCompile(`^editmy.+`).Match([]byte(method)) {
 		return true
 	}
 	return false
 }
 
+func isAdjustGet(method string) bool {
+	return regexp.MustCompile(`^get(My|my)?\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
+}
+
 func isAdjustEdit(method string) bool {
-	return regexp.MustCompile(`^edit(My)?\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
+	return regexp.MustCompile(`^edit(My|my)?\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
 }
 
 func isAdjustList(method string) bool {
@@ -1065,7 +1076,7 @@ func expandName(method string) string {
 	return strings.TrimSuffix(regexp.MustCompile("[^a-zA-Z0-9*]").Split(method, 2)[0], "*")
 }
 
-func expandNamePostfixForAdjustEditOrList(method string) string {
+func expandNamePostfixForAdjustMethods(method string) string {
 	pattern := regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\(.+\)(\[(?P<value>[a-zA-Z0-9]+)\])?$`)
 	result := []byte{}
 	template := "$value"
@@ -1074,9 +1085,9 @@ func expandNamePostfixForAdjustEditOrList(method string) string {
 	return string(result)
 }
 
-func getNameForAdjustEditOrList(method string) (result string) {
+func getNameForAdjustMethods(method string) (result string) {
 	methodName := expandName(method)
-	methodNamePostfix := expandNamePostfixForAdjustEditOrList(method)
+	methodNamePostfix := expandNamePostfixForAdjustMethods(method)
 
 	if methodNamePostfix == "" {
 		fieldsStr := expandStrNestedFields(method)
@@ -1172,7 +1183,7 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 			}
 		}
 		if !haveFieldInColumns {
-			return nil, errors.Errorf(`Model "%s" does not contain "%s" column for custom list`, modelName, fields[i])
+			return nil, errors.Errorf(`Model "%s" does not contain "%s" column for adjust list`, modelName, fields[i])
 		}
 		if strings.ToLower(fields[i]) == "id" {
 			haveID = true
@@ -1357,11 +1368,11 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 				}
 			}
 
-			result.Methods[i] = getNameForAdjustEditOrList(method)
+			result.Methods[i] = getNameForAdjustMethods(method)
 			if !haveID {
 				SQLSelect = append(SQLSelect, "id")
 			}
-			result.MethodsProps[i].AdjustListSQLSelect = strings.Join(SQLSelect, ", ")
+			result.MethodsProps[i].AdjustSQLSelect = strings.Join(SQLSelect, ", ")
 			result.MethodsProps[i].AdjustListSQLWhereProps = strings.Join(sqlWhereParams, " AND ")
 			result.MethodsProps[i].FilteredFields = filtredFields
 			result.MethodsProps[i].IsAdjustList = true
@@ -1392,6 +1403,60 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 	return nil
 }
 
+func handleAdjustGets(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
+	result := *model
+	for i, method := range result.Methods {
+		if isAdjustGet(method) {
+			var SQLSelect, adjustGetJSONColumns []string
+			haveID := false
+
+			fieldsStr := expandStrNestedFields(method)
+			fields := splitFields(fieldsStr)
+			for j := range fields {
+				var haveFieldInColumns bool
+				for column := range result.Columns {
+					if column == fields[j] {
+						haveFieldInColumns = true
+					}
+				}
+				if !haveFieldInColumns {
+					return errors.Errorf(`Model "%s" does not contain "%s" column for method "%s"`, modelName, fields[j], method)
+				}
+
+				if strings.ToLower(fields[j]) == "id" {
+					haveID = true
+				}
+
+				adjustGetJSONColumns = append(adjustGetJSONColumns, fields[j])
+
+				for column, options := range result.Columns {
+					if fields[j] == column {
+						if !options.IsStruct {
+							sqlName := NameSQL(options.TitleName)
+							if options.IsArray || options.IsCustom {
+								sqlName += "_json"
+							}
+							SQLSelect = append(SQLSelect, sqlName)
+						} else {
+							if !options.IsArray {
+								SQLSelect = append(SQLSelect, NameSQL(options.TitleName)+"_id")
+							}
+						}
+					}
+				}
+			}
+			result.Methods[i] = getNameForAdjustMethods(method)
+			if !haveID {
+				SQLSelect = append(SQLSelect, "id")
+			}
+			result.MethodsProps[i].AdjustSQLSelect = strings.Join(SQLSelect, ", ")
+			result.MethodsProps[i].AdjustGetJSONColumns = adjustGetJSONColumns
+		}
+	}
+	model = &result
+	return nil
+}
+
 func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
 	result := *model
 	for i, method := range result.Methods {
@@ -1405,7 +1470,7 @@ func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, m
 			fields := splitFields(fieldsStr)
 			for j := range fields {
 				if IsStandardColumn(fields[j]) {
-					return errors.Errorf(`Model "%s". Method: "%s". "%s" can not be used in custom edit method, it edits automatically`, modelName, method, fields[j])
+					return errors.Errorf(`Model "%s". Method: "%s". "%s" can not be used in adjust edit method, it edits automatically`, modelName, method, fields[j])
 				}
 
 				var haveFieldInColumns bool
@@ -1449,7 +1514,7 @@ func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, m
 					}
 				}
 			}
-			result.Methods[i] = getNameForAdjustEditOrList(method)
+			result.Methods[i] = getNameForAdjustMethods(method)
 			result.MethodsProps[i].CustomSQLEditStr = strings.Join(sqlEdit, ", ")
 			result.MethodsProps[i].CustomSQLExecParams = strings.Join(sqlAddExecParams, ", ")
 			result.MethodsProps[i].EditableFields = editableFields
