@@ -195,14 +195,14 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			var prop models.MethodProps
 			if method == "delete" || method == "deleteMy" {
 				prop.HTTPMethod = "delete"
-			} else if method == "edit" || method == "editMy" || isCustomEdit(method) {
+			} else if method == "edit" || method == "editMy" || isAdjustEdit(method) {
 				prop.HTTPMethod = "put"
 			} else {
 				prop.HTTPMethod = "post"
 			}
 			props = append(props, prop)
 
-			if method == "list" || isCustomList(method) {
+			if method == "list" || isAdjustList(method) {
 				cfg.HaveListMethod = true
 				model.HaveListMethod = true
 			}
@@ -507,11 +507,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			return
 		}
 
-		if err = handleCustomLists(cfg.Models, &model, name); err != nil {
+		if err = handleAdjustLists(cfg.Models, &model, name); err != nil {
 			return
 		}
 
-		if err = handleCustomEdits(cfg.Models, &model, name); err != nil {
+		if err = handleAdjustEdits(cfg.Models, &model, name); err != nil {
 			return
 		}
 
@@ -1001,7 +1001,7 @@ func convertStandardTypeToGoType(columnType, format string) string {
 // isCustomMethod return true if method is custom
 func isCustomMethod(method string) bool {
 	method = strings.ToLower(method)
-	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isCustomList(method) || isCustomEdit(method) || IsMyMethod(method) {
+	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isAdjustList(method) || isAdjustEdit(method) || IsMyMethod(method) {
 		return false
 	}
 	return true
@@ -1016,11 +1016,11 @@ func IsMyMethod(method string) bool {
 	return false
 }
 
-func isCustomEdit(method string) bool {
+func isAdjustEdit(method string) bool {
 	return regexp.MustCompile(`^edit(My)?\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
 }
 
-func isCustomList(method string) bool {
+func isAdjustList(method string) bool {
 	return regexp.MustCompile(`^list\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
 }
 
@@ -1065,7 +1065,7 @@ func expandName(method string) string {
 	return strings.TrimSuffix(regexp.MustCompile("[^a-zA-Z0-9*]").Split(method, 2)[0], "*")
 }
 
-func expandNamePostfixForCustomEditOrList(method string) string {
+func expandNamePostfixForAdjustEditOrList(method string) string {
 	pattern := regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\(.+\)(\[(?P<value>[a-zA-Z0-9]+)\])?$`)
 	result := []byte{}
 	template := "$value"
@@ -1074,9 +1074,9 @@ func expandNamePostfixForCustomEditOrList(method string) string {
 	return string(result)
 }
 
-func getNameForCustomEditOrList(method string) (result string) {
+func getNameForAdjustEditOrList(method string) (result string) {
 	methodName := expandName(method)
-	methodNamePostfix := expandNamePostfixForCustomEditOrList(method)
+	methodNamePostfix := expandNamePostfixForAdjustEditOrList(method)
 
 	if methodNamePostfix == "" {
 		fieldsStr := expandStrNestedFields(method)
@@ -1279,10 +1279,10 @@ func handleSorts(modelsMap map[string]models.Model, model *models.Model, modelNa
 	return nil
 }
 
-func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
+func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
 	result := *model
 	for i, method := range result.Methods {
-		if isCustomList(method) {
+		if isAdjustList(method) {
 			var SQLSelect, sqlWhereParams, filtredFields []string
 			fieldsStr := expandStrNestedFields(method)
 			fieldsFull := splitFields(fieldsStr)
@@ -1357,14 +1357,14 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 				}
 			}
 
-			result.Methods[i] = getNameForCustomEditOrList(method)
+			result.Methods[i] = getNameForAdjustEditOrList(method)
 			if !haveID {
 				SQLSelect = append(SQLSelect, "id")
 			}
-			result.MethodsProps[i].CustomListSQLSelect = strings.Join(SQLSelect, ", ")
-			result.MethodsProps[i].CustomListSQLWhereProps = strings.Join(sqlWhereParams, " AND ")
+			result.MethodsProps[i].AdjustListSQLSelect = strings.Join(SQLSelect, ", ")
+			result.MethodsProps[i].AdjustListSQLWhereProps = strings.Join(sqlWhereParams, " AND ")
 			result.MethodsProps[i].FilteredFields = filtredFields
-			result.MethodsProps[i].IsCustomList = true
+			result.MethodsProps[i].IsAdjustList = true
 
 			sort.Slice(result.MethodsProps[i].NestedObjs, func(a, b int) bool {
 				return result.MethodsProps[i].NestedObjs[a].Path < result.MethodsProps[i].NestedObjs[b].Path
@@ -1392,10 +1392,10 @@ func handleCustomLists(modelsMap map[string]models.Model, model *models.Model, m
 	return nil
 }
 
-func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
+func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
 	result := *model
 	for i, method := range result.Methods {
-		if isCustomEdit(method) {
+		if isAdjustEdit(method) {
 			var sqlEdit, sqlAddExecParams, editableFields []string
 			count := 1
 			if !model.Shared {
@@ -1449,7 +1449,7 @@ func handleCustomEdits(modelsMap map[string]models.Model, model *models.Model, m
 					}
 				}
 			}
-			result.Methods[i] = getNameForCustomEditOrList(method)
+			result.Methods[i] = getNameForAdjustEditOrList(method)
 			result.MethodsProps[i].CustomSQLEditStr = strings.Join(sqlEdit, ", ")
 			result.MethodsProps[i].CustomSQLExecParams = strings.Join(sqlAddExecParams, ", ")
 			result.MethodsProps[i].EditableFields = editableFields

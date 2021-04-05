@@ -61,7 +61,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 		})
 	{{- end}}
 	{{- if IsEdit $method}}
-		{{- if IsCustomEdit $method}}
+		{{- if IsAdjustEdit $method}}
 			params.Body = {{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}Body{
 				{{- if not (IsMyMethod $method)}}
 					ID: test{{$modelName}}1.ID,
@@ -88,13 +88,13 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 				params.Body.ID = test{{$modelName}}1.ID
 			{{- end}}
 		{{- end}}
-		mockApp.EXPECT().{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}gomock.Any(), {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}app{{$modelName}}(test{{$modelName}}1{{if IsCustomEdit $method}}Edited{{end}}{{if $model.HaveLazyLoading}}, true{{end}}), {{end}}nil)
+		mockApp.EXPECT().{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}gomock.Any(), {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}app{{$modelName}}(test{{$modelName}}1{{if IsAdjustEdit $method}}Edited{{end}}{{if $model.HaveLazyLoading}}, true{{end}}), {{end}}nil)
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
 			{{if $model.ReturnWhenEdit}}geted{{else}}_{{end}}, err := c.{{$model.TitleName}}.{{$method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
 			t.Nil(err)
 			{{- if $model.ReturnWhenEdit}}
-				t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if IsCustomEdit $method}}Edited{{end}}{{if $model.HaveLazyLoading}}, true{{end}})))
+				t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if IsAdjustEdit $method}}Edited{{end}}{{if $model.HaveLazyLoading}}, true{{end}})))
 			{{- end}}
 		})
 	{{- end}}
@@ -109,7 +109,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 		t.DeepEqual(list.Payload.Items, api{{$modelName}}s(app{{$modelName}}s(test{{$modelName}}s{{if $model.HaveLazyLoading}}, true{{end}})))
 	})
 	{{- end}}
-	{{/* {{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
+	{{/* {{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsAdjustList $method))}}
 	params.Body = test{{$modelName}}1
 	mockApp.EXPECT().{{$method}}{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}})).Return(nil)
 

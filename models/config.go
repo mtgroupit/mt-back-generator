@@ -65,12 +65,12 @@ type NestedObjProps struct {
 // MethodProps contains all additional information for method
 type MethodProps struct {
 	HTTPMethod              string
-	IsCustomList            bool
+	IsAdjustList            bool
 	NeedLazyLoading         bool
 	HaveJSON                bool
 	JSONColumns             map[string]bool
-	CustomListSQLSelect     string
-	CustomListSQLWhereProps string
+	AdjustListSQLSelect     string
+	AdjustListSQLWhereProps string
 	CustomSQLEditStr        string
 	CustomSQLExecParams     string
 	FilteredFields          []string

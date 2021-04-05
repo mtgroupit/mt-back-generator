@@ -59,7 +59,7 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 	{{- end}}
 	t.DeepEqual(test{{$modelName}}s, b)
 	{{- end}}
-	{{/* {{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
+	{{/* {{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsAdjustList $method))}}
 	mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any()).Return(nil)
 	err := a.{{$method}}{{$modelName}}(test{{$modelName}}1)
 	t.Nil(err){{end}} */}}
