@@ -82,7 +82,7 @@ type {{$modelName}} struct {
 		{{- end}}
 		{{- if IsAdjustGet $method}}
 			var m {{$modelName}}
-			if err := a.db.Get(&m, `SELECT {{(index $model.MethodsProps $i).AdjustSQLSelect}} FROM {{NameSQL $modelName}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}} AND NOT deleted`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+			if err := a.db.Get(&m, sql{{$method}}{{$modelName}}, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
 				if err == sql.ErrNoRows {
 					return nil, app.ErrNotFound
 				} 
@@ -138,7 +138,7 @@ type {{$modelName}} struct {
 				return err
 			}
 		{{- end}}
-		res, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET deleted=true, deleted_at=$2, deleted_by=$3 WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$4{{end}} AND NOT deleted`, id, time.Now(), profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
+		res, err := a.db.Exec(sqlDelete{{$modelName}}, id, time.Now(), profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
 		if err != nil {
 			return err
 		}
@@ -177,7 +177,7 @@ type {{$modelName}} struct {
 			m.ModifiedBy = profileID
 		{{- end}}
 
-		res, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if  (IsAdjustEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLEditStr}}{{else}}{{$model.SQLEditStr}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}} AND NOT deleted`, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{if  (IsAdjustEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLEditExecParams}}{{end}})
+		res, err := a.db.Exec(sql{{if IsAdjustEdit $method}}{{$method}}{{else}}Edit{{end}}{{$modelName}}, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{if  (IsAdjustEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLEditExecParams}}{{end}})
 		if err != nil {
 			return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 		}
@@ -312,7 +312,7 @@ type {{$modelName}} struct {
 			}
 		{{- end}}
 		
-		rows, err := a.db.NamedQuery(`SELECT {{if  (IsAdjustList $method)}}{{(index $model.MethodsProps $i).AdjustSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsAdjustList $method))}}WHERE {{end}}{{if  (IsAdjustList $method)}}{{(index $model.MethodsProps $i).AdjustListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} {{if not $model.Shared}}{{if or (index $model.MethodsProps $i).FilteredFields (not (IsAdjustList $method))}}AND{{else}}WHERE{{end}} isolated_entity_id=:isolated_entity_id{{end}} AND NOT deleted ` + orderQuery, mapQuery)
+		rows, err := a.db.NamedQuery(sql{{if IsAdjustList $method}}{{$method}}{{else}}List{{end}}{{$modelName}} + orderQuery, mapQuery)
 		if err != nil {
 			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 		}
@@ -468,12 +468,12 @@ type {{$modelName}} struct {
 			{{- if  $nestedObj.IsArray}}
 				{{- $sliceName := (print "slice" $nestedObj.Name)}}
 				{{$sliceName}} := []{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}{{$nestedObj.Type}}{}
-				if err = a.db.Select(&{{$sliceName}}, `SELECT {{if $nestedObj.Path}}{{NameSQL $nestedObj.ParentStruct}}{{else}}{{NameSQL $modelName}}{{end}}_id, {{NameSQL $nestedObj.Name}}_id FROM {{if $nestedObj.Path}}{{NameSQL $nestedObj.ParentStruct}}{{else}}{{NameSQL $modelName}}{{end}}_{{NameSQL $nestedObj.Name}} WHERE {{if $nestedObj.Path}}{{NameSQL $nestedObj.ParentStruct}}{{else}}{{NameSQL $modelName}}{{end}}_id=$1{{if not $model2.Shared}} AND isolated_entity_id=$2{{end}}`, m.ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil {
+				if err = a.db.Select(&{{$sliceName}}, sqlGet{{$nestedObj.Name}}IDsFor{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}LazyLoading, m.ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil {
 					return
 				}
 				for _, cd := range {{$sliceName}} {
 					var elem {{$nestedObj.Type}}
-					if err = a.db.Get(&elem, `SELECT {{$nestedObj.SQLSelect}} FROM {{NameSQL $nestedObj.Type}}s WHERE id=$1{{if not $model2.Shared}} AND isolated_entity_id=$2{{end}}`, cd.{{$nestedObj.Type}}ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil {
+					if err = a.db.Get(&elem, sqlGet{{$nestedObj.Name}}For{{$method}}, cd.{{$nestedObj.Type}}ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil {
 						return
 					}
 					{{- if $nestedObj.NeedLazyLoading}}
@@ -486,7 +486,7 @@ type {{$modelName}} struct {
 					m.{{$nestedObj.Name}} = append(m.{{$nestedObj.Name}}, elem)
 				}
 			{{- else}}
-				if err = a.db.Get(&m.{{$nestedObj.Name}}, `SELECT {{$nestedObj.SQLSelect}} FROM {{NameSQL $nestedObj.Type}}s WHERE id=$1{{if not $model2.Shared}} AND isolated_entity_id=$2{{end}}`, m.{{$nestedObj.Name}}ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil && err != sql.ErrNoRows {
+				if err = a.db.Get(&m.{{$nestedObj.Name}}, sqlGet{{$nestedObj.Name}}For{{$method}}, m.{{$nestedObj.Name}}ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil && err != sql.ErrNoRows {
 					return
 				}
 				{{- if $nestedObj.NeedLazyLoading}}
@@ -513,12 +513,12 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 		{{- if eq $modelName2 $options.GoType}}
 			{{- if and $options.IsArray $options.IsStruct}}
 				slice{{$options.TitleName}} := []{{$modelName}}{{$options.GoType}}{}
-				if err = a.db.Select(&slice{{$options.TitleName}}, `SELECT {{NameSQL $modelName}}_id, {{NameSQL $options.TitleName}}_id FROM {{NameSQL $modelName}}_{{NameSQL $options.TitleName}} WHERE {{NameSQL $modelName}}_id=$1{{if not $model2.Shared}} AND isolated_entity_id=$2{{end}}`, m.ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil {
+				if err = a.db.Select(&slice{{$options.TitleName}}, sqlGet{{Title $column}}IDsFor{{$modelName}}LazyLoading, m.ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil {
 					return
 				}
 				for _, cd := range slice{{$options.TitleName}} {
 					var {{$column}} {{$options.GoType}}
-					if err = a.db.Get(&{{$column}}, `SELECT {{$model2.SQLSelectStr}} FROM {{NameSQL $options.GoType}}s WHERE id=$1{{if not $model2.Shared}} AND isolated_entity_id=$2{{end}}`, cd.{{$options.GoType}}ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil {
+					if err = a.db.Get(&{{$column}}, sqlGet{{Title $column}}For{{$modelName}}LazyLoading, cd.{{$options.GoType}}ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil {
 						return
 					}
 					{{- range $column2, $options2 := $model2.Columns}}
@@ -538,7 +538,7 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 					m.{{$options.TitleName}} = append(m.{{$options.TitleName}}, {{$column}})
 				}
 			{{- else}}
-				if err = a.db.Get(&m.{{$options.TitleName}}, `SELECT {{$model2.SQLSelectStr}} FROM {{NameSQL $modelName2}}s WHERE id=$1{{if not $model2.Shared}} AND isolated_entity_id=$2{{end}}`,  m.{{$options.TitleName}}ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil && err != sql.ErrNoRows {
+				if err = a.db.Get(&m.{{$options.TitleName}}, sqlGet{{Title $column}}For{{$modelName}}LazyLoading,  m.{{$options.TitleName}}ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil && err != sql.ErrNoRows {
 					return
 				}
 				{{- range $column2, $options2 := $model2.Columns}}
@@ -577,7 +577,7 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 			itemsID = append(itemsID, id)
 		}
 		for _, itemID := range itemsID {
-			if _, err := a.db.Exec(`INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}({{NameSQL $modelName}}_id, {{NameSQL $column}}_id{{if not $model.Shared}}, isolated_entity_id{{end}}) VALUES ($1, $2{{if not $model.Shared}}, $3{{end}})`, id, itemID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+			if _, err := a.db.Exec(sqlAddTo{{Title $column}}In{{$modelName}}, id, itemID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
 				if strings.Contains(err.Error(), "violates foreign key constraint") {
 					switch {
 					case strings.Contains(err.Error(), "{{NameSQL $modelName}}_id_fkey"):
@@ -590,11 +590,7 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 			}
 		}
 	{{- if or $model.HaveModifiedAt $model.HaveModifiedBy}}
-		{{- $countParams := 2}}
-		{{- if not $model.Shared}}
-			{{- $countParams = 3}}
-		{{- end}}
-		if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if $model.HaveModifiedAt}}modified_at=${{$countParams}}{{$countParams = 4}}{{end}}{{if $model.HaveModifiedBy}}modified_by=${{$countParams}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}{{if $model.HaveModifiedAt}}, time.Now(){{end}}{{if $model.HaveModifiedBy}}, profileID{{end}}); err != nil {
+		if _, err := a.db.Exec(sqlSetModifiedParams{{$modelName}}, id{{if not $model.Shared}}, isolatedEntityID{{end}}{{if $model.HaveModifiedAt}}, time.Now(){{end}}{{if $model.HaveModifiedBy}}, profileID{{end}}); err != nil {
 			return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 		}
 	{{- end}}
@@ -603,7 +599,7 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 
 	func (a *Repo) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error {
 		for _, item := range items {
-			res, err := a.db.Exec(`DELETE FROM {{NameSQL $modelName}}_{{NameSQL $column}} WHERE {{NameSQL $modelName}}_id=$1 AND {{NameSQL $column}}_id=$2{{if not $model.Shared}} AND isolated_entity_id=$3{{end}}`, id, item{{if not $model.Shared}}, isolatedEntityID{{end}})
+			res, err := a.db.Exec(sqlDeleteFrom{{Title $column}}In{{$modelName}}, id, item{{if not $model.Shared}}, isolatedEntityID{{end}})
 			if err != nil {
 				return err
 			}
@@ -612,11 +608,7 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 			}
 		}
 	{{- if or $model.HaveModifiedAt $model.HaveModifiedBy}}
-		{{- $countParams := 2}}
-		{{- if not $model.Shared}}
-			{{- $countParams = 3}}
-		{{- end}}
-		if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if $model.HaveModifiedAt}}modified_at=${{$countParams}}{{$countParams = 4}}{{end}}{{if $model.HaveModifiedBy}}modified_by=${{$countParams}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}{{if $model.HaveModifiedAt}}, time.Now(){{end}}{{if $model.HaveModifiedBy}}, profileID{{end}}); err != nil {
+		if _, err := a.db.Exec(sqlSetModifiedParams{{$modelName}}, id{{if not $model.Shared}}, isolatedEntityID{{end}}{{if $model.HaveModifiedAt}}, time.Now(){{end}}{{if $model.HaveModifiedBy}}, profileID{{end}}); err != nil {
 			return err
 		}
 	{{- end}}
@@ -634,7 +626,7 @@ func (a *Repo) {{$modelName}}AccessManager(am *app.AccessManager) error {
 
 func (a *Repo) get{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
 	var m {{$modelName}}
-	if err := a.db.Get(&m, `SELECT {{$model.SQLSelectStr}} FROM {{NameSQL $modelName}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}} AND NOT deleted`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+	if err := a.db.Get(&m, sqlGet{{$modelName}}, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, app.ErrNotFound
 		} 
@@ -675,7 +667,7 @@ func (a *Repo) add{{$modelName}}(profileID string, {{if not $model.Shared}}isola
 			{{$options.TitleName}}JSON, _ := json.Marshal(m.{{$options.TitleName}})
 		{{- end}}
 	{{- end}}
-	if err := a.db.Get(&{{$modelName}}ID, `INSERT INTO {{NameSQL $modelName}}s{{$model.SQLAddStr}} RETURNING id`, {{$model.SQLAddExecParams}}{{if $model.IDIsUUID}}, {{$modelName}}ID{{end}}{{if not $model.HaveCreatedBy}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+	if err := a.db.Get(&{{$modelName}}ID, sqlAdd{{$modelName}}, {{$model.SQLAddExecParams}}{{if $model.IDIsUUID}}, {{$modelName}}ID{{end}}{{if not $model.HaveCreatedBy}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			return {{if $model.IDIsUUID}}""{{else}}0{{end}}, app.ErrDuplicateID
 		}
@@ -686,7 +678,7 @@ func (a *Repo) add{{$modelName}}(profileID string, {{if not $model.Shared}}isola
 			{{- if eq $modelName2 $options.GoType}}
 				{{- if and $options.IsArray $options.IsStruct}}
 					for _, m := range m.{{$options.TitleName}} {
-						if _, err := a.db.Exec(`INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}({{NameSQL $modelName}}_id, {{NameSQL $column}}_id{{if not $model.Shared}}, isolated_entity_id{{end}}) VALUES ($1, $2{{if not $model.Shared}}, $3{{end}})`, {{$modelName}}ID, m.ID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+						if _, err := a.db.Exec(sqlAddTo{{Title $column}}In{{$modelName}}, {{$modelName}}ID, m.ID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
 							return {{if $model.IDIsUUID}}""{{else}}0{{end}}, err
 						}
 					}
@@ -698,7 +690,7 @@ func (a *Repo) add{{$modelName}}(profileID string, {{if not $model.Shared}}isola
 }
 
 func (a *Repo) getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}profileID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}} string) (id string, err error) {
-	if err = a.db.Get(&id, `SELECT id FROM {{NameSQL $modelName}}s WHERE {{if not $model.BoundToIsolatedEntity}}created_by=$1{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}} AND {{end}}isolated_entity_id=${{if $model.BoundToIsolatedEntity}}1{{else}}2{{end}}{{end}} AND NOT deleted AND bound`{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+	if err = a.db.Get(&id, sqlGetMy{{$modelName}}ID{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
 		if err == sql.ErrNoRows {
 			return "", app.ErrNotFound
 		}
@@ -708,7 +700,7 @@ func (a *Repo) getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}prof
 }
 
 func (a *Repo) bindTo{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Profile{{end}}{{$modelName}}(id{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}} string) error {
-	res, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET bound=true WHERE id=$1{{if not $model.BoundToIsolatedEntity}} AND created_by=$2{{end}}{{if not $model.Shared}} AND isolated_entity_id=${{if $model.BoundToIsolatedEntity}}2{{else}}3{{end}}{{end}} AND NOT deleted AND NOT bound`, id{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}})
+	res, err := a.db.Exec(sqlBind{{$modelName}}To{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Profile{{end}}, id{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}})
 	if err != nil {
 		return err
 	}
