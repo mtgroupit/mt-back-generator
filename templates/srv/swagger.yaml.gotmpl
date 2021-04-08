@@ -49,12 +49,12 @@ paths:
         - {{$tag}}
       {{- end}}
       operationId: {{LowerTitle $method}}{{$model.TitleName}}
-    {{- if not (or (eq $method "GetMy") (eq $method "DeleteMy"))}}
+    {{- if not (or (and (IsGet $method) (IsMyMethod $method)) (eq $method "DeleteMy"))}}
       parameters:
         - name: body
           in: body
           schema: 
-      {{- if or (eq $method "Get") (eq $method "Delete")}}
+      {{- if or (and (IsGet $method) (not (IsMyMethod $method))) (eq $method "Delete")}}
             type: object
             properties:
               id:
@@ -71,7 +71,7 @@ paths:
                 type: {{if $model.IDIsUUID}}string{{else}}int64{{end}} 
             {{- end}}
               data:
-            {{- if IsCustomEdit $method}}
+            {{- if IsAdjustEdit $method}}
                 type: object
                 properties:
               {{- range $name, $options := $model.Columns}}
@@ -114,7 +114,7 @@ paths:
               {{- end}}
             {{- end}}
           {{- end}}
-              {{- if not (IsCustomEdit $method)}}
+              {{- if not (IsAdjustEdit $method)}}
                 $ref: "#/definitions/{{LowerTitle $modelName}}Add"
               {{- end}}
         {{- end}}
@@ -137,7 +137,7 @@ paths:
     {{- end}}        
     {{- if or (IsList $method) (IsGet $method) (and (IsEdit $method) $model.ReturnWhenEdit)}}
           schema:          
-          {{- if or (eq $method "List") (IsCustomList $method)}}
+          {{- if or (eq $method "List") (IsAdjustList $method)}}
             type: object
             properties:
             {{- if $model.DetailedPagination}}

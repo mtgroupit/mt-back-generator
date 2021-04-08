@@ -36,7 +36,7 @@ func Test{{$method}}{{$modelName}}Smoke(tt *testing.T) {
 		t.Nil(err)
 		t.DeepEqual(list, test{{$modelName}}s)
 	{{- end}}
-	{{/* {{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsCustomList $method))}}
+	{{/* {{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsAdjustList $method))}}
 	t.Nil(testRepo.{{$method}}{{$modelName}}(test{{$modelName}}1)){{end}} */}}
 
 	t.Nil(testRepo.truncate())

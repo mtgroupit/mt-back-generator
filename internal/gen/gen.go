@@ -41,8 +41,9 @@ var goTmplFuncs = template.FuncMap{
 	"LowerTitle":   parser.LowerTitle,
 	"Title":        nameToTitle,
 	"NameSQL":      parser.NameSQL,
-	"IsCustomList": isCustomList,
-	"IsCustomEdit": isCustomEdit,
+	"IsAdjustList": isAdjustList,
+	"IsAdjustEdit": isAdjustEdit,
+	"IsAdjustGet":  isAdjustGet,
 	"IsTimeFormat": parser.IsTimeFormat,
 	"HaveField": func(method, modelName string) bool {
 		return strings.Contains(method, modelName)
@@ -91,7 +92,7 @@ var goTmplFuncs = template.FuncMap{
 	},
 	"IsGet": func(method string) bool {
 		method = strings.ToLower(method)
-		if method == "get" || method == "getmy" {
+		if method == "get" || method == "getmy" || isAdjustGet(method) {
 			return true
 		}
 		return false
@@ -106,7 +107,7 @@ var goTmplFuncs = template.FuncMap{
 	},
 	"IsEdit": func(method string) bool {
 		method = strings.ToLower(method)
-		if method == "edit" || method == "editmy" || method == "editoraddmy" || isCustomEdit(method) {
+		if method == "edit" || method == "editmy" || method == "editoraddmy" || isAdjustEdit(method) {
 			return true
 		}
 		return false
@@ -116,7 +117,7 @@ var goTmplFuncs = template.FuncMap{
 		for i, method := range model.Methods {
 			if isList(method) {
 				if model.HaveLazyLoading {
-					if isCustomList(method) {
+					if isAdjustList(method) {
 						if model.MethodsProps[i].NeedLazyLoading {
 							return true
 						}
@@ -135,7 +136,7 @@ var goTmplFuncs = template.FuncMap{
 			for i, method2 := range model.Methods {
 				if method == method2 {
 					if model.HaveLazyLoading {
-						if isCustomList(method) {
+						if isAdjustList(method) {
 							if len(model.MethodsProps[i].FilteredFields) != 0 || model.MethodsProps[i].HaveJSON {
 								return true
 							}
@@ -585,18 +586,22 @@ func checkExistenseFile(file string) bool {
 
 func isCustomMethod(method string) bool {
 	method = strings.ToLower(method)
-	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isCustomEdit(method) || isCustomList(method) || parser.IsMyMethod(method) {
+	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isAdjustGet(method) || isAdjustEdit(method) || isAdjustList(method) || parser.IsMyMethod(method) {
 		return false
 	}
 	return true
 }
 
-func isCustomList(method string) bool {
+func isAdjustList(method string) bool {
 	return regexp.MustCompile(`^(L|l)ist.+`).Match([]byte(method)) && !parser.IsMyMethod(method)
 }
 
-func isCustomEdit(method string) bool {
+func isAdjustEdit(method string) bool {
 	return regexp.MustCompile(`^(E|e)dit.+`).Match([]byte(method)) && strings.ToLower(method) != "editmy" && strings.ToLower(method) != "editoraddmy"
+}
+
+func isAdjustGet(method string) bool {
+	return regexp.MustCompile(`^(G|g)et.+`).Match([]byte(method)) && strings.ToLower(method) != "getmy"
 }
 
 func formatName(name string) string {
@@ -617,7 +622,7 @@ func isAdd(method string) bool {
 
 func isList(method string) bool {
 	method = strings.ToLower(method)
-	return method == "list" || isCustomList(method)
+	return method == "list" || isAdjustList(method)
 }
 
 func nameToTitle(name string) string {

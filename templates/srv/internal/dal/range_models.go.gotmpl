@@ -80,7 +80,30 @@ type {{$modelName}} struct {
 				return nil, err
 			}
 		{{- end}}
-		return a.get{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}})
+		{{- if IsAdjustGet $method}}
+			var m {{$modelName}}
+			if err := a.db.Get(&m, `SELECT {{(index $model.MethodsProps $i).AdjustSQLSelect}} FROM {{NameSQL $modelName}}s WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}} AND NOT deleted`, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+				if err == sql.ErrNoRows {
+					return nil, app.ErrNotFound
+				} 
+				return nil, err
+			}
+			{{- range $column, $options := $model.Columns}}
+				{{- if and (ContainsStr (index $model.MethodsProps $i).AdjustGetJSONColumns $column) (or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom)}}
+					if err := json.Unmarshal(m.{{$options.TitleName}}JSON, &m.{{$options.TitleName}}); err != nil {
+						return nil, err
+					}
+				{{- end}}
+			{{- end}}
+			{{- if $model.HaveLazyLoading}}
+				if err := m.LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
+					return nil, err
+				}
+			{{- end}}
+			return app{{$modelName}}(m), nil
+		{{- else}}
+			return a.get{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}})
+		{{- end}}
 	}
 	{{- end}}
 	{{- if IsAdd $method}}
@@ -135,7 +158,7 @@ type {{$modelName}} struct {
 			}
 		{{- end}}
 		{{- range $column, $options := $model.Columns}}
-			{{- if or (not (IsCustomEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsCustomEdit $method))}}
+			{{- if or (not (IsAdjustEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsAdjustEdit $method))}}
 				{{- if and $options.IsStruct (not $options.IsArray)}}
 					var {{$column}}ID interface{}
 					if m.{{$options.TitleName}} != nil {
@@ -154,7 +177,7 @@ type {{$modelName}} struct {
 			m.ModifiedBy = profileID
 		{{- end}}
 
-		res, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLEditStr}}{{else}}{{$model.SQLEditStr}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}} AND NOT deleted`, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{if  (IsCustomEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLEditExecParams}}{{end}})
+		res, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if  (IsAdjustEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLEditStr}}{{else}}{{$model.SQLEditStr}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}} AND NOT deleted`, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{if  (IsAdjustEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLEditExecParams}}{{end}})
 		if err != nil {
 			return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 		}
@@ -227,7 +250,7 @@ type {{$modelName}} struct {
 		}
 
 		mapQuery := map[string]interface{}{ 
-			{{- if IsCustomList $method}}
+			{{- if IsAdjustList $method}}
 				{{- range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
 					{{- if not (index (index $model.MethodsProps $i).JSONColumns $column)}}
 						"{{$column}}": nil,
@@ -251,11 +274,11 @@ type {{$modelName}} struct {
 			customFilters := []*app.Filter{}
 		{{- end}}
 
-		{{- if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}
+		{{- if or (index $model.MethodsProps $i).FilteredFields (not (IsAdjustList $method))}}
 			if logicFilter {
 				for _, filter := range filters {
 					switch filter.Key { 
-				{{- if IsCustomList $method}}
+				{{- if IsAdjustList $method}}
 					{{- range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
 						{{- if not (index (index $model.MethodsProps $i).JSONColumns $column)}}
 						case "{{$column}}":
@@ -289,7 +312,7 @@ type {{$modelName}} struct {
 			}
 		{{- end}}
 		
-		rows, err := a.db.NamedQuery(`SELECT {{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}WHERE {{end}}{{if  (IsCustomList $method)}}{{(index $model.MethodsProps $i).CustomListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} {{if not $model.Shared}}{{if or (index $model.MethodsProps $i).FilteredFields (not (IsCustomList $method))}}AND{{else}}WHERE{{end}} isolated_entity_id=:isolated_entity_id{{end}} AND NOT deleted ` + orderQuery, mapQuery)
+		rows, err := a.db.NamedQuery(`SELECT {{if  (IsAdjustList $method)}}{{(index $model.MethodsProps $i).AdjustSQLSelect}}{{else}}{{$model.SQLSelectStr}}{{end}} FROM {{NameSQL $modelName}}s {{if or (index $model.MethodsProps $i).FilteredFields (not (IsAdjustList $method))}}WHERE {{end}}{{if  (IsAdjustList $method)}}{{(index $model.MethodsProps $i).AdjustListSQLWhereProps}}{{else}}{{$model.SQLWhereParams}}{{end}} {{if not $model.Shared}}{{if or (index $model.MethodsProps $i).FilteredFields (not (IsAdjustList $method))}}AND{{else}}WHERE{{end}} isolated_entity_id=:isolated_entity_id{{end}} AND NOT deleted ` + orderQuery, mapQuery)
 		if err != nil {
 			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 		}
@@ -299,10 +322,10 @@ type {{$modelName}} struct {
 			ms = append(ms, m)
 		}
 
-		{{- if or (and (not (IsCustomList $method)) $model.HaveJSON) (and (IsCustomList $method) (index $model.MethodsProps $i).HaveJSON)}}
+		{{- if or (and (not (IsAdjustList $method)) $model.HaveJSON) (and (IsAdjustList $method) (index $model.MethodsProps $i).HaveJSON)}}
 			for i := range ms { 
 			{{- range $column, $options := $model.Columns}}
-				{{- if or (and (or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom) (not (IsCustomList $method))) (and (IsCustomList $method) (index (index $model.MethodsProps $i).JSONColumns $column))}}
+				{{- if or (and (or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom) (not (IsAdjustList $method))) (and (IsAdjustList $method) (index (index $model.MethodsProps $i).JSONColumns $column))}}
 					if err := json.Unmarshal(ms[i].{{$options.TitleName}}JSON, &ms[i].{{$options.TitleName}}); err != nil {
 						return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 					}
@@ -313,7 +336,7 @@ type {{$modelName}} struct {
 		
 		result := []{{$modelName}}{}
 		{{- if $model.HaveLazyLoading}}
-			{{- if (IsCustomList $method)}}
+			{{- if (IsAdjustList $method)}}
 				{{- if or ((index $model.MethodsProps $i).NeedLazyLoading) ((index $model.MethodsProps $i).HaveJSON)}}
 					for i := range ms {
 					{{- if (index $model.MethodsProps $i).NeedLazyLoading}}
@@ -436,7 +459,7 @@ type {{$modelName}} struct {
 	}
 	{{- end}}
 
-	{{- if and (IsCustomList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}
+	{{- if and (IsAdjustList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}
 		{{- range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
 		{{- if $nestedObj.IsFirstForLazyLoading}}
 			func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}})LazyLoading{{$method}}{{$nestedObj.Path}}({{if $nestedObj.Path}}{{if not  (index $.Models $nestedObj.ParentStruct).Shared}} isolatedEntityID string, {{end}}{{else}}{{if not $model.Shared}}isolatedEntityID string, {{end}}{{end}}a *Repo) (err error) { 
