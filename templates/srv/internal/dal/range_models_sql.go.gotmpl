@@ -27,16 +27,16 @@ const (
 	FROM
 		{{NameSQL $modelName}}s
 	WHERE
-		{{if not $model.BoundToIsolatedEntity}}created_by=$1{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}} AND 
-		{{end}}isolated_entity_id=${{if $model.BoundToIsolatedEntity}}1{{else}}2{{end}}{{end}} AND 
-		NOT deleted AND 
+		{{if not $model.BoundToIsolatedEntity}}created_by=$1{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}} AND
+		{{end}}isolated_entity_id=${{if $model.BoundToIsolatedEntity}}1{{else}}2{{end}}{{end}} AND
+		NOT deleted AND
 		bound
 	`
 
 	{{- range $i, $method := $model.Methods}}
 		{{- if IsAdjustGet $method}}
 			sql{{$method}}{{$modelName}} = `
-	SELECT 
+	SELECT
 		{{(index $model.MethodsProps $i).AdjustSQLSelect}}
 	FROM
 		{{NameSQL $modelName}}s
@@ -52,9 +52,8 @@ const (
 
 
 	sqlAdd{{$modelName}} = `
-	INSERT INTO
-		{{NameSQL $modelName}}s{{$model.SQLAddStr}} 
-	RETURNING 
+	INSERT INTO {{NameSQL $modelName}}s{{$model.SQLAddStr}}
+	RETURNING
 		id
 	`
 
@@ -64,16 +63,16 @@ const (
 				{{- if and $options.IsArray $options.IsStruct}}
 						sqlAddTo{{Title $column}}In{{$modelName}} = `
 	INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}(
-		{{NameSQL $modelName}}_id, 
+		{{NameSQL $modelName}}_id,
 		{{NameSQL $column}}_id
-		{{- if not $model.Shared}}, 
+		{{- if not $model.Shared}},
 		isolated_entity_id
 		{{- end}}
-		) 
+		)
 	VALUES (
-		$1, 
+		$1,
 		$2
-		{{- if not $model.Shared}}, 
+		{{- if not $model.Shared}},
 		$3
 		{{- end}}
 	)
@@ -84,11 +83,11 @@ const (
 	{{- end}}
 
 	sqlBind{{$modelName}}To{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Profile{{end}} = `
-	UPDATE 
-		{{NameSQL $modelName}}s 
-	SET 
-		bound=true 
-	WHERE 
+	UPDATE
+		{{NameSQL $modelName}}s
+	SET
+		bound=true
+	WHERE
 		id=$1 AND
 		{{- if not $model.BoundToIsolatedEntity}}
 		created_by=$2 AND
@@ -96,7 +95,7 @@ const (
 		{{- if not $model.Shared}}
 		isolated_entity_id=${{if $model.BoundToIsolatedEntity}}2{{else}}3{{end}} AND
 		{{- end}}
-		NOT deleted AND 
+		NOT deleted AND
 		NOT bound
 	`
 
@@ -107,7 +106,7 @@ const (
 		deleted=true,
 		deleted_at=$2,
 		deleted_by=$3
-	WHERE 
+	WHERE
 		id=$1 AND
 		{{- if not $model.Shared}}
 		isolated_entity_id=$4 AND
@@ -174,7 +173,7 @@ const (
 		{{- if not $model.Shared}}
 		isolated_entity_id=:isolated_entity_id AND
 		{{- end}}
-		NOT deleted 
+		NOT deleted
 	`
 
 	{{- range $i, $method := $model.Methods}}
@@ -182,11 +181,11 @@ const (
 			sql{{$method}}{{$modelName}} = `
 	SELECT
 		{{(index $model.MethodsProps $i).AdjustSQLSelect}}
-	FROM 
+	FROM
 		{{NameSQL $modelName}}s
 	{{if (index $model.MethodsProps $i).FilteredFields}}WHERE
-		{{end}}{{(index $model.MethodsProps $i).AdjustListSQLWhereProps}} {{if not $model.Shared}}{{if (index $model.MethodsProps $i).FilteredFields}}AND{{else}}WHERE{{end}} 
-		isolated_entity_id=:isolated_entity_id{{end}} AND 
+		{{end}}{{(index $model.MethodsProps $i).AdjustListSQLWhereProps}} {{if not $model.Shared}}{{if (index $model.MethodsProps $i).FilteredFields}}AND{{else}}WHERE{{end}}
+		isolated_entity_id=:isolated_entity_id{{end}} AND
 		NOT deleted
 	`
 			{{if (index $model.MethodsProps $i).NeedLazyLoading}}
@@ -198,7 +197,7 @@ const (
 	FROM
 		{{NameSQL $nestedObj.Type}}s
 	WHERE
-		id=$1{{if not $model2.Shared}} AND 
+		id=$1{{if not $model2.Shared}} AND
 		isolated_entity_id=$2{{end}}
 	`
 				{{- end}}
@@ -211,26 +210,17 @@ const (
 			{{- range $column, $options := $model.Columns}}
 				{{- if eq $modelName2 $options.GoType}}
 					{{- if and $options.IsArray $options.IsStruct}}
-					sqlGet{{Title $column}}IDsFor{{$modelName}}LazyLoading = `
+						sqlGet{{Title $column}}IDsFor{{$modelName}}LazyLoading = `
 	SELECT
-		{{NameSQL $modelName}}_id, {{NameSQL $options.TitleName}}_id
+		{{NameSQL $modelName}}_id,
+		{{NameSQL $options.TitleName}}_id
 	FROM
 		{{NameSQL $modelName}}_{{NameSQL $options.TitleName}}
 	WHERE
 		{{NameSQL $modelName}}_id=$1{{if not $model2.Shared}} AND
 		isolated_entity_id=$2{{end}}
 	`
-
-					sqlGet{{Title $column}}For{{$modelName}}LazyLoading = `
-	SELECT
-		{{$model2.SQLSelectStr}}
-	FROM
-		{{NameSQL $options.GoType}}s
-	WHERE
-		id=$1{{if not $model2.Shared}} AND
-		isolated_entity_id=$2{{end}}
-	`
-					{{- else}}
+					{{- end}}
 					sqlGet{{Title $column}}For{{$modelName}}LazyLoading = `
 	SELECT
 		{{$model2.SQLSelectStr}}
@@ -240,7 +230,6 @@ const (
 		id=$1{{if not $model2.Shared}} AND
 		isolated_entity_id=$2{{end}}
 	`
-					{{- end}}
 				{{- end}}
 			{{end}}
 		{{- end}}

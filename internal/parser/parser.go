@@ -480,8 +480,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			}
 		}
-		model.SQLSelectStr = strings.Join(SQLSelect, ", ")
-		model.SQLWhereParams = strings.Join(sqlWhereParams, " AND ")
+		model.SQLSelectStr = strings.Join(SQLSelect, ",\n\t\t")
+		model.SQLWhereParams = strings.Join(sqlWhereParams, " AND\n\t\t")
 		if model.IDIsUUID {
 			sqlAdd = append(sqlAdd, "id")
 			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
@@ -494,10 +494,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			sqlAdd = append(sqlAdd, "isolated_entity_id")
 			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
 		}
-		model.SQLAddStr = fmt.Sprintf("(%s) VALUES (%s)", strings.Join(sqlAdd, ", "), strings.Join(countFields, ", "))
-		model.SQLEditStr = strings.Join(sqlEdit, ", ")
-		model.SQLAddExecParams = strings.Join(sqlAddExecParams, ", ")
-		model.SQLEditExecParams = strings.Join(sqlEditExecParams, ", ")
+		model.SQLAddStr = fmt.Sprintf("(\n\t\t%s\n\t) VALUES (\n\t\t%s\n\t)", strings.Join(sqlAdd, ",\n\t\t"), strings.Join(countFields, ",\n\t\t"))
+		model.SQLEditStr = strings.Join(sqlEdit, ",\n\t\t")
+		model.SQLAddExecParams = strings.Join(sqlAddExecParams, ",\n\t\t")
+		model.SQLEditExecParams = strings.Join(sqlEditExecParams, ",\n\t\t")
 
 		cfg.Models[name] = model
 	}
@@ -1217,7 +1217,7 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 	if !haveID {
 		SQLSelect = append(SQLSelect, "id")
 	}
-	obj.SQLSelect = strings.Join(SQLSelect, ", ")
+	obj.SQLSelect = strings.Join(SQLSelect, ",\n\t\t")
 	obj.Path = nesting
 	obj.ParentStruct = parent
 	obj.IsArray = isArray
@@ -1372,8 +1372,8 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 			if !haveID {
 				SQLSelect = append(SQLSelect, "id")
 			}
-			result.MethodsProps[i].AdjustSQLSelect = strings.Join(SQLSelect, ", ")
-			result.MethodsProps[i].AdjustListSQLWhereProps = strings.Join(sqlWhereParams, " AND ")
+			result.MethodsProps[i].AdjustSQLSelect = strings.Join(SQLSelect, ",\n\t\t")
+			result.MethodsProps[i].AdjustListSQLWhereProps = strings.Join(sqlWhereParams, " AND\n\t\t")
 			result.MethodsProps[i].FilteredFields = filtredFields
 			result.MethodsProps[i].IsAdjustList = true
 
@@ -1449,7 +1449,7 @@ func handleAdjustGets(modelsMap map[string]models.Model, model *models.Model, mo
 			if !haveID {
 				SQLSelect = append(SQLSelect, "id")
 			}
-			result.MethodsProps[i].AdjustSQLSelect = strings.Join(SQLSelect, ", ")
+			result.MethodsProps[i].AdjustSQLSelect = strings.Join(SQLSelect, ",\n\t\t")
 			result.MethodsProps[i].AdjustGetJSONColumns = adjustGetJSONColumns
 		}
 	}
@@ -1515,8 +1515,8 @@ func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, m
 				}
 			}
 			result.Methods[i] = getNameForAdjustMethods(method)
-			result.MethodsProps[i].CustomSQLEditStr = strings.Join(sqlEdit, ", ")
-			result.MethodsProps[i].CustomSQLExecParams = strings.Join(sqlAddExecParams, ", ")
+			result.MethodsProps[i].CustomSQLEditStr = strings.Join(sqlEdit, ",\n\t\t")
+			result.MethodsProps[i].CustomSQLExecParams = strings.Join(sqlAddExecParams, ",\n\t\t")
 			result.MethodsProps[i].EditableFields = editableFields
 		}
 	}
