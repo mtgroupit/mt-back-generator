@@ -296,7 +296,7 @@ definitions:
           type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}}
         {{- if $options.Format}}
           format: {{$options.Format}}
-          {{- if or (eq $options.Format "date") (eq $options.Format "date-time")}}
+          {{- if (IsTimeFormat $options.Format)}}
           x-nullable: true
           {{- end}}
         {{- end}}
@@ -314,7 +314,7 @@ definitions:
         type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}}
         {{- if $options.Format}}
         format: {{$options.Format}}
-        {{- if or (eq $options.Format "date") (eq $options.Format "date-time")}}
+        {{- if (IsTimeFormat $options.Format)}}
         x-nullable: true
         {{- end}}
         {{- end}}
@@ -365,7 +365,7 @@ definitions:
           type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}}
         {{- if $options.Format}}
           format: {{$options.Format}}
-          {{- if or (eq $options.Format "date") (eq $options.Format "date-time")}}
+          {{- if (IsTimeFormat $options.Format)}}
           x-nullable: true
           {{- end}}
         {{- end}}
@@ -382,7 +382,7 @@ definitions:
         type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}}
         {{- if $options.Format}}
         format: {{$options.Format}}
-        {{- if or (eq $options.Format "date") (eq $options.Format "date-time")}}
+        {{- if (IsTimeFormat $options.Format)}}
         x-nullable: true
         {{- end}}
         {{- end}}
@@ -425,7 +425,7 @@ definitions:
           type: {{$options.Type}}
         {{- if $options.Format}}
           format: {{$options.Format}}
-          {{- if or (eq $options.Format "date") (eq $options.Format "date-time")}}
+          {{- if (IsTimeFormat $options.Format)}}
           x-nullable: true
           {{- end}}
         {{- end}}
@@ -443,7 +443,7 @@ definitions:
         type: {{$options.Type}}
         {{- if $options.Format}}
         format: {{$options.Format}}
-        {{- if or (eq $options.Format "date") (eq $options.Format "date-time")}}
+        {{- if (IsTimeFormat $options.Format)}}
         x-nullable: true
         {{- end}}
         {{- end}}
