@@ -12,7 +12,7 @@ const (
 	SELECT
 		{{$model.SQLSelectStr}}
 	FROM
-		{{NameSQL $modelName}}s
+		{{Pluralize (NameSQL $modelName)}}
 	WHERE
 		id=$1 AND
 		{{- if not $model.Shared}}
@@ -25,7 +25,7 @@ const (
 	SELECT
 		id
 	FROM
-		{{NameSQL $modelName}}s
+		{{Pluralize (NameSQL $modelName)}}
 	WHERE
 		{{if not $model.BoundToIsolatedEntity}}created_by=$1{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}} AND
 		{{end}}isolated_entity_id=${{if $model.BoundToIsolatedEntity}}1{{else}}2{{end}}{{end}} AND
@@ -39,7 +39,7 @@ const (
 	SELECT
 		{{(index $model.MethodsProps $i).AdjustSQLSelect}}
 	FROM
-		{{NameSQL $modelName}}s
+		{{Pluralize (NameSQL $modelName)}}
 	WHERE
 		id=$1 AND
 		{{- if not $model.Shared}}
@@ -52,7 +52,7 @@ const (
 
 
 	sqlAdd{{$modelName}} = `
-	INSERT INTO {{NameSQL $modelName}}s{{$model.SQLAddStr}}
+	INSERT INTO {{Pluralize (NameSQL $modelName)}}{{$model.SQLAddStr}}
 	RETURNING
 		id
 	`
@@ -84,7 +84,7 @@ const (
 
 	sqlBind{{$modelName}}To{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Profile{{end}} = `
 	UPDATE
-		{{NameSQL $modelName}}s
+		{{Pluralize (NameSQL $modelName)}}
 	SET
 		bound=true
 	WHERE
@@ -101,7 +101,7 @@ const (
 
 	sqlDelete{{$modelName}} = `
 	UPDATE
-		{{NameSQL $modelName}}s
+		{{Pluralize (NameSQL $modelName)}}
 	SET
 		deleted=true,
 		deleted_at=$2,
@@ -116,7 +116,7 @@ const (
 
 	sqlEdit{{$modelName}} = `
 	UPDATE
-		{{NameSQL $modelName}}s
+		{{Pluralize (NameSQL $modelName)}}
 	SET
 		{{$model.SQLEditStr}}
 	WHERE
@@ -135,7 +135,7 @@ const (
 		{{- end}}
 		sqlSetModifiedParams{{$modelName}} = `
 	UPDATE
-		{{NameSQL $modelName}}s
+		{{Pluralize (NameSQL $modelName)}}
 	SET
 		{{if $model.HaveModifiedAt}}modified_at=${{$countParams}}{{$countParams = 4}}{{end}}{{if $model.HaveModifiedBy}}modified_by=${{$countParams}}{{end}}
 	WHERE
@@ -150,7 +150,7 @@ const (
 		{{- if IsAdjustEdit $method}}
 			sql{{$method}}{{$modelName}} = `
 	UPDATE
-		{{NameSQL $modelName}}s
+		{{Pluralize (NameSQL $modelName)}}
 	SET
 		{{(index $model.MethodsProps $i).CustomSQLEditStr}}
 	WHERE
@@ -167,7 +167,7 @@ const (
 	SELECT
 		{{$model.SQLSelectStr}}
 	FROM
-		{{NameSQL $modelName}}s
+		{{Pluralize (NameSQL $modelName)}}
 	WHERE
 		{{$model.SQLWhereParams}}{{if $model.SQLWhereParams}} AND{{end}}
 		{{- if not $model.Shared}}
@@ -182,7 +182,7 @@ const (
 	SELECT
 		{{(index $model.MethodsProps $i).AdjustSQLSelect}}
 	FROM
-		{{NameSQL $modelName}}s
+		{{Pluralize (NameSQL $modelName)}}
 	{{if (index $model.MethodsProps $i).FilteredFields}}WHERE
 		{{end}}{{(index $model.MethodsProps $i).AdjustListSQLWhereProps}} {{if not $model.Shared}}{{if (index $model.MethodsProps $i).FilteredFields}}AND{{else}}WHERE{{end}}
 		isolated_entity_id=:isolated_entity_id{{end}} AND
@@ -195,7 +195,7 @@ const (
 	SELECT
 		{{$nestedObj.SQLSelect}}
 	FROM
-		{{NameSQL $nestedObj.Type}}s
+		{{Pluralize (NameSQL $nestedObj.Type)}}
 	WHERE
 		id=$1{{if not $model2.Shared}} AND
 		isolated_entity_id=$2{{end}}
@@ -225,7 +225,7 @@ const (
 	SELECT
 		{{$model2.SQLSelectStr}}
 	FROM
-		{{NameSQL $modelName2}}s
+		{{Pluralize (NameSQL $modelName2)}}
 	WHERE
 		id=$1{{if not $model2.Shared}} AND
 		isolated_entity_id=$2{{end}}

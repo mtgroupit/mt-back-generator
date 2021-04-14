@@ -38,9 +38,12 @@ var goTmplFuncs = template.FuncMap{
 	"ToLower": func(in string) string {
 		return strings.ToLower(in)
 	},
-	"LowerTitle":   parser.LowerTitle,
-	"Title":        nameToTitle,
-	"NameSQL":      parser.NameSQL,
+	"LowerTitle": parser.LowerTitle,
+	"Title":      nameToTitle,
+
+	"NameSQL":   parser.NameSQL,
+	"Pluralize": parser.Pluralize,
+
 	"IsAdjustList": isAdjustList,
 	"IsAdjustEdit": isAdjustEdit,
 	"IsAdjustGet":  isAdjustGet,

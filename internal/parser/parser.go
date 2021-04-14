@@ -8,10 +8,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fatih/camelcase"
 	"github.com/go-openapi/strfmt"
+	"github.com/jinzhu/inflection"
 	"github.com/mtgroupit/mt-back-generator/models"
 
-	"github.com/fatih/camelcase"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -565,6 +566,16 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	return
 }
 
+// NameSQL converts name to "snake_case" format
+func NameSQL(name string) string {
+	return strings.ToLower(strings.Join(camelcase.Split(name), "_"))
+}
+
+// Pluralize - convert name to plural form
+func Pluralize(name string) string {
+	return inflection.Plural(name)
+}
+
 func validate(cfg *models.Config) error {
 	if cfg.Name == "" {
 		return errors.New("name is empty")
@@ -1045,11 +1056,6 @@ func LowerTitle(in string) string {
 	default:
 		return strings.ToLower(string(in[0])) + string(in[1:])
 	}
-}
-
-// NameSQL converts name to "snake_case" format
-func NameSQL(name string) string {
-	return strings.ToLower(strings.Join(camelcase.Split(name), "_"))
 }
 
 func titleize(cfg *models.Config) {
