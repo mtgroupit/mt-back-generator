@@ -27,8 +27,8 @@ const (
 	FROM
 		{{Pluralize (NameSQL $modelName)}}
 	WHERE
-		{{if not $model.BoundToIsolatedEntity}}created_by=$1{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}} AND
-		{{end}}isolated_entity_id=${{if $model.BoundToIsolatedEntity}}1{{else}}2{{end}}{{end}} AND
+		{{if not $model.BoundToIsolatedEntity}}created_by=:created_by{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}} AND
+		{{end}}isolated_entity_id=:isolated_entity_id{{end}} AND
 		NOT deleted AND
 		bound
 	`
@@ -255,6 +255,15 @@ const (
 type (
     argGet{{$modelName}} struct {
         ID {{if $model.IDIsUUID}}string{{else}}int64{{end}} `db:"id"`
+		{{- if not $model.Shared}}
+		IsolatedEntityID string `db:"isolated_entity_id"`
+		{{- end}}
+    }
+
+	argGetMy{{$modelName}}ID struct {
+		{{- if not $model.BoundToIsolatedEntity}}
+		CreatedBy string `db:"created_by"`
+		{{- end}}
 		{{- if not $model.Shared}}
 		IsolatedEntityID string `db:"isolated_entity_id"`
 		{{- end}}

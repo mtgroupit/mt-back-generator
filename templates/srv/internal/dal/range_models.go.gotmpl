@@ -695,7 +695,14 @@ func (a *Repo) add{{$modelName}}(profileID string, {{if not $model.Shared}}isola
 }
 
 func (a *Repo) getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}profileID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}} string) (id string, err error) {
-	if err = a.db.Get(&id, sqlGetMy{{$modelName}}ID{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+	if err = a.db.NamedGet(&id, sqlGetMy{{$modelName}}ID, argGetMy{{$modelName}}ID{
+		{{- if not $model.BoundToIsolatedEntity}}
+			CreatedBy: profileID,
+		{{- end}}
+		{{- if not $model.Shared}}
+			IsolatedEntityID: isolatedEntityID,
+		{{- end}}
+	}); err != nil {
 		if err == sql.ErrNoRows {
 			return "", app.ErrNotFound
 		}
