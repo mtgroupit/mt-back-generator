@@ -151,7 +151,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 						options.Type = "float"
 					case TypesPrefix + "Decimal":
 						options.Type = "decimal"
-					case "time.Time":
+					case "*time.Time":
 						options.Type = "string"
 					default:
 						options.Type = options.GoType
@@ -354,7 +354,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 							cfg.HaveFloatArr = true
 						case TypesPrefix + "Decimal":
 							options.Type = "decimal"
-						case "time.Time":
+						case "*time.Time":
 							options.Type = "string"
 						default:
 							options.Type = options.GoType
@@ -998,7 +998,7 @@ func convertStandardTypeToGoType(columnType, format string) string {
 	case columnType == "float":
 		return "float64"
 	case columnType == "string" && IsTimeFormat(format):
-		return "time.Time"
+		return "*time.Time"
 	default:
 		return columnType
 	}

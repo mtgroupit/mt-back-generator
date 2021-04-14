@@ -138,7 +138,8 @@ type {{$modelName}} struct {
 				return err
 			}
 		{{- end}}
-		res, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET deleted=true, deleted_at=$2, deleted_by=$3 WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$4{{end}} AND NOT deleted`, id, time.Now(), profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
+		t := time.Now()
+		res, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET deleted=true, deleted_at=$2, deleted_by=$3 WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$4{{end}} AND NOT deleted`, id, &t, profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
 		if err != nil {
 			return err
 		}
@@ -171,7 +172,8 @@ type {{$modelName}} struct {
 			{{- end}}
 		{{- end}}
 		{{- if $model.HaveModifiedAt}}
-			m.ModifiedAt = time.Now()
+			t := time.Now()
+			m.ModifiedAt = &t
 		{{- end}}
 		{{- if $model.HaveModifiedBy}}
 			m.ModifiedBy = profileID
@@ -594,7 +596,10 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 		{{- if not $model.Shared}}
 			{{- $countParams = 3}}
 		{{- end}}
-		if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if $model.HaveModifiedAt}}modified_at=${{$countParams}}{{$countParams = 4}}{{end}}{{if $model.HaveModifiedBy}}modified_by=${{$countParams}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}{{if $model.HaveModifiedAt}}, time.Now(){{end}}{{if $model.HaveModifiedBy}}, profileID{{end}}); err != nil {
+		{{- if $model.HaveModifiedAt}}
+		  t := time.Now()
+		{{- end}}
+		if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if $model.HaveModifiedAt}}modified_at=${{$countParams}}{{$countParams = 4}}{{end}}{{if $model.HaveModifiedBy}}modified_by=${{$countParams}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}{{if $model.HaveModifiedAt}}, &t{{end}}{{if $model.HaveModifiedBy}}, profileID{{end}}); err != nil {
 			return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 		}
 	{{- end}}
@@ -616,7 +621,10 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 		{{- if not $model.Shared}}
 			{{- $countParams = 3}}
 		{{- end}}
-		if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if $model.HaveModifiedAt}}modified_at=${{$countParams}}{{$countParams = 4}}{{end}}{{if $model.HaveModifiedBy}}modified_by=${{$countParams}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}{{if $model.HaveModifiedAt}}, time.Now(){{end}}{{if $model.HaveModifiedBy}}, profileID{{end}}); err != nil {
+		{{- if $model.HaveModifiedAt}}
+		  t := time.Now()
+		{{- end}}
+		if _, err := a.db.Exec(`UPDATE {{NameSQL $modelName}}s SET {{if $model.HaveModifiedAt}}modified_at=${{$countParams}}{{$countParams = 4}}{{end}}{{if $model.HaveModifiedBy}}modified_by=${{$countParams}}{{end}} WHERE id=$1{{if not $model.Shared}} AND isolated_entity_id=$2{{end}}`, id{{if not $model.Shared}}, isolatedEntityID{{end}}{{if $model.HaveModifiedAt}}, &t{{end}}{{if $model.HaveModifiedBy}}, profileID{{end}}); err != nil {
 			return err
 		}
 	{{- end}}
@@ -662,7 +670,8 @@ func (a *Repo) add{{$modelName}}(profileID string, {{if not $model.Shared}}isola
 		var {{$modelName}}ID int64
 	{{- end}}
 	{{- if $model.HaveCreatedAt}}
-		m.CreatedAt = time.Now()
+		t := time.Now()
+		m.CreatedAt = &t
 	{{- end}}
 	{{- range $column, $options := $model.Columns}}
 		{{- if and $options.IsStruct (not $options.IsArray)}}
@@ -763,7 +772,9 @@ func (m *{{$modelName}}) Filter(filter *app.Filter) (ok, filterIsValid bool) {
 			{{- if $options.IsArray}}
 			for _, elem := range m.{{$options.TitleName}} {
 			{{- end}}
-				value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{if eq $options.GoType "types.Decimal"}}Decimal.String(){{else}}{{if (IsTimeFormat $options.Format)}}Time{{else}}{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}}{{end}}{{end}})
+				{{- if (IsTimeFormat $options.Format)}}
+				value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}{{end}}
+				{{- else}}value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{if eq $options.GoType "types.Decimal"}}Decimal.String(){{else}}{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}}{{end}}{{end}})
 				equal := {{if or (ne $options.Type "string") $options.StrictFilter}}value == filter.Value{{else}}contains(value, filter.Value){{end}}
 				if (equal && filter.Include) || (!equal && !filter.Include) {
 					ok, filterIsValid = true, true

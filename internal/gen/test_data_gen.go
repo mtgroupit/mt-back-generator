@@ -43,9 +43,9 @@ func genApiTestArray(columnOptions models.Options) string {
 
 	switch columnOptions.Format {
 	case "date-time":
-		return fmt.Sprintf("[]strfmt.DateTime{%s}", strings.Join(arr, ", "))
+		return fmt.Sprintf("[]*strfmt.DateTime{%s}", strings.Join(arr, ", "))
 	case "date":
-		return fmt.Sprintf("[]strfmt.Date{%s}", strings.Join(arr, ", "))
+		return fmt.Sprintf("[]*strfmt.Date{%s}", strings.Join(arr, ", "))
 	case "email":
 		return fmt.Sprintf("[]strfmt.Email{%s}", strings.Join(arr, ", "))
 	case "float":
@@ -111,7 +111,7 @@ func genTestValue(columnOptions models.Options) (str string) {
 		}
 	} else {
 		switch columnOptions.GoType {
-		case "string", "time.Time":
+		case "string", "*time.Time", "time.Time":
 			switch columnOptions.Format {
 			case "date-time":
 				dateTime := strfmt.NewDateTime()

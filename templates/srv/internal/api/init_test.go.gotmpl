@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	{{- if .HaveTime}}
+		"time"
+	{{- end}}
 
 	"{{.Module}}/internal/api/restapi/models"
 	"{{.Module}}/internal/app"
@@ -171,3 +174,31 @@ func (m matchCookie) Matches(x interface{}) bool {
 	}
 	return false
 }
+
+{{- if .HaveTime}}
+	func fromDateTime(dt strfmt.DateTime) time.Time {
+		return time.Time(dt)
+	}
+
+	func toDateTime(date interface{}) (*strfmt.DateTime) {
+		if date == nil {
+			return nil
+		}
+		var dt strfmt.DateTime
+		dt.Scan(date)
+		return &dt
+	}
+	
+	func fromDate(d strfmt.Date) time.Time {
+		return time.Time(d)
+	}
+
+	func toDate(date interface{}) (*strfmt.Date) {
+		if date == nil {
+			return nil
+		}
+		var dt strfmt.Date
+		dt.Scan(date)
+		return &dt
+	}
+{{end}}

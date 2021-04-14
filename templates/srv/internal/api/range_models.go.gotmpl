@@ -5,6 +5,9 @@ import (
 {{- if NeedErrorsInApi $model}}
 	"errors"
 {{- end}}
+{{- if $model.NeedTime}}
+	"time"
+{{- end}}
 {{- if $model.Methods}}
 	"{{.Module}}/internal/def"
 	"github.com/go-openapi/swag"
@@ -17,7 +20,7 @@ import (
 	{{- end}}
 
 	{{if or (HaveMyMethod $model.Methods) $model.HaveCreatedBy $model.HaveModifiedBy (ContainsStr $model.Methods "Delete") (ContainsStr $model.Methods "Add") (and (not $model.Shared) ($model.Methods))}}extauthapi "{{.AuthSrv}}"{{end}}
-	{{- if $model.HaveEmail}}
+	{{- if or $model.HaveEmail $model.NeedTime}}
 		"github.com/go-openapi/strfmt"
 	{{- end}}
 	{{- if $model.NeedConv}}

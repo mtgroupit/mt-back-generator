@@ -183,7 +183,7 @@ var goTmplFuncs = template.FuncMap{
 				if columnOptions.Default != "" {
 					appValue = fmt.Sprintf("conv.DateTimeValue(%s)", appValue)
 				}
-				appValue = fmt.Sprintf("fromDateTime(%s)", appValue)
+				appValue = fmt.Sprintf("(*time.Time)(%s)", appValue)
 			}
 		case "date":
 			if columnOptions.IsArray {
@@ -192,7 +192,7 @@ var goTmplFuncs = template.FuncMap{
 				if columnOptions.Default != "" {
 					appValue = fmt.Sprintf("conv.DateValue(%s)", appValue)
 				}
-				appValue = fmt.Sprintf("fromDate(%s)", appValue)
+				appValue = fmt.Sprintf("(*time.Time)(%s)", appValue)
 			}
 		case "email":
 			if columnOptions.IsArray {
@@ -265,16 +265,16 @@ var goTmplFuncs = template.FuncMap{
 			if columnOptions.IsArray {
 				apiValue = fmt.Sprintf("toDateTimesArray(%s)", apiValue)
 			} else {
-				apiValue = fmt.Sprintf("toDateTime(%s)", apiValue)
+				apiValue = fmt.Sprintf("(*strfmt.DateTime)(%s)", apiValue)
 				if columnOptions.Default != "" {
 					apiValue = fmt.Sprintf("conv.DateTime(%s)", apiValue)
 				}
 			}
 		case "date":
 			if columnOptions.IsArray {
-				apiValue = fmt.Sprintf("toDatesArray(%s)", apiValue)
+				apiValue = fmt.Sprintf("[]toDatesArray(%s)", apiValue)
 			} else {
-				apiValue = fmt.Sprintf("toDate(%s)", apiValue)
+				apiValue = fmt.Sprintf("(*strfmt.Date)(%s)", apiValue)
 				if columnOptions.Default != "" {
 					apiValue = fmt.Sprintf("conv.Date(%s)", apiValue)
 				}
@@ -331,7 +331,7 @@ var goTmplFuncs = template.FuncMap{
 		case strings.HasPrefix(columnOptions.GoType, parser.TypesPrefix):
 			appValue = fmt.Sprintf("%s(%s.Decimal)", columnOptions.GoType, appValue)
 		case parser.IsTimeFormat(columnOptions.Format):
-			appValue = fmt.Sprintf("%s.Time", appValue)
+			appValue = fmt.Sprintf("%s", appValue)
 		default:
 			appValue = fmt.Sprintf("%s.%s", appValue, strings.Title(columnOptions.GoType))
 		}
@@ -342,8 +342,8 @@ var goTmplFuncs = template.FuncMap{
 		switch psqlType {
 		case parser.TypesPrefix + "Decimal":
 			return fmt.Sprintf("%sNullDecimal", parser.TypesPrefix)
-		case "time.Time":
-			return "sql.NullTime"
+		case "*time.Time":
+			return "*time.Time"
 		default:
 			return fmt.Sprintf("sql.Null%s", strings.Title(psqlType))
 		}
