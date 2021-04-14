@@ -14,9 +14,9 @@ const (
 	FROM
 		{{Pluralize (NameSQL $modelName)}}
 	WHERE
-		id=$1 AND
+		id=:id AND
 		{{- if not $model.Shared}}
-		isolated_entity_id=$2 AND
+		isolated_entity_id=:isolated_entity_id AND
 		{{- end}}
 		NOT deleted
 	`
@@ -250,4 +250,13 @@ const (
 		{{- end}}
 	{{- end}}
 	
+)
+
+type (
+    argGet{{$modelName}} struct {
+        ID {{if $model.IDIsUUID}}string{{else}}int64{{end}} `db:"id"`
+		{{- if not $model.Shared}}
+		IsolatedEntityID string `db:"isolated_entity_id"`
+		{{- end}}
+    }
 )

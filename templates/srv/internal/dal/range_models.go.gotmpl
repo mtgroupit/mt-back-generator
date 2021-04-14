@@ -626,7 +626,12 @@ func (a *Repo) {{$modelName}}AccessManager(am *app.AccessManager) error {
 
 func (a *Repo) get{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
 	var m {{$modelName}}
-	if err := a.db.Get(&m, sqlGet{{$modelName}}, id{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+	if err := a.db.NamedGet(&m, sqlGet{{$modelName}}, argGet{{$modelName}}{
+		ID: id,
+		{{- if not $model.Shared}}
+			IsolatedEntityID: isolatedEntityID,
+		{{- end}} 
+	}); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, app.ErrNotFound
 		} 
