@@ -32,12 +32,12 @@ const (
 var log = structlog.New()
 
 type Repo struct {
-	db *sqlxx.DB
+	db *DB
 }
 
 {{- if .HaveCustomMethod}}
 	type CustomsRepo struct {
-		db *sqlxx.DB
+		db *DB
 	}
 {{- end}}
 
@@ -48,7 +48,7 @@ type {{$et.RefTableOne}}{{$et.RefTableTwo}} struct{
 }
 {{end}}
 
-func connect(ctx context.Context, cfg pqx.Config, migrationDir string{{if .Debug}}, resetDB bool{{end}}) (*sqlxx.DB, error) { {{if .Debug}}
+func connect(ctx context.Context, cfg pqx.Config, migrationDir string{{if .Debug}}, resetDB bool{{end}}) (*DB, error) { {{if .Debug}}
 	if resetDB {
 		if err := migration.ResetAll(ctx, migrationDir, cfg); err != nil {
 			return nil, err
@@ -80,7 +80,7 @@ func connect(ctx context.Context, cfg pqx.Config, migrationDir string{{if .Debug
 		err = nextErr
 	}
 
-	return sqlxx.NewDB(sqlx.NewDb(db, "postgres")), nil
+	return NewDB(sqlxx.NewDB(sqlx.NewDb(db, "postgres"))), nil
 }
 
 func New(ctx context.Context, dbCfg pqx.Config, migrationDir string{{if .Debug}}, resetDB bool{{end}}) (*Repo, {{if .HaveCustomMethod}}*CustomsRepo, {{end}} error) {
