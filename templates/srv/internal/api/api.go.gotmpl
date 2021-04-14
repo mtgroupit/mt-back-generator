@@ -126,7 +126,7 @@ func NewServer(appl app.App,{{if .HaveCustomMethod}}cust app.Customs,{{end}} ext
 		return forbidCSRF(handler)
 	}
 
-	handleCORS := cors.New(cors.Options{
+	newCORS := cors.New(cors.Options{
 		AllowedOrigins:   []string{cfg.AllowedOrigin},
 		AllowedMethods:   []string{"POST", "PUT", "GET", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
@@ -135,7 +135,9 @@ func NewServer(appl app.App,{{if .HaveCustomMethod}}cust app.Customs,{{end}} ext
 			// Enable Debugging for testing, consider disabling in production
 			Debug: true,
 		{{- end}}
-	}).Handler
+	})
+	newCORS.Log = cors.Logger(structlog.New(structlog.KeyUnit, "CORS"))
+	handleCORS := newCORS.Handler
 	
 	server.SetHandler(handleCORS(globalMiddlewares(api.Serve(middlewares))))
 
