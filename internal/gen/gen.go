@@ -44,6 +44,8 @@ var goTmplFuncs = template.FuncMap{
 	"NameSQL":   parser.NameSQL,
 	"Pluralize": parser.Pluralize,
 
+	"IsTypesGoType": parser.IsTypesGoType,
+
 	"IsAdjustList": isAdjustList,
 	"IsAdjustEdit": isAdjustEdit,
 	"IsAdjustGet":  isAdjustGet,
@@ -331,7 +333,7 @@ var goTmplFuncs = template.FuncMap{
 		switch {
 		case columnOptions.TitleName == "ID" && columnOptions.Type == "uuid":
 			appValue = fmt.Sprintf("%s.String()", appValue)
-		case strings.HasPrefix(columnOptions.GoType, parser.TypesPrefix):
+		case parser.IsTypesGoType(columnOptions.GoType):
 			appValue = fmt.Sprintf("%s(%s.Decimal)", columnOptions.GoType, appValue)
 		case parser.IsTimeFormat(columnOptions.Format):
 			appValue = fmt.Sprintf("%s.Time", appValue)

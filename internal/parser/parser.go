@@ -78,6 +78,11 @@ func IsTimeFormat(format string) bool {
 	return false
 }
 
+// IsTypesGoType return true if go type is from types package
+func IsTypesGoType(goType string) bool {
+	return strings.HasPrefix(goType, TypesPrefix)
+}
+
 // ReadYAMLCfg create models.Config from configFile
 func ReadYAMLCfg(file string) (*models.Config, error) {
 	cfg := models.Config{}
@@ -116,7 +121,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				return nil, errors.Wrapf(err, `Custom type: "%s". Field: "%s"`, customTypeName, field)
 			}
 
-			if strings.HasPrefix(options.GoType, TypesPrefix) {
+			if IsTypesGoType(options.GoType) {
 				cfg.HaveTypesInCustomTypes = true
 			}
 			if options.Default != "" {
@@ -233,7 +238,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				return nil, errors.Wrapf(err, `Model: "%s". Column: "%s"`, name, column)
 			}
 
-			if strings.HasPrefix(options.GoType, TypesPrefix) {
+			if IsTypesGoType(options.GoType) {
 				cfg.HaveTypes = true
 				model.NeedTypes = true
 			}
@@ -420,7 +425,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		psql[indexLastNotArrOfStruct].Last = true
 		model.Psql = psql
 
-		var SQLSelect, sqlWhereParams, sqlAdd, sqlEdit, sqlAddExecParams, sqlEditExecParams, countFields []string
+		var SQLSelect, sqlWhereParams, sqlAdd, sqlEdit, sqlEditExecParams []string
 		count := 1
 		countCreatedColumns := 0
 		for column, options := range model.Columns {
@@ -433,9 +438,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				} else {
 					titleName = "m." + titleName
 				}
-				if strings.HasPrefix(options.GoType, TypesPrefix) && !options.IsArray {
-					titleName += ".Value()"
-				}
 				SQLSelect = append(SQLSelect, sqlName)
 				if !options.IsArray && !options.IsCustom {
 					if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
@@ -446,12 +448,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 				if options.TitleName != "ID" {
 					sqlAdd = append(sqlAdd, sqlName)
-					if sqlName == "created_by" {
-						sqlAddExecParams = append(sqlAddExecParams, "profileID")
-					} else {
-						sqlAddExecParams = append(sqlAddExecParams, titleName)
-					}
-					countFields = append(countFields, fmt.Sprintf("$%d", count))
 					count++
 					if isCreatedStandardColumn(column) {
 						countCreatedColumns++
@@ -469,9 +465,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					SQLSelect = append(SQLSelect, NameSQL(options.TitleName)+"_id")
 					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
 					sqlAdd = append(sqlAdd, NameSQL(options.TitleName)+"_id")
-					sqlAddExecParams = append(sqlAddExecParams, column+"ID")
 					sqlEditExecParams = append(sqlEditExecParams, column+"ID")
-					countFields = append(countFields, fmt.Sprintf("$%d", count))
 					count++
 					if model.Shared {
 						sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count-countCreatedColumns))
@@ -485,19 +479,15 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		model.SQLWhereParams = strings.Join(sqlWhereParams, " AND\n\t\t")
 		if model.IDIsUUID {
 			sqlAdd = append(sqlAdd, "id")
-			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
 		}
 		if !model.HaveCreatedBy {
 			sqlAdd = append(sqlAdd, "created_by")
-			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
 		}
 		if !model.Shared {
 			sqlAdd = append(sqlAdd, "isolated_entity_id")
-			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
 		}
-		model.SQLAddStr = fmt.Sprintf("(\n\t\t%s\n\t) VALUES (\n\t\t%s\n\t)", strings.Join(sqlAdd, ",\n\t\t"), strings.Join(countFields, ",\n\t\t"))
+		model.SQLAddStr = fmt.Sprintf("(\n\t\t%s\n\t) VALUES (\n\t\t:%s\n\t)", strings.Join(sqlAdd, ",\n\t\t"), strings.Join(sqlAdd, ",\n\t\t:"))
 		model.SQLEditStr = strings.Join(sqlEdit, ",\n\t\t")
-		model.SQLAddExecParams = strings.Join(sqlAddExecParams, ",\n\t\t")
 		model.SQLEditExecParams = strings.Join(sqlEditExecParams, ",\n\t\t")
 
 		cfg.Models[name] = model
@@ -1504,7 +1494,7 @@ func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, m
 							} else {
 								titleName = "m." + titleName
 							}
-							if strings.HasPrefix(options.GoType, TypesPrefix) && !options.IsArray {
+							if IsTypesGoType(options.GoType) && !options.IsArray {
 								titleName += ".Value()"
 							}
 							sqlAddExecParams = append(sqlAddExecParams, titleName)
