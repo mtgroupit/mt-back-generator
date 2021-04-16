@@ -143,7 +143,14 @@ type {{$modelName}} struct {
 				return err
 			}
 		{{- end}}
-		res, err := a.db.Exec(sqlDelete{{$modelName}}, id, time.Now(), profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
+		res, err := a.db.NamedExec(sqlDelete{{$modelName}}, argDelete{{$modelName}}{
+			ID: id,
+			DeletedAt: time.Now(),
+			DeletedBy: profileID,
+			{{- if not $model.Shared}}
+				IsolatedEntityID: isolatedEntityID,
+			{{- end}}
+		})
 		if err != nil {
 			return err
 		}
