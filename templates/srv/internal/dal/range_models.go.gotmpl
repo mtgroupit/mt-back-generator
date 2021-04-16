@@ -162,41 +162,50 @@ type {{$modelName}} struct {
 				return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 			}
 		{{- end}}
-		{{- range $column, $options := $model.Columns}}
-			{{- if or (not (IsAdjustEdit $method)) (and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsAdjustEdit $method))}}
-				{{- if and $options.IsStruct (not $options.IsArray)}}
-					var {{$column}}ID interface{}
-					if m.{{$options.TitleName}} != nil {
-						{{$column}}ID = m.{{$options.TitleName}}.ID
-					}
-				{{- end}}
-				{{- if or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom}}
-					{{$options.TitleName}}JSON, _ := json.Marshal(m.{{$options.TitleName}})
-				{{- end}}
-			{{- end}}
-		{{- end}}
-		{{- if $model.HaveModifiedAt}}
-			m.ModifiedAt = time.Now()
-		{{- end}}
-		{{- if $model.HaveModifiedBy}}
-			m.ModifiedBy = profileID
-		{{- end}}
-
-		res, err := a.db.Exec(sql{{if IsAdjustEdit $method}}{{$method}}{{else}}Edit{{end}}{{$modelName}}, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{if  (IsAdjustEdit $method)}}{{(index $model.MethodsProps $i).CustomSQLExecParams}}{{else}}{{$model.SQLEditExecParams}}{{end}})
-		if err != nil {
-			return {{if $model.ReturnWhenEdit}}nil, {{end}}err
-		}
-
-		if count, _ := res.RowsAffected(); count == 0 {
-			{{- if eq $method "EditOrAddMy"}}
-				_, err := a.add{{$modelName}}({{if $model.IDIsUUID}}id, {{end}}{{if $model.HaveCreatedBy}}id, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m)
+		{{- if eq $method "EditOrAddMy"}}
+			if err == app.ErrNotFound {
+				{{if $model.ReturnWhenEdit}}id{{else}}_{{end}}, err := a.add{{$modelName}}(profileID, {{if not $model.Shared}}isolatedEntityID, {{end}}m)
 				if err != nil {
 					return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 				}
-			{{- else}}
-				return {{if $model.ReturnWhenEdit}}nil, {{end}}app.ErrNotFound
+				return {{if $model.ReturnWhenEdit}}a.get{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}}){{else}}nil{{end}}
+			}
+		{{- end}}
+		{{- if IsAdjustEdit $method}}
+			{{- range $column, $options := $model.Columns}}
+				{{- if and (ContainsStr (index $model.MethodsProps $i).EditableFields $column) (IsAdjustEdit $method)}}
+					{{- if and $options.IsStruct (not $options.IsArray)}}
+						var {{$column}}ID interface{}
+						if m.{{$options.TitleName}} != nil {
+							{{$column}}ID = m.{{$options.TitleName}}.ID
+						}
+					{{- end}}
+					{{- if or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom}}
+						{{$options.TitleName}}JSON, _ := json.Marshal(m.{{$options.TitleName}})
+					{{- end}}
+				{{- end}}
 			{{- end}}
-		}
+			{{- if $model.HaveModifiedAt}}
+				m.ModifiedAt = time.Now()
+			{{- end}}
+			{{- if $model.HaveModifiedBy}}
+				m.ModifiedBy = profileID
+			{{- end}}
+
+			res, err := a.db.Exec(sql{{$method}}{{$modelName}}, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{(index $model.MethodsProps $i).CustomSQLExecParams}})
+			if err != nil {
+				return {{if $model.ReturnWhenEdit}}nil, {{end}}err
+			}
+
+			if count, _ := res.RowsAffected(); count == 0 {
+				return {{if $model.ReturnWhenEdit}}nil, {{end}}app.ErrNotFound
+			}
+		{{- else}}
+			if err := a.edit{{$modelName}}(id, {{if $model.HaveModifiedBy}}profileID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}m); err != nil {
+				return {{if $model.ReturnWhenEdit}}nil, {{end}}err
+			}
+		{{- end}}
+		
 
 		return {{if $model.ReturnWhenEdit}}a.get{{$modelName}}(id{{if not $model.Shared}}, isolatedEntityID{{end}}){{else}}nil{{end}}
 	}
@@ -771,6 +780,37 @@ func (a *Repo) bindTo{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Pr
 	if count, _ := res.RowsAffected(); count == 0 {
 		return app.ErrNotFound
 	}
+	return nil
+}
+
+func (a *Repo) edit{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) error  {
+	{{- range $column, $options := $model.Columns}}
+		{{- if and $options.IsStruct (not $options.IsArray)}}
+			var {{$column}}ID interface{}
+			if m.{{$options.TitleName}} != nil {
+				{{$column}}ID = m.{{$options.TitleName}}.ID
+			}
+		{{- end}}
+		{{- if or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom}}
+			{{$options.TitleName}}JSON, _ := json.Marshal(m.{{$options.TitleName}})
+		{{- end}}
+	{{- end}}
+	{{- if $model.HaveModifiedAt}}
+		m.ModifiedAt = time.Now()
+	{{- end}}
+	{{- if $model.HaveModifiedBy}}
+		m.ModifiedBy = profileID
+	{{- end}}
+
+	res, err := a.db.Exec(sqlEdit{{$modelName}}, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{$model.SQLEditExecParams}})
+	if err != nil {
+		return err
+	}
+
+	if count, _ := res.RowsAffected(); count == 0 {
+			return app.ErrNotFound
+	}
+
 	return nil
 }
 
