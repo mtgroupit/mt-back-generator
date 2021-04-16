@@ -755,7 +755,15 @@ func (a *Repo) getMy{{$modelName}}ID({{if not $model.BoundToIsolatedEntity}}prof
 }
 
 func (a *Repo) bindTo{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Profile{{end}}{{$modelName}}(id{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}} string) error {
-	res, err := a.db.Exec(sqlBind{{$modelName}}To{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Profile{{end}}, id{{if not $model.BoundToIsolatedEntity}}, profileID{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}})
+	res, err := a.db.NamedExec(sqlBind{{$modelName}}To{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Profile{{end}}, argBind{{$modelName}}To{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Profile{{end}}{
+		ID: id,
+		{{- if not $model.BoundToIsolatedEntity}}
+			CreatedBy: profileID,
+		{{- end}}
+		{{- if not $model.Shared}}
+			IsolatedEntityID: isolatedEntityID,
+		{{- end}}
+	})
 	if err != nil {
 		return err
 	}

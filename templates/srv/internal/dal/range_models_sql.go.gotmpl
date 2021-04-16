@@ -99,12 +99,12 @@ const (
 	SET
 		bound=true
 	WHERE
-		id=$1 AND
+		id=:id AND
 		{{- if not $model.BoundToIsolatedEntity}}
-		created_by=$2 AND
+		created_by=:created_by AND
 		{{- end}}
 		{{- if not $model.Shared}}
-		isolated_entity_id=${{if $model.BoundToIsolatedEntity}}2{{else}}3{{end}} AND
+		isolated_entity_id=:isolated_entity_id AND
 		{{- end}}
 		NOT deleted AND
 		NOT bound
@@ -321,4 +321,13 @@ type (
 			{{- end}}
 		{{- end}}
 	{{- end}}
+	argBind{{$modelName}}To{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Profile{{end}} struct {
+		ID {{if $model.IDIsUUID}}string{{else}}int64{{end}} `db:"id"`
+		{{- if not $model.BoundToIsolatedEntity}}
+			CreatedBy string `db:"created_by"`
+		{{- end}}
+		{{- if not $model.Shared}}
+			IsolatedEntityID string `db:"isolated_entity_id"`
+		{{- end}}
+	}
 )
