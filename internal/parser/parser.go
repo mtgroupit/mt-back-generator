@@ -425,9 +425,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		psql[indexLastNotArrOfStruct].Last = true
 		model.Psql = psql
 
-		var SQLSelect, sqlWhereParams, sqlAdd, sqlEdit, sqlEditExecParams []string
-		count := 1
-		countCreatedColumns := 0
+		var SQLSelect, sqlWhereParams, sqlAdd, sqlEdit []string
 		for column, options := range model.Columns {
 			if !options.IsStruct {
 				sqlName := NameSQL(options.TitleName)
@@ -448,30 +446,17 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 				if options.TitleName != "ID" {
 					sqlAdd = append(sqlAdd, sqlName)
-					count++
-					if isCreatedStandardColumn(column) {
-						countCreatedColumns++
-					} else {
-						if model.Shared {
-							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", sqlName, count-countCreatedColumns))
-						} else {
-							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", sqlName, (count-countCreatedColumns)+1))
-						}
-						sqlEditExecParams = append(sqlEditExecParams, titleName)
+					if !isCreatedStandardColumn(column) {
+						sqlEdit = append(sqlEdit, fmt.Sprintf("%s=:%s", sqlName, sqlName))
 					}
 				}
 			} else {
 				if !options.IsArray {
-					SQLSelect = append(SQLSelect, NameSQL(options.TitleName)+"_id")
-					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
-					sqlAdd = append(sqlAdd, NameSQL(options.TitleName)+"_id")
-					sqlEditExecParams = append(sqlEditExecParams, column+"ID")
-					count++
-					if model.Shared {
-						sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count-countCreatedColumns))
-					} else {
-						sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), (count-countCreatedColumns)+1))
-					}
+					sqlName := NameSQL(options.TitleName) + "_id"
+					SQLSelect = append(SQLSelect, sqlName)
+					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+					sqlAdd = append(sqlAdd, sqlName)
+					sqlEdit = append(sqlEdit, fmt.Sprintf("%s=:%s", sqlName, sqlName))
 				}
 			}
 		}
@@ -488,7 +473,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		}
 		model.SQLAddStr = fmt.Sprintf("(\n\t\t%s\n\t) VALUES (\n\t\t:%s\n\t)", strings.Join(sqlAdd, ",\n\t\t"), strings.Join(sqlAdd, ",\n\t\t:"))
 		model.SQLEditStr = strings.Join(sqlEdit, ",\n\t\t")
-		model.SQLEditExecParams = strings.Join(sqlEditExecParams, ",\n\t\t")
 
 		cfg.Models[name] = model
 	}

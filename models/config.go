@@ -112,8 +112,6 @@ type Model struct {
 	SQLWhereParams    string
 	SQLAddStr         string
 	SQLEditStr        string
-	SQLAddExecParams  string
-	SQLEditExecParams string
 
 	Binds        []Bind
 	Methods      []string

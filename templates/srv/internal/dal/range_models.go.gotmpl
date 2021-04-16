@@ -792,7 +792,7 @@ func (a *Repo) edit{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{
 			}
 		{{- end}}
 		{{- if or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom}}
-			{{$options.TitleName}}JSON, _ := json.Marshal(m.{{$options.TitleName}})
+			{{$column}}JSON, _ := json.Marshal(m.{{$options.TitleName}})
 		{{- end}}
 	{{- end}}
 	{{- if $model.HaveModifiedAt}}
@@ -802,7 +802,32 @@ func (a *Repo) edit{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{
 		m.ModifiedBy = profileID
 	{{- end}}
 
-	res, err := a.db.Exec(sqlEdit{{$modelName}}, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{$model.SQLEditExecParams}})
+	res, err := a.db.NamedExec(sqlEdit{{$modelName}}, argEdit{{$modelName}}{
+		{{- range $column, $options := $model.Columns}}
+			{{- if $options.IsStruct}}
+				{{- if not $options.IsArray}}
+					{{$options.TitleName}}ID: {{$column}}ID,
+				{{- end}}
+			{{- else}}
+				{{- if $options.IsCustom}}
+					{{$options.TitleName}}JSON: {{$column}}JSON,
+				{{- else}}
+					{{- if not $options.IsArray}}
+						{{- if eq $options.TitleName "ID"}}
+							ID: id,
+						{{- else}}
+							{{$options.TitleName}}: m.{{$options.TitleName}},
+						{{- end}} 
+					{{- else}}
+						{{$options.TitleName}}JSON: {{$column}}JSON,
+					{{- end}}
+				{{- end}}
+			{{- end}}
+		{{- end}}
+		{{- if not $model.Shared}}
+			IsolatedEntityID: isolatedEntityID,
+		{{- end}}
+	})
 	if err != nil {
 		return err
 	}
