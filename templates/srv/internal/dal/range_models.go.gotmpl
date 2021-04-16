@@ -357,14 +357,9 @@ type {{$modelName}} struct {
 			}
 		{{- end}}
 		
-		rows, err := a.db.NamedQuery(sql{{if IsAdjustList $method}}{{$method}}{{else}}List{{end}}{{$modelName}} + orderQuery, mapQuery)
+		err := a.db.NamedSelect(&ms, sql{{if IsAdjustList $method}}{{$method}}{{else}}List{{end}}{{$modelName}} + orderQuery, mapQuery)
 		if err != nil {
 			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
-		}
-		for rows.Next() {
-			var m {{$modelName}}
-			err = rows.StructScan(&m)
-			ms = append(ms, m)
 		}
 
 		{{- if or (and (not (IsAdjustList $method)) $model.HaveJSON) (and (IsAdjustList $method) (index $model.MethodsProps $i).HaveJSON)}}
