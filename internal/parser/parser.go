@@ -1441,7 +1441,7 @@ func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, m
 	result := *model
 	for i, method := range result.Methods {
 		if isAdjustEdit(method) {
-			var sqlEdit, sqlAddExecParams, editableFields []string
+			var sqlEdit, editableFields []string
 			count := 1
 			if !model.Shared {
 				count++
@@ -1467,28 +1467,18 @@ func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, m
 
 				fields[j] = strings.Title(fields[j])
 
-				for column, options := range result.Columns {
+				for _, options := range result.Columns {
 					if fields[j] == options.TitleName {
+						sqlName := NameSQL(options.TitleName)
 						if !options.IsStruct {
-							sqlName := NameSQL(options.TitleName)
-							titleName := options.TitleName
 							if options.IsArray || options.IsCustom {
 								sqlName += "_json"
-								titleName += "JSON"
-							} else {
-								titleName = "m." + titleName
 							}
-							if IsTypesGoType(options.GoType) && !options.IsArray {
-								titleName += ".Value()"
-							}
-							sqlAddExecParams = append(sqlAddExecParams, titleName)
-							count++
-							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", sqlName, count))
+							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=:%s", sqlName, sqlName))
 						} else {
 							if !options.IsArray {
-								sqlAddExecParams = append(sqlAddExecParams, column+"ID")
-								count++
-								sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count))
+								sqlName+="_id"
+								sqlEdit = append(sqlEdit, fmt.Sprintf("%s=:%s", sqlName, sqlName))
 							}
 						}
 					}
@@ -1496,7 +1486,6 @@ func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, m
 			}
 			result.Methods[i] = getNameForAdjustMethods(method)
 			result.MethodsProps[i].CustomSQLEditStr = strings.Join(sqlEdit, ",\n\t\t")
-			result.MethodsProps[i].CustomSQLExecParams = strings.Join(sqlAddExecParams, ",\n\t\t")
 			result.MethodsProps[i].EditableFields = editableFields
 		}
 	}

@@ -181,7 +181,7 @@ type {{$modelName}} struct {
 						}
 					{{- end}}
 					{{- if or (and $options.IsArray (not $options.IsStruct)) $options.IsCustom}}
-						{{$options.TitleName}}JSON, _ := json.Marshal(m.{{$options.TitleName}})
+						{{$column}}JSON, _ := json.Marshal(m.{{$options.TitleName}})
 					{{- end}}
 				{{- end}}
 			{{- end}}
@@ -192,7 +192,31 @@ type {{$modelName}} struct {
 				m.ModifiedBy = profileID
 			{{- end}}
 
-			res, err := a.db.Exec(sql{{$method}}{{$modelName}}, id{{if not $model.Shared}}, isolatedEntityID{{end}}, {{(index $model.MethodsProps $i).CustomSQLExecParams}})
+			res, err := a.db.NamedExec(sql{{$method}}{{$modelName}}, arg{{$method}}{{$modelName}}{
+				ID: id,
+				{{- range $column, $options := $model.Columns}}
+					{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $column}}
+						{{- if $options.IsStruct}}
+							{{- if not $options.IsArray}}
+								{{$options.TitleName}}ID: {{$column}}ID,
+							{{- end}}
+						{{- else}}
+							{{- if $options.IsCustom}}
+								{{$options.TitleName}}JSON: {{$column}}JSON,
+							{{- else}}
+								{{- if not $options.IsArray}}
+									{{$options.TitleName}}: m.{{$options.TitleName}},
+								{{- else}}
+									{{$options.TitleName}}JSON: {{$column}}JSON,
+								{{- end}}
+							{{- end}}
+						{{- end}}
+					{{- end}}
+				{{- end}}
+				{{- if not $model.Shared}}
+					IsolatedEntityID: isolatedEntityID,
+				{{- end}}
+			})
 			if err != nil {
 				return {{if $model.ReturnWhenEdit}}nil, {{end}}err
 			}

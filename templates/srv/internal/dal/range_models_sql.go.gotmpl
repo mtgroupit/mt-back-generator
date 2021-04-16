@@ -165,9 +165,9 @@ const (
 	SET
 		{{(index $model.MethodsProps $i).CustomSQLEditStr}}
 	WHERE
-		id=$1 AND
+		id=:id AND
 		{{- if not $model.Shared}}
-		isolated_entity_id=$2 AND
+		isolated_entity_id=:isolated_entity_id AND
 		{{- end}}
 		NOT deleted
 	`
@@ -352,4 +352,33 @@ type (
 			IsolatedEntityID string `db:"isolated_entity_id"`
 		{{- end}}
 	}
+	{{- range $i, $method := $model.Methods}}
+		{{- if IsAdjustEdit $method}}
+			arg{{$method}}{{$modelName}} struct {
+				ID {{if $model.IDIsUUID}}string{{else}}int64{{end}} `db:"id"`
+				{{- range $column, $options := $model.Columns}}
+					{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $column}}
+						{{- if $options.IsStruct}}
+							{{- if not $options.IsArray}}
+								{{$options.TitleName}}ID interface{} `db:"{{NameSQL $column}}_id"`
+							{{- end}}
+						{{- else}}
+							{{- if $options.IsCustom}}
+								{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
+							{{- else}}
+								{{- if not $options.IsArray}}
+									{{$options.TitleName}} {{$options.GoType}} `db:"{{NameSQL $column}}"`
+								{{- else}}
+									{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
+								{{- end}}
+							{{- end}}
+						{{- end}}
+					{{- end}}
+				{{- end}}
+				{{- if not $model.Shared}}
+					IsolatedEntityID string `db:"isolated_entity_id"`
+				{{- end}}
+			}
+		{{- end}}
+	{{- end}}
 )

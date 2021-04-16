@@ -73,7 +73,6 @@ type MethodProps struct {
 	AdjustGetJSONColumns    []string
 	AdjustListSQLWhereProps string
 	CustomSQLEditStr        string
-	CustomSQLExecParams     string
 	FilteredFields          []string
 	EditableFields          []string
 	NestedObjs              []NestedObjProps
