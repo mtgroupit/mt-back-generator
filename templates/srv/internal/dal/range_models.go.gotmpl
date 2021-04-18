@@ -83,7 +83,7 @@ type {{$modelName}} struct {
 		{{- if IsAdjustGet $method}}
 			var m {{$modelName}}
 			if err := a.db.NamedGet(&m, sql{{$method}}{{$modelName}},  argGet{{$modelName}}{
-				ID: id,
+				ID: newNull{{if $model.IDIsUUID}}UUID{{else}}Int64ID{{end}}(id),
 				{{- if not $model.Shared}}
 					IsolatedEntityID: isolatedEntityID,
 				{{- end}} 
@@ -553,12 +553,22 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 		{{- if eq $modelName2 $options.GoType}}
 			{{- if and $options.IsArray $options.IsStruct}}
 				slice{{$options.TitleName}} := []{{$modelName}}{{$options.GoType}}{}
-				if err = a.db.Select(&slice{{$options.TitleName}}, sqlGet{{Title $column}}IDsFor{{$modelName}}LazyLoading, m.ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil {
+				if err = a.db.NamedSelect(&slice{{$options.TitleName}}, sqlGet{{Title $column}}IDsFor{{$modelName}}LazyLoading, argGet{{$modelName}}{
+					ID: newNull{{if $model.IDIsUUID}}UUID{{else}}Int64ID{{end}}(m.ID{{if $model.IDIsUUID}}.String(){{end}}),
+					{{- if not $model.Shared}}
+						IsolatedEntityID: isolatedEntityID,
+					{{- end}}
+				}); err != nil {
 					return
 				}
 				for _, cd := range slice{{$options.TitleName}} {
 					var {{$column}} {{$options.GoType}}
-					if err = a.db.Get(&{{$column}}, sqlGet{{Title $column}}For{{$modelName}}LazyLoading, cd.{{$options.GoType}}ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil {
+					if err = a.db.NamedGet(&{{$column}}, sqlGet{{Title $column}}For{{$modelName}}LazyLoading, argGet{{$modelName2}}{
+						ID: newNull{{if $model2.IDIsUUID}}UUID{{else}}Int64ID{{end}}(cd.{{$options.GoType}}ID{{if $model2.IDIsUUID}}.String(){{end}}),
+						{{- if not $model2.Shared}}
+							IsolatedEntityID: isolatedEntityID,
+						{{- end}}
+					}); err != nil {
 						return
 					}
 					{{- range $column2, $options2 := $model2.Columns}}
@@ -578,7 +588,12 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 					m.{{$options.TitleName}} = append(m.{{$options.TitleName}}, {{$column}})
 				}
 			{{- else}}
-				if err = a.db.Get(&m.{{$options.TitleName}}, sqlGet{{Title $column}}For{{$modelName}}LazyLoading,  m.{{$options.TitleName}}ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil && err != sql.ErrNoRows {
+				if err = a.db.NamedGet(&m.{{$options.TitleName}}, sqlGet{{Title $column}}For{{$modelName}}LazyLoading,  argGet{{$modelName2}}{
+					ID: m.{{$options.TitleName}}ID,
+					{{- if not $model2.Shared}}
+						IsolatedEntityID: isolatedEntityID,
+					{{- end}} 
+				}); err != nil && err != sql.ErrNoRows {
 					return
 				}
 				{{- range $column2, $options2 := $model2.Columns}}
@@ -667,7 +682,7 @@ func (a *Repo) {{$modelName}}AccessManager(am *app.AccessManager) error {
 func (a *Repo) get{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{if not $model.Shared}}, isolatedEntityID string{{end}}) (*app.{{$modelName}}, error) { 
 	var m {{$modelName}}
 	if err := a.db.NamedGet(&m, sqlGet{{$modelName}}, argGet{{$modelName}}{
-		ID: id,
+		ID: newNull{{if $model.IDIsUUID}}UUID{{else}}Int64ID{{end}}(id),
 		{{- if not $model.Shared}}
 			IsolatedEntityID: isolatedEntityID,
 		{{- end}} 
@@ -755,7 +770,7 @@ func (a *Repo) add{{$modelName}}(profileID string, {{if not $model.Shared}}isola
 			{{- if eq $modelName2 $options.GoType}}
 				{{- if and $options.IsArray $options.IsStruct}}
 					for _, m := range m.{{$options.TitleName}} {
-						if _, err := a.db.Exec(sqlAddTo{{Title $column}}In{{$modelName}}, argAddTo{{Title $column}}In{{$modelName}}{
+						if _, err := a.db.NamedExec(sqlAddTo{{Title $column}}In{{$modelName}}, argAddTo{{Title $column}}In{{$modelName}}{
 							{{$modelName}}ID: {{$modelName}}ID,
 							{{$options.TitleName}}ID: m.ID,
 							{{- if not $model.Shared}}

@@ -174,3 +174,19 @@ func areEqualJSON(s1, s2 string) (bool, error) {
 
 	return reflect.DeepEqual(o1, o2), nil
 }
+
+func newNullUUID(s string) (nullUUID sql.NullString) {
+	if _, err := uuid.Parse(s); err != nil {
+		return
+	}
+	nullUUID.Scan(s)
+	return
+}
+
+func newNullInt64ID(i int64) (nullInt64ID sql.NullInt64) {
+	if i <= 0 {
+		return
+	}
+	nullInt64ID.Scan(i)
+	return
+}
