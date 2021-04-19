@@ -647,7 +647,13 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 			itemsID = append(itemsID, id)
 		}
 		for _, itemID := range itemsID {
-			if _, err := a.db.Exec(sqlAddTo{{Title $column}}In{{$modelName}}, id, itemID{{if not $model.Shared}}, isolatedEntityID{{end}}); err != nil {
+			if _, err := a.db.NamedExec(sqlAddTo{{Title $column}}In{{$modelName}}, arg{{Title $column}}In{{$modelName}}{
+				{{$modelName}}ID: id,
+				{{$options.TitleName}}ID: itemID,
+				{{- if not $model.Shared}}
+					IsolatedEntityID: isolatedEntityID,
+				{{- end}}
+			}); err != nil {
 				if strings.Contains(err.Error(), "violates foreign key constraint") {
 					switch {
 					case strings.Contains(err.Error(), "{{NameSQL $modelName}}_id_fkey"):
@@ -660,8 +666,19 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 			}
 		}
 	{{- if or $model.HaveModifiedAt $model.HaveModifiedBy}}
-		if _, err := a.db.Exec(sqlSetModifiedParams{{$modelName}}, id{{if not $model.Shared}}, isolatedEntityID{{end}}{{if $model.HaveModifiedAt}}, time.Now(){{end}}{{if $model.HaveModifiedBy}}, profileID{{end}}); err != nil {
-			return {{if $model.ReturnWhenEdit}}nil, {{end}}err
+		if _, err := a.db.NamedExec(sqlSetModifiedParams{{$modelName}}, argSetModifiedParams{{$modelName}}{
+			ID: id,
+			{{- if $model.HaveModifiedAt}}
+				ModifiedAt: time.Now(),
+			{{- end}}
+			{{- if $model.HaveModifiedBy}}
+				ModifiedBy: profileID,
+			{{- end}}
+			{{- if not $model.Shared}}
+				IsolatedEntityID: isolatedEntityID,
+			{{- end}}
+		}); err != nil {
+			return err
 		}
 	{{- end}}
 		return nil
@@ -669,7 +686,13 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 
 	func (a *Repo) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error {
 		for _, item := range items {
-			res, err := a.db.Exec(sqlDeleteFrom{{Title $column}}In{{$modelName}}, id, item{{if not $model.Shared}}, isolatedEntityID{{end}})
+			res, err := a.db.NamedExec(sqlDeleteFrom{{Title $column}}In{{$modelName}}, arg{{Title $column}}In{{$modelName}}{
+				{{$modelName}}ID: id,
+				{{$options.TitleName}}ID: item,
+				{{- if not $model.Shared}}
+					IsolatedEntityID: isolatedEntityID,
+				{{- end}}
+			})
 			if err != nil {
 				return err
 			}
@@ -678,7 +701,18 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 			}
 		}
 	{{- if or $model.HaveModifiedAt $model.HaveModifiedBy}}
-		if _, err := a.db.Exec(sqlSetModifiedParams{{$modelName}}, id{{if not $model.Shared}}, isolatedEntityID{{end}}{{if $model.HaveModifiedAt}}, time.Now(){{end}}{{if $model.HaveModifiedBy}}, profileID{{end}}); err != nil {
+		if _, err := a.db.NamedExec(sqlSetModifiedParams{{$modelName}}, argSetModifiedParams{{$modelName}}{
+			ID: id,
+			{{- if $model.HaveModifiedAt}}
+				ModifiedAt: time.Now(),
+			{{- end}}
+			{{- if $model.HaveModifiedBy}}
+				ModifiedBy: profileID,
+			{{- end}}
+			{{- if not $model.Shared}}
+				IsolatedEntityID: isolatedEntityID,
+			{{- end}}
+		}); err != nil {
 			return err
 		}
 	{{- end}}
@@ -785,7 +819,7 @@ func (a *Repo) add{{$modelName}}(profileID string, {{if not $model.Shared}}isola
 			{{- if eq $modelName2 $options.GoType}}
 				{{- if and $options.IsArray $options.IsStruct}}
 					for _, m := range m.{{$options.TitleName}} {
-						if _, err := a.db.NamedExec(sqlAddTo{{Title $column}}In{{$modelName}}, argAddTo{{Title $column}}In{{$modelName}}{
+						if _, err := a.db.NamedExec(sqlAddTo{{Title $column}}In{{$modelName}}, arg{{Title $column}}In{{$modelName}}{
 							{{$modelName}}ID: {{$modelName}}ID,
 							{{$options.TitleName}}ID: m.ID,
 							{{- if not $model.Shared}}

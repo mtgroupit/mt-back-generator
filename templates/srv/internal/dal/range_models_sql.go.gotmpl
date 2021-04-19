@@ -139,19 +139,16 @@ const (
 
 
 	{{- if or $model.HaveModifiedAt $model.HaveModifiedBy}}
-		{{- $countParams := 2}}
-		{{- if not $model.Shared}}
-			{{- $countParams = 3}}
-		{{- end}}
 		sqlSetModifiedParams{{$modelName}} = `
 	UPDATE
 		{{Pluralize (NameSQL $modelName)}}
 	SET
-		{{if $model.HaveModifiedAt}}modified_at=${{$countParams}}{{$countParams = 4}}{{end}}{{if $model.HaveModifiedBy}}modified_by=${{$countParams}}{{end}}
+		{{if $model.HaveModifiedAt}}modified_at=:modified_at{{if $model.HaveModifiedBy}},{{end}}{{end}}
+		{{if $model.HaveModifiedBy}}modified_by=:modified_by{{end}}
 	WHERE
-		id=$1
+		id=:id
 		{{- if not $model.Shared}} AND
-		isolated_entity_id=$2
+		isolated_entity_id=:isolated_entity_id
 		{{- end}}
 	`
 	{{- end}}
@@ -251,10 +248,10 @@ const (
 	DELETE FROM
 		{{NameSQL $modelName}}_{{NameSQL $column}}
 	WHERE
-		{{NameSQL $modelName}}_id=$1 AND
-		{{NameSQL $column}}_id=$2
+		{{NameSQL $modelName}}_id=:{{NameSQL $modelName}}_id AND
+		{{NameSQL $column}}_id=:{{NameSQL $column}}_id
 		{{- if not $model.Shared}} AND
-		isolated_entity_id=$2
+		isolated_entity_id=:isolated_entity_id
 		{{- end}}
 	`
 		{{- end}}
@@ -309,7 +306,7 @@ type (
 		{{- range $column, $options := $model.Columns}}
 			{{- if eq $modelName2 $options.GoType}}
 				{{- if and $options.IsArray $options.IsStruct}}
-						argAddTo{{Title $column}}In{{$modelName}} struct {
+						arg{{Title $column}}In{{$modelName}} struct {
 							{{$modelName}}ID interface{} `db:"{{NameSQL $modelName}}_id"`
 							{{$options.TitleName}}ID interface{} `db:"{{NameSQL $column}}_id"`
 							{{- if not $model.Shared}}
@@ -388,4 +385,19 @@ type (
 			IsolatedEntityID string `db:"isolated_entity_id"`
 		{{- end}}
 	}
+
+	{{- if or $model.HaveModifiedAt $model.HaveModifiedBy}}
+		argSetModifiedParams{{$modelName}} struct {
+			ID {{if $model.IDIsUUID}}string{{else}}int64{{end}} `db:"id"`
+			{{- if $model.HaveModifiedAt}}
+				ModifiedAt time.Time `db:"modified_at"`
+			{{- end}}
+			{{- if $model.HaveModifiedBy}}
+				ModifiedBy string `db:"modified_by"`
+			{{- end}}
+			{{- if not $model.Shared}}
+				IsolatedEntityID string `db:"isolated_entity_id"`
+			{{- end}}
+		}
+	{{- end}}
 )
