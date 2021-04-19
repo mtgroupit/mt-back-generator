@@ -207,8 +207,8 @@ const (
 	FROM
 		{{Pluralize (NameSQL $nestedObj.Type)}}
 	WHERE
-		id=$1{{if not $model2.Shared}} AND
-		isolated_entity_id=$2{{end}}
+		id=:id{{if not $model2.Shared}} AND
+		isolated_entity_id=:isolated_entity_id{{end}}
 	`
 				{{- end}}
 			{{end}}

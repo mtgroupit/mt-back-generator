@@ -508,12 +508,22 @@ type {{$modelName}} struct {
 			{{- if  $nestedObj.IsArray}}
 				{{- $sliceName := (print "slice" $nestedObj.Name)}}
 				{{$sliceName}} := []{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}{{$nestedObj.Type}}{}
-				if err = a.db.Select(&{{$sliceName}}, sqlGet{{$nestedObj.Name}}IDsFor{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}LazyLoading, m.ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil {
+				if err = a.db.NamedSelect(&{{$sliceName}}, sqlGet{{$nestedObj.Name}}IDsFor{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}}LazyLoading, argGet{{$modelName}}{
+					ID: newNull{{if $model.IDIsUUID}}UUID{{else}}Int64ID{{end}}(m.ID{{if $model.IDIsUUID}}.String(){{end}}),
+					{{- if not $model.Shared}}
+						IsolatedEntityID: isolatedEntityID,
+					{{- end}}
+				}); err != nil {
 					return
 				}
 				for _, cd := range {{$sliceName}} {
 					var elem {{$nestedObj.Type}}
-					if err = a.db.Get(&elem, sqlGet{{$nestedObj.Name}}For{{$method}}, cd.{{$nestedObj.Type}}ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil {
+					if err = a.db.NamedGet(&elem, sqlGet{{$nestedObj.Name}}For{{$method}}, argGet{{$nestedObj.Type}}{
+						ID: newNull{{if $model2.IDIsUUID}}UUID{{else}}Int64ID{{end}}(cd.{{$nestedObj.Type}}ID{{if $model2.IDIsUUID}}.String(){{end}}),
+						{{- if not $model2.Shared}}
+							IsolatedEntityID: isolatedEntityID,
+						{{- end}}
+					}); err != nil {
 						return
 					}
 					{{- if $nestedObj.NeedLazyLoading}}
@@ -526,7 +536,12 @@ type {{$modelName}} struct {
 					m.{{$nestedObj.Name}} = append(m.{{$nestedObj.Name}}, elem)
 				}
 			{{- else}}
-				if err = a.db.Get(&m.{{$nestedObj.Name}}, sqlGet{{$nestedObj.Name}}For{{$method}}, m.{{$nestedObj.Name}}ID{{if not $model2.Shared}}, isolatedEntityID{{end}}); err != nil && err != sql.ErrNoRows {
+				if err = a.db.NamedGet(&m.{{$nestedObj.Name}}, sqlGet{{$nestedObj.Name}}For{{$method}}, argGet{{$nestedObj.Type}}{
+						ID: m.{{$nestedObj.Name}}ID,
+						{{- if not $model2.Shared}}
+							IsolatedEntityID: isolatedEntityID,
+						{{- end}}
+				}); err != nil && err != sql.ErrNoRows {
 					return
 				}
 				{{- if $nestedObj.NeedLazyLoading}}

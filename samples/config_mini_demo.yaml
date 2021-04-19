@@ -92,7 +92,7 @@ models:
       - delete
       - edit(headOfficeLocation)
       - list
-      - list(name, headOfficeLocation*(id, name))
+      - list(name, headOfficeLocation*(id, name), locations(id, name))
 
   ourCompany:
     description: "ourCompany object"
