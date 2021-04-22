@@ -95,6 +95,20 @@ var goTmplFuncs = template.FuncMap{
 		}
 		return false
 	},
+	"NeedJSONInsideColumns": func(columns map[string]models.Options, models map[string]models.Model) bool {
+		for _, options := range columns {
+			for modelName2, model2 := range models {
+				if options.GoType == modelName2 {
+					for _, options2 := range model2.Columns {
+						if (!options2.IsStruct  && options2.IsArray) || options2.IsCustom {
+							return true
+						}
+					}
+				}
+			}
+		}
+		return false
+	},
 	"IsGet": func(method string) bool {
 		method = strings.ToLower(method)
 		if method == "get" || method == "getmy" || isAdjustGet(method) {

@@ -22,7 +22,7 @@ import (
 {{- if HaveListWithWarn $model}}
 	"fmt"
 {{- end}}
-{{- if or $model.HaveJSON (HaveColumnWithModelThatIsStructAndIsArray $model.Columns $.Models false true)}}
+{{- if or $model.HaveJSON (HaveColumnWithModelThatIsStructAndIsArray $model.Columns $.Models false true) (NeedJSONInsideColumns $model.Columns $.Models)}}
 	"encoding/json"
 {{- end}}
 
