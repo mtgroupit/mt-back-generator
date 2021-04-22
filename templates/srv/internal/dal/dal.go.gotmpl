@@ -135,6 +135,8 @@ func toString(value interface{}) string {
 		return "false"
 	case time.Time:
 		return value.(time.Time).String()
+	case *time.Time:
+		return value.(*time.Time).String()
 	}
 	return ""
 }
