@@ -38,6 +38,7 @@ type Repo struct {
 {{- if .HaveCustomMethod}}
 	type CustomsRepo struct {
 		db *DB
+		repo *Repo
 	}
 {{- end}}
 
@@ -88,10 +89,12 @@ func New(ctx context.Context, dbCfg pqx.Config, migrationDir string{{if .Debug}}
 	if err != nil {
 		return nil, {{if .HaveCustomMethod}}nil, {{end}}err
 	}
-	return &Repo{
+	repo := &Repo{
 		db: db,
-	}{{if .HaveCustomMethod}}, &CustomsRepo{
+	}
+	return repo{{if .HaveCustomMethod}}, &CustomsRepo{
 		db: db,
+		repo: repo,
 	}{{end}}, nil
 }
 
