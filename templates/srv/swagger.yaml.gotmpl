@@ -296,6 +296,9 @@ definitions:
           type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}}
         {{- if $options.Format}}
           format: {{$options.Format}}
+          {{- if (IsTimeFormat $options.Format)}}
+          x-nullable: true
+          {{- end}}
         {{- end}}
         {{- if .Length}}
           maxLength: {{.Length}}
@@ -311,6 +314,9 @@ definitions:
         type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}}
         {{- if $options.Format}}
         format: {{$options.Format}}
+        {{- if (IsTimeFormat $options.Format)}}
+        x-nullable: true
+        {{- end}}
         {{- end}}
         {{- if .Length}}
         maxLength: {{.Length}}
@@ -359,6 +365,9 @@ definitions:
           type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}}
         {{- if $options.Format}}
           format: {{$options.Format}}
+          {{- if (IsTimeFormat $options.Format)}}
+          x-nullable: true
+          {{- end}}
         {{- end}}
         {{- if .Length}}
           maxLength: {{.Length}}
@@ -373,6 +382,9 @@ definitions:
         type: {{if eq $options.Type "uuid"}}string{{else}}{{$options.Type}}{{end}}
         {{- if $options.Format}}
         format: {{$options.Format}}
+        {{- if (IsTimeFormat $options.Format)}}
+        x-nullable: true
+        {{- end}}
         {{- end}}
         {{- if .Length}}
         maxLength: {{.Length}}
@@ -413,6 +425,9 @@ definitions:
           type: {{$options.Type}}
         {{- if $options.Format}}
           format: {{$options.Format}}
+          {{- if (IsTimeFormat $options.Format)}}
+          x-nullable: true
+          {{- end}}
         {{- end}}
         {{- if .Length}}
           maxLength: {{.Length}}
@@ -428,6 +443,9 @@ definitions:
         type: {{$options.Type}}
         {{- if $options.Format}}
         format: {{$options.Format}}
+        {{- if (IsTimeFormat $options.Format)}}
+        x-nullable: true
+        {{- end}}
         {{- end}}
         {{- if .Length}}
         maxLength: {{.Length}}

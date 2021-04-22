@@ -54,7 +54,6 @@ models:
     methods:
       - get
       - getMy
-      - get(name, department)[info]
       - get(id, name, email, defaultPhone, phones)[contact]
       - getMy(links, contract)
       - addMy

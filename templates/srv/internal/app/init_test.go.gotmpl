@@ -73,11 +73,11 @@ var (
 )
 
 {{- if .HaveTime}}
-	func mustParseTime(t string) time.Time {
+	func mustParseTime(t string) *time.Time {
 		date, err := time.Parse(time.RFC3339, t)
 		if err != nil {
 			date, _ = time.Parse(strfmt.RFC3339FullDate, t)
 		}
-		return date
+		return &date
 	}
 {{- end}}

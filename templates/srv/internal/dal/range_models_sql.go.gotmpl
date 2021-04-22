@@ -379,7 +379,7 @@ type (
 	{{- end}}
 	argDelete{{$modelName}} struct {
 		ID {{if $model.IDIsUUID}}string{{else}}int64{{end}} `db:"id"`
-		DeletedAt time.Time `db:"deleted_at"`
+		DeletedAt *time.Time `db:"deleted_at"`
 		DeletedBy string `db:"deleted_by"`
 		{{- if not $model.Shared}}
 			IsolatedEntityID string `db:"isolated_entity_id"`
@@ -390,7 +390,7 @@ type (
 		argSetModifiedParams{{$modelName}} struct {
 			ID {{if $model.IDIsUUID}}string{{else}}int64{{end}} `db:"id"`
 			{{- if $model.HaveModifiedAt}}
-				ModifiedAt time.Time `db:"modified_at"`
+				ModifiedAt *time.Time `db:"modified_at"`
 			{{- end}}
 			{{- if $model.HaveModifiedBy}}
 				ModifiedBy string `db:"modified_by"`

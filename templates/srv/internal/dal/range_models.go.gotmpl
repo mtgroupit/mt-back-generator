@@ -143,9 +143,10 @@ type {{$modelName}} struct {
 				return err
 			}
 		{{- end}}
+		t := time.Now()
 		res, err := a.db.NamedExec(sqlDelete{{$modelName}}, argDelete{{$modelName}}{
 			ID: id,
-			DeletedAt: time.Now(),
+			DeletedAt: &t,
 			DeletedBy: profileID,
 			{{- if not $model.Shared}}
 				IsolatedEntityID: isolatedEntityID,
@@ -193,7 +194,8 @@ type {{$modelName}} struct {
 				{{- end}}
 			{{- end}}
 			{{- if $model.HaveModifiedAt}}
-				m.ModifiedAt = time.Now()
+				t := time.Now()
+				m.ModifiedAt = &t
 			{{- end}}
 			{{- if $model.HaveModifiedBy}}
 				m.ModifiedBy = profileID
@@ -666,10 +668,13 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 			}
 		}
 	{{- if or $model.HaveModifiedAt $model.HaveModifiedBy}}
+		{{- if $model.HaveModifiedAt}}
+			t := time.Now()
+		{{- end}}
 		if _, err := a.db.NamedExec(sqlSetModifiedParams{{$modelName}}, argSetModifiedParams{{$modelName}}{
 			ID: id,
 			{{- if $model.HaveModifiedAt}}
-				ModifiedAt: time.Now(),
+				ModifiedAt: &t,
 			{{- end}}
 			{{- if $model.HaveModifiedBy}}
 				ModifiedBy: profileID,
@@ -701,10 +706,13 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 			}
 		}
 	{{- if or $model.HaveModifiedAt $model.HaveModifiedBy}}
+		{{- if $model.HaveModifiedAt}}
+			t := time.Now()
+		{{- end}}
 		if _, err := a.db.NamedExec(sqlSetModifiedParams{{$modelName}}, argSetModifiedParams{{$modelName}}{
 			ID: id,
 			{{- if $model.HaveModifiedAt}}
-				ModifiedAt: time.Now(),
+				ModifiedAt: &t,
 			{{- end}}
 			{{- if $model.HaveModifiedBy}}
 				ModifiedBy: profileID,
@@ -763,7 +771,8 @@ func (a *Repo) add{{$modelName}}(profileID string, {{if not $model.Shared}}isola
 		var {{$modelName}}ID int64
 	{{- end}}
 	{{- if $model.HaveCreatedAt}}
-		m.CreatedAt = time.Now()
+		t := time.Now()
+		m.CreatedAt = &t
 	{{- end}}
 	{{- if $model.HaveCreatedBy}}
 		m.CreatedBy = profileID
@@ -886,7 +895,8 @@ func (a *Repo) edit{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{
 		{{- end}}
 	{{- end}}
 	{{- if $model.HaveModifiedAt}}
-		m.ModifiedAt = time.Now()
+		t := time.Now()
+		m.ModifiedAt = &t
 	{{- end}}
 	{{- if $model.HaveModifiedBy}}
 		m.ModifiedBy = profileID
@@ -973,7 +983,9 @@ func (m *{{$modelName}}) Filter(filter *app.Filter) (ok, filterIsValid bool) {
 			{{- if $options.IsArray}}
 			for _, elem := range m.{{$options.TitleName}} {
 			{{- end}}
-				value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{if eq $options.GoType "types.Decimal"}}Decimal.String(){{else}}{{if (IsTimeFormat $options.Format)}}Time{{else}}{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}}{{end}}{{end}})
+				{{- if (IsTimeFormat $options.Format)}}
+				value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}{{end}}
+				{{- else}}value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{if eq $options.GoType "types.Decimal"}}Decimal.String(){{else}}{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}}{{end}}{{end}})
 				equal := {{if or (ne $options.Type "string") $options.StrictFilter}}value == filter.Value{{else}}contains(value, filter.Value){{end}}
 				if (equal && filter.Include) || (!equal && !filter.Include) {
 					ok, filterIsValid = true, true
