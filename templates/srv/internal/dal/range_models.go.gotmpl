@@ -244,7 +244,7 @@ type {{$modelName}} struct {
 	}
 	{{- end}}
 	{{- if IsList $method}}
-	func (a *Repo) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*app.Filter, logicFilter bool, sortBy, orderBy string) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
+	func (a *Repo) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}params *app.ListParams) ([]*app.{{$modelName}}, {{if $model.DetailedPagination}} int,{{end}}[]string, error) { 
 		ms := []{{$modelName}}{}
 		warnings := []string{}
 
@@ -252,7 +252,7 @@ type {{$modelName}} struct {
 		{{- if $haveNestedSorts}}
 			var nestedSort bool
 		{{- end}}
-		switch sortBy {
+		switch params.SortBy {
 			{{- range $column, $options := $model.Columns }}
 				{{- if and $options.SortOn (not $options.IsStruct) }}
 					case "{{$column}}":
@@ -265,12 +265,12 @@ type {{$modelName}} struct {
 					{{- if $options.SortDefault }}
 						{{/* {{- if $haveNestedSorts }} */}}
 							{{- $completeIfStmt = true }}
-							if sortBy == "" { 
+							if params.SortBy == "" { 
 						{{/* {{- end}} */}}
 								orderQuery = "ORDER BY {{NameSQL $column}}"
 						{{- if $options.SortOrderDefault}}
-								if orderBy == "" {
-									orderBy = "{{$options.SortOrderDefault}}"
+								if params.OrderBy == "" {
+									params.OrderBy = "{{$options.SortOrderDefault}}"
 								}
 						{{- end }}
 					{{- end }}
@@ -288,7 +288,7 @@ type {{$modelName}} struct {
 		}
 
 		if orderQuery != "" {
-			switch orderBy {
+			switch params.OrderBy {
 			case "ASC", "":
 				orderQuery += " ASC"
 			case "DESC":
@@ -322,8 +322,8 @@ type {{$modelName}} struct {
 		{{- end}}
 
 		{{- if or (index $model.MethodsProps $i).FilteredFields (not (IsAdjustList $method))}}
-			if logicFilter {
-				for _, filter := range filters {
+			if params.LogicFilter {
+				for _, filter := range params.Filters {
 					switch filter.Key { 
 				{{- if IsAdjustList $method}}
 					{{- range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
@@ -353,7 +353,7 @@ type {{$modelName}} struct {
 					}
 				}
 			} else {
-				for _, filter := range filters {
+				for _, filter := range params.Filters {
 					customFilters = append(customFilters, filter)
 				}
 			}
@@ -391,7 +391,7 @@ type {{$modelName}} struct {
 							var validFilter bool
 							filterKey := customFilters[j].Key
 						{{- if (index $model.MethodsProps $i).NeedLazyLoading}}
-							if !logicFilter && !strings.Contains(customFilters[j].Key, ".") {
+							if !params.LogicFilter && !strings.Contains(customFilters[j].Key, ".") {
 								ok, validFilter = ms[i].Filter(customFilters[j])
 							} else {
 								ok, validFilter = ms[i].NestedFilter(customFilters[j])
@@ -405,7 +405,7 @@ type {{$modelName}} struct {
 								customFilters = append(customFilters[:j], customFilters[j+1:]...)
 								j--
 							}
-							if (!ok && logicFilter) || (ok && !logicFilter) {
+							if (!ok && params.LogicFilter) || (ok && !params.LogicFilter) {
 								break
 							}
 						}
@@ -426,7 +426,7 @@ type {{$modelName}} struct {
 						var validFilter bool
 						filterKey := customFilters[j].Key
 					{{- if $model.HaveLazyLoading}}
-						if !logicFilter && !strings.Contains(customFilters[j].Key, ".") {
+						if !params.LogicFilter && !strings.Contains(customFilters[j].Key, ".") {
 							ok, validFilter = ms[i].Filter(customFilters[j])
 						} else {
 							ok, validFilter = ms[i].NestedFilter(customFilters[j])
@@ -440,7 +440,7 @@ type {{$modelName}} struct {
 							customFilters = append(customFilters[:j], customFilters[j+1:]...)
 							j--
 						}
-						if (!ok && logicFilter) || (ok && !logicFilter) {
+						if (!ok && params.LogicFilter) || (ok && !params.LogicFilter) {
 							break
 						}
 					}
@@ -460,11 +460,11 @@ type {{$modelName}} struct {
 						customFilters = append(customFilters[:j], customFilters[j+1:]...)
 						j--
 					}
-					if (!ok && logicFilter) || (ok && !logicFilter) {
+					if (!ok && params.LogicFilter) || (ok && !params.LogicFilter) {
 						break
 					}
 				}
-				if ok {
+				if ok {   
 					result = append(result, ms[i])
 				}
 			}
@@ -472,13 +472,13 @@ type {{$modelName}} struct {
 		{{- if $haveNestedSorts}}
 			if nestedSort {
 				var orderByASC bool
-				switch orderBy {
+				switch params.OrderBy {
 				case "ASC", "":
 					orderByASC = true
 				case "DESC":
 					orderByASC = false
 				}
-				switch sortBy { 
+				switch params.SortBy { 
 			{{- range $column, $options := $model.Columns}}
 				{{- range $j, $sort := $options.SortBy}}
 				case "{{$column}}.{{$sort}}":
@@ -490,12 +490,12 @@ type {{$modelName}} struct {
 				{{- end}}
 			{{- end}}
 				default:
-					warnings = append(warnings, fmt.Sprintf("sorting by '%s' is not avaliable or '%s' is not a valid sort key", sortBy, sortBy))
+					warnings = append(warnings, fmt.Sprintf("sorting by '%s' is not avaliable or '%s' is not a valid sort key", params.SortBy, params.SortBy))
 				}
 			}
 		{{- end}}
 
-		start, end := pagination(int(offset), int(limit), len(result))
+		start, end := pagination(int(params.Offset), int(params.Limit), len(result))
 
 		return app{{$modelName}}s(result[start:end]),{{if $model.DetailedPagination}} len(result),{{end}} warnings, nil
 	}
