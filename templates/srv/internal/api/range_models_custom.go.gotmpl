@@ -8,7 +8,7 @@ import (
 )
 
 {{range $i, $method := $model.Methods}}{{if (IsCustomMethod $method)}}
-func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
+func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}Params{{if not (index $model.MethodsProps $i).NoSecure}}, profile interface{}{{end}}) middleware.Responder {
 	return {{LowerTitle $modelName}}.New{{$method}}{{$model.TitleName}}OK()
 }
 {{end}}{{end}}

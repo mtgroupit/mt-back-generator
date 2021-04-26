@@ -186,7 +186,16 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		model.Tags = append([]string{strings.Title(name)}, model.Tags...)
 
 		var props []models.MethodProps
-		for _, method := range model.Methods {
+		for i, method := range model.Methods {
+			noSecure := false
+			if strings.Contains(method, "{noSecure}") {
+				if !model.Shared {
+					return nil, errors.Errorf(`Model: "%s". Methods without authorization are allowed only for shared models`, name)
+				}
+				method = strings.Replace(method, "{noSecure}", "", -1)
+				model.Methods[i] = method
+				noSecure = true
+			}
 			if isCustomMethod(method) {
 				cfg.HaveCustomMethod = true
 				model.HaveCustomMethod = true
@@ -200,6 +209,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			} else {
 				prop.HTTPMethod = "post"
 			}
+			prop.NoSecure = noSecure
 			props = append(props, prop)
 
 			if method == "list" || isAdjustList(method) {
@@ -598,6 +608,12 @@ func validateModels(cfg *models.Config) error {
 		}
 
 		for _, method := range model.Methods {
+			if strings.Contains(method, "{noSecure}") {
+				method = strings.Replace(method, "{noSecure}", "", -1)
+				if IsMyMethod(method) {
+					return errors.Errorf(`Model: "%s". "%s" Methods "My" must be with authorization`, name, method)
+				}
+			}
 			if isCustomMethod(method) {
 				switch {
 				case strings.HasPrefix(method, "list") && strings.Contains(method, "("):

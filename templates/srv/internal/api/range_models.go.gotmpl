@@ -33,12 +33,12 @@ import (
 
 {{- range $i, $method := $model.Methods}}
 {{- if not (IsCustomMethod $method)}}
-func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
+func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}Params{{if not (index $model.MethodsProps $i).NoSecure}}, profile interface{}{{end}}) middleware.Responder {
 	{{- if IsGet $method}}
-		{{- if or (IsMyMethod $method) (not $model.Shared)}}
+		{{- if and (or (IsMyMethod $method) (not $model.Shared)) (not (index $model.MethodsProps $i).NoSecure)}}
 			prof := profile.(*extauthapi.Profile)
 		{{- end}}
-		c, err := svc.app.{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}{{if IsMyMethod $method}}prof.ID.String(){{else}}params.Body.ID{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}prof.IsolatedEntityID.String(){{end}})
+		c, err := svc.app.{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}{{if IsMyMethod $method}}prof.ID.String(){{else}}params.Body.ID{{end}}{{end}}{{if and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}{{if not $model.BoundToIsolatedEntity}}, {{end}}prof.IsolatedEntityID.String(){{end}})
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -59,7 +59,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 	{{- end}}
 	{{- if IsAdd $method}}
 		prof := profile.(*extauthapi.Profile)
-		c, err := svc.app.{{$method}}{{$modelName}}(prof.ID.String(), {{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}app{{$modelName}}Add(params.Body))
+		c, err := svc.app.{{$method}}{{$modelName}}(prof.ID.String(), {{if and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}prof.IsolatedEntityID.String(), {{end}}app{{$modelName}}Add(params.Body))
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -82,7 +82,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 	{{- end}}
 	{{- if IsDelete $method}}
 		prof := profile.(*extauthapi.Profile)
-		err := svc.app.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}params.Body.ID, {{end}}prof.ID.String(){{if not $model.Shared}}, prof.IsolatedEntityID.String(){{end}})
+		err := svc.app.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}params.Body.ID, {{end}}prof.ID.String(){{if  and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}, prof.IsolatedEntityID.String(){{end}})
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -102,7 +102,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 		}
 	{{- end}}
 	{{- if IsEdit $method}}
-		{{- if or (IsMyMethod $method) $model.HaveModifiedBy (not $model.Shared)}}
+		{{- if and (or (IsMyMethod $method) $model.HaveModifiedBy (not $model.Shared)) (not (index $model.MethodsProps $i).NoSecure)}}
 			prof := profile.(*extauthapi.Profile)
 		{{- end}}
 		{{- if IsAdjustEdit $method}}
@@ -137,7 +137,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 				{{- end}}
 			{{- end}}
 		{{- end}}
-		{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}params.Body.ID, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}{{if IsAdjustEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
+		{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}params.Body.ID, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if  and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}prof.IsolatedEntityID.String(), {{end}}{{if IsAdjustEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -157,14 +157,14 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 		}
 	{{- end}}
 	{{- if  IsList $method}}
-		{{- if not $model.Shared}}
+		{{- if  and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}
 			prof := profile.(*extauthapi.Profile)
 		{{end}}
 		var offset int64 = 0
 		if params.Body.Offset != nil {
 			offset = *params.Body.Offset
 		}
-		c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}({{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}offset, params.Body.Limit, appFilters(params.Body.Filters), params.Body.LogicFilter, params.Body.SortBy, params.Body.OrderBy)
+		c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}({{if  and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}prof.IsolatedEntityID.String(), {{end}}offset, params.Body.Limit, appFilters(params.Body.Filters), params.Body.LogicFilter, params.Body.SortBy, params.Body.OrderBy)
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -187,7 +187,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 {{range $column, $options := $model.Columns}} {{if and $options.IsArray $options.IsStruct}}
 func (svc *service) Add{{Title $column}}{{$modelName}}(params {{LowerTitle $modelName}}.Add{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
 	{{if or $model.HaveModifiedBy (not $model.Shared)}}prof := profile.(*extauthapi.Profile)
-	{{end}}err := svc.app.Add{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}params.Body.ItemsID, app{{$options.GoType}}sAdd(params.Body.Items))
+	{{end}}err := svc.app.Add{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if (not $model.Shared)}}prof.IsolatedEntityID.String(), {{end}}params.Body.ItemsID, app{{$options.GoType}}sAdd(params.Body.Items))
 	switch {
 	default:
 		log.PrintErr("Add{{Title $column}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -214,8 +214,8 @@ func (svc *service) Add{{Title $column}}{{$modelName}}(params {{LowerTitle $mode
 }
 
 func (svc *service) Delete{{Title $column}}{{$modelName}}(params {{LowerTitle $modelName}}.Delete{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
-	{{if or $model.HaveModifiedBy (not $model.Shared)}}prof := profile.(*extauthapi.Profile)
-	{{end}}err := svc.app.Delete{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}params.Body.Items)
+	{{if and (or $model.HaveModifiedBy (not $model.Shared))}}prof := profile.(*extauthapi.Profile)
+	{{end}}err := svc.app.Delete{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if (not $model.Shared)}}prof.IsolatedEntityID.String(), {{end}}params.Body.Items)
 	if err != nil {
 		log.Err("Delete{{Title $column}}{{$modelName}} error", err)
 	} else {
