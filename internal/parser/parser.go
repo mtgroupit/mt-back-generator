@@ -439,9 +439,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				SQLSelect = append(SQLSelect, sqlName)
 				if !options.IsArray && !options.IsCustom {
 					if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
-						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", column, sqlName, column, "not_"+column, sqlName, "not_"+column))
 					} else {
-						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND (CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND\n\t\t(CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))", column, sqlName, column, "not_"+column, sqlName, "not_"+column))
 					}
 				}
 				if options.TitleName != "ID" {
@@ -454,7 +454,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				if !options.IsArray {
 					sqlName := NameSQL(options.TitleName) + "_id"
 					SQLSelect = append(SQLSelect, sqlName)
-					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", column, sqlName, column, "not_"+column, sqlName, "not_"+column))
 					sqlAdd = append(sqlAdd, sqlName)
 					sqlEdit = append(sqlEdit, fmt.Sprintf("%s=:%s", sqlName, sqlName))
 				}
@@ -1318,16 +1318,16 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 							SQLSelect = append(SQLSelect, sqlName)
 							if needFilter && !options.IsArray {
 								if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", column, sqlName, column, "not_"+column, sqlName, "not_"+column))
 								} else {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND (CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND\n\t\t(CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))", column, sqlName, column, "not_"+column, sqlName, "not_"+column))
 								}
 							}
 						} else {
 							if !options.IsArray {
 								SQLSelect = append(SQLSelect, NameSQL(options.TitleName)+"_id")
 								if needFilter {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", column, NameSQL(options.TitleName)+"_id", column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
 								}
 							} else {
 								structIsArr = true
