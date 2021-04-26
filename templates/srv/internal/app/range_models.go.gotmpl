@@ -41,8 +41,8 @@ type {{$modelName}} struct {
 		}
 	{{- end}}
 	{{- if IsList $method}}
-		func (a *app) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*Filter, logicFilter bool, sortBy, orderBy string) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error) {
-			return a.repo.{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}offset, limit, filters, logicFilter, sortBy, orderBy)
+		func (a *app) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}params *ListParams) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error) {
+			return a.repo.{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}params)
 		}
 	{{- end}}
 {{- end}}

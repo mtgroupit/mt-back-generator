@@ -8,10 +8,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fatih/camelcase"
 	"github.com/go-openapi/strfmt"
+	"github.com/jinzhu/inflection"
 	"github.com/mtgroupit/mt-back-generator/models"
 
-	"github.com/fatih/camelcase"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -77,6 +78,11 @@ func IsTimeFormat(format string) bool {
 	return false
 }
 
+// IsTypesGoType return true if go type is from types package
+func IsTypesGoType(goType string) bool {
+	return strings.HasPrefix(goType, TypesPrefix)
+}
+
 // ReadYAMLCfg create models.Config from configFile
 func ReadYAMLCfg(file string) (*models.Config, error) {
 	cfg := models.Config{}
@@ -115,7 +121,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				return nil, errors.Wrapf(err, `Custom type: "%s". Field: "%s"`, customTypeName, field)
 			}
 
-			if strings.HasPrefix(options.GoType, TypesPrefix) {
+			if IsTypesGoType(options.GoType) {
 				cfg.HaveTypesInCustomTypes = true
 			}
 			if options.Default != "" {
@@ -232,7 +238,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				return nil, errors.Wrapf(err, `Model: "%s". Column: "%s"`, name, column)
 			}
 
-			if strings.HasPrefix(options.GoType, TypesPrefix) {
+			if IsTypesGoType(options.GoType) {
 				cfg.HaveTypes = true
 				model.NeedTypes = true
 			}
@@ -419,9 +425,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		psql[indexLastNotArrOfStruct].Last = true
 		model.Psql = psql
 
-		var SQLSelect, sqlWhereParams, sqlAdd, sqlEdit, sqlAddExecParams, sqlEditExecParams, countFields []string
-		count := 1
-		countCreatedColumns := 0
+		var SQLSelect, sqlWhereParams, sqlAdd, sqlEdit []string
 		for column, options := range model.Columns {
 			if !options.IsStruct {
 				sqlName := NameSQL(options.TitleName)
@@ -432,72 +436,45 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				} else {
 					titleName = "m." + titleName
 				}
-				if strings.HasPrefix(options.GoType, TypesPrefix) && !options.IsArray {
-					titleName += ".Value()"
-				}
 				SQLSelect = append(SQLSelect, sqlName)
 				if !options.IsArray && !options.IsCustom {
+					sqlColumn := NameSQL(column)
 					if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
-						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 					} else {
-						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND (CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND\n\t\t(CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 					}
 				}
 				if options.TitleName != "ID" {
 					sqlAdd = append(sqlAdd, sqlName)
-					if sqlName == "created_by" {
-						sqlAddExecParams = append(sqlAddExecParams, "profileID")
-					} else {
-						sqlAddExecParams = append(sqlAddExecParams, titleName)
-					}
-					countFields = append(countFields, fmt.Sprintf("$%d", count))
-					count++
-					if isCreatedStandardColumn(column) {
-						countCreatedColumns++
-					} else {
-						if model.Shared {
-							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", sqlName, count-countCreatedColumns))
-						} else {
-							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", sqlName, (count-countCreatedColumns)+1))
-						}
-						sqlEditExecParams = append(sqlEditExecParams, titleName)
+					if !isCreatedStandardColumn(column) {
+						sqlEdit = append(sqlEdit, fmt.Sprintf("%s=:%s", sqlName, sqlName))
 					}
 				}
 			} else {
 				if !options.IsArray {
-					SQLSelect = append(SQLSelect, NameSQL(options.TitleName)+"_id")
-					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
-					sqlAdd = append(sqlAdd, NameSQL(options.TitleName)+"_id")
-					sqlAddExecParams = append(sqlAddExecParams, column+"ID")
-					sqlEditExecParams = append(sqlEditExecParams, column+"ID")
-					countFields = append(countFields, fmt.Sprintf("$%d", count))
-					count++
-					if model.Shared {
-						sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count-countCreatedColumns))
-					} else {
-						sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), (count-countCreatedColumns)+1))
-					}
+					sqlColumn := NameSQL(column)
+					sqlName := NameSQL(options.TitleName) + "_id"
+					SQLSelect = append(SQLSelect, sqlName)
+					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
+					sqlAdd = append(sqlAdd, sqlName)
+					sqlEdit = append(sqlEdit, fmt.Sprintf("%s=:%s", sqlName, sqlName))
 				}
 			}
 		}
-		model.SQLSelectStr = strings.Join(SQLSelect, ", ")
-		model.SQLWhereParams = strings.Join(sqlWhereParams, " AND ")
+		model.SQLSelectStr = strings.Join(SQLSelect, ",\n\t\t")
+		model.SQLWhereParams = strings.Join(sqlWhereParams, " AND\n\t\t")
 		if model.IDIsUUID {
 			sqlAdd = append(sqlAdd, "id")
-			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
 		}
 		if !model.HaveCreatedBy {
 			sqlAdd = append(sqlAdd, "created_by")
-			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
 		}
 		if !model.Shared {
 			sqlAdd = append(sqlAdd, "isolated_entity_id")
-			countFields = append(countFields, "$"+strconv.Itoa(len(countFields)+1))
 		}
-		model.SQLAddStr = fmt.Sprintf("(%s) VALUES (%s)", strings.Join(sqlAdd, ", "), strings.Join(countFields, ", "))
-		model.SQLEditStr = strings.Join(sqlEdit, ", ")
-		model.SQLAddExecParams = strings.Join(sqlAddExecParams, ", ")
-		model.SQLEditExecParams = strings.Join(sqlEditExecParams, ", ")
+		model.SQLAddStr = fmt.Sprintf("(\n\t\t%s\n\t) VALUES (\n\t\t:%s\n\t)", strings.Join(sqlAdd, ",\n\t\t"), strings.Join(sqlAdd, ",\n\t\t:"))
+		model.SQLEditStr = strings.Join(sqlEdit, ",\n\t\t")
 
 		cfg.Models[name] = model
 	}
@@ -563,6 +540,16 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	titleize(cfg)
 
 	return
+}
+
+// NameSQL converts name to "snake_case" format
+func NameSQL(name string) string {
+	return strings.ToLower(strings.Join(camelcase.Split(name), "_"))
+}
+
+// Pluralize - convert name to plural form
+func Pluralize(name string) string {
+	return inflection.Plural(name)
 }
 
 func validate(cfg *models.Config) error {
@@ -1047,11 +1034,6 @@ func LowerTitle(in string) string {
 	}
 }
 
-// NameSQL converts name to "snake_case" format
-func NameSQL(name string) string {
-	return strings.ToLower(strings.Join(camelcase.Split(name), "_"))
-}
-
 func titleize(cfg *models.Config) {
 	titleModels := make(map[string]models.Model)
 	for modelName, model := range cfg.Models {
@@ -1217,7 +1199,7 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 	if !haveID {
 		SQLSelect = append(SQLSelect, "id")
 	}
-	obj.SQLSelect = strings.Join(SQLSelect, ", ")
+	obj.SQLSelect = strings.Join(SQLSelect, ",\n\t\t")
 	obj.Path = nesting
 	obj.ParentStruct = parent
 	obj.IsArray = isArray
@@ -1337,17 +1319,20 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 							}
 							SQLSelect = append(SQLSelect, sqlName)
 							if needFilter && !options.IsArray {
+								sqlColumn := NameSQL(column)
 								if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 								} else {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND (CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))`, column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND\n\t\t(CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 								}
 							}
 						} else {
 							if !options.IsArray {
-								SQLSelect = append(SQLSelect, NameSQL(options.TitleName)+"_id")
+								sqlColumn := NameSQL(column)
+								sqlName := NameSQL(options.TitleName) + "_id"
+								SQLSelect = append(SQLSelect, sqlName)
 								if needFilter {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf(`(CAST(:%s as text) IS NULL OR %s=:%s) AND (CAST(:%s as text) IS NULL OR %s<>:%s)`, column, NameSQL(options.TitleName)+"_id", column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 								}
 							} else {
 								structIsArr = true
@@ -1372,8 +1357,8 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 			if !haveID {
 				SQLSelect = append(SQLSelect, "id")
 			}
-			result.MethodsProps[i].AdjustSQLSelect = strings.Join(SQLSelect, ", ")
-			result.MethodsProps[i].AdjustListSQLWhereProps = strings.Join(sqlWhereParams, " AND ")
+			result.MethodsProps[i].AdjustSQLSelect = strings.Join(SQLSelect, ",\n\t\t")
+			result.MethodsProps[i].AdjustListSQLWhereProps = strings.Join(sqlWhereParams, " AND\n\t\t")
 			result.MethodsProps[i].FilteredFields = filtredFields
 			result.MethodsProps[i].IsAdjustList = true
 
@@ -1449,7 +1434,7 @@ func handleAdjustGets(modelsMap map[string]models.Model, model *models.Model, mo
 			if !haveID {
 				SQLSelect = append(SQLSelect, "id")
 			}
-			result.MethodsProps[i].AdjustSQLSelect = strings.Join(SQLSelect, ", ")
+			result.MethodsProps[i].AdjustSQLSelect = strings.Join(SQLSelect, ",\n\t\t")
 			result.MethodsProps[i].AdjustGetJSONColumns = adjustGetJSONColumns
 		}
 	}
@@ -1461,7 +1446,7 @@ func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, m
 	result := *model
 	for i, method := range result.Methods {
 		if isAdjustEdit(method) {
-			var sqlEdit, sqlAddExecParams, editableFields []string
+			var sqlEdit, editableFields []string
 			count := 1
 			if !model.Shared {
 				count++
@@ -1487,36 +1472,25 @@ func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, m
 
 				fields[j] = strings.Title(fields[j])
 
-				for column, options := range result.Columns {
+				for _, options := range result.Columns {
 					if fields[j] == options.TitleName {
+						sqlName := NameSQL(options.TitleName)
 						if !options.IsStruct {
-							sqlName := NameSQL(options.TitleName)
-							titleName := options.TitleName
 							if options.IsArray || options.IsCustom {
 								sqlName += "_json"
-								titleName += "JSON"
-							} else {
-								titleName = "m." + titleName
 							}
-							if strings.HasPrefix(options.GoType, TypesPrefix) && !options.IsArray {
-								titleName += ".Value()"
-							}
-							sqlAddExecParams = append(sqlAddExecParams, titleName)
-							count++
-							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=$%d", sqlName, count))
+							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=:%s", sqlName, sqlName))
 						} else {
 							if !options.IsArray {
-								sqlAddExecParams = append(sqlAddExecParams, column+"ID")
-								count++
-								sqlEdit = append(sqlEdit, fmt.Sprintf("%s_id=$%d", NameSQL(options.TitleName), count))
+								sqlName += "_id"
+								sqlEdit = append(sqlEdit, fmt.Sprintf("%s=:%s", sqlName, sqlName))
 							}
 						}
 					}
 				}
 			}
 			result.Methods[i] = getNameForAdjustMethods(method)
-			result.MethodsProps[i].CustomSQLEditStr = strings.Join(sqlEdit, ", ")
-			result.MethodsProps[i].CustomSQLExecParams = strings.Join(sqlAddExecParams, ", ")
+			result.MethodsProps[i].CustomSQLEditStr = strings.Join(sqlEdit, ",\n\t\t")
 			result.MethodsProps[i].EditableFields = editableFields
 		}
 	}

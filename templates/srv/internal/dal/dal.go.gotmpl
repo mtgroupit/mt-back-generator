@@ -32,12 +32,13 @@ const (
 var log = structlog.New()
 
 type Repo struct {
-	db *sqlxx.DB
+	db *DB
 }
 
 {{- if .HaveCustomMethod}}
 	type CustomsRepo struct {
-		db *sqlxx.DB
+		db *DB
+		repo *Repo
 	}
 {{- end}}
 
@@ -48,7 +49,7 @@ type {{$et.RefTableOne}}{{$et.RefTableTwo}} struct{
 }
 {{end}}
 
-func connect(ctx context.Context, cfg pqx.Config, migrationDir string{{if .Debug}}, resetDB bool{{end}}) (*sqlxx.DB, error) { {{if .Debug}}
+func connect(ctx context.Context, cfg pqx.Config, migrationDir string{{if .Debug}}, resetDB bool{{end}}) (*DB, error) { {{if .Debug}}
 	if resetDB {
 		if err := migration.ResetAll(ctx, migrationDir, cfg); err != nil {
 			return nil, err
@@ -80,7 +81,7 @@ func connect(ctx context.Context, cfg pqx.Config, migrationDir string{{if .Debug
 		err = nextErr
 	}
 
-	return sqlxx.NewDB(sqlx.NewDb(db, "postgres")), nil
+	return NewDB(sqlxx.NewDB(sqlx.NewDb(db, "postgres"))), nil
 }
 
 func New(ctx context.Context, dbCfg pqx.Config, migrationDir string{{if .Debug}}, resetDB bool{{end}}) (*Repo, {{if .HaveCustomMethod}}*CustomsRepo, {{end}} error) {
@@ -88,10 +89,12 @@ func New(ctx context.Context, dbCfg pqx.Config, migrationDir string{{if .Debug}}
 	if err != nil {
 		return nil, {{if .HaveCustomMethod}}nil, {{end}}err
 	}
-	return &Repo{
+	repo := &Repo{
 		db: db,
-	}{{if .HaveCustomMethod}}, &CustomsRepo{
+	}
+	return repo{{if .HaveCustomMethod}}, &CustomsRepo{
 		db: db,
+		repo: repo,
 	}{{end}}, nil
 }
 
@@ -132,6 +135,8 @@ func toString(value interface{}) string {
 		return "false"
 	case time.Time:
 		return value.(time.Time).String()
+	case *time.Time:
+		return value.(*time.Time).String()
 	}
 	return ""
 }
@@ -173,4 +178,20 @@ func areEqualJSON(s1, s2 string) (bool, error) {
 	}
 
 	return reflect.DeepEqual(o1, o2), nil
+}
+
+func newNullUUID(s string) (nullUUID sql.NullString) {
+	if _, err := uuid.Parse(s); err != nil {
+		return
+	}
+	nullUUID.Scan(s)
+	return
+}
+
+func newNullInt64ID(i int64) (nullInt64ID sql.NullInt64) {
+	if i <= 0 {
+		return
+	}
+	nullInt64ID.Scan(i)
+	return
 }

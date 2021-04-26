@@ -54,7 +54,6 @@ models:
     methods:
       - get
       - getMy
-      - get(name, department)[info]
       - get(id, name, email, defaultPhone, phones)[contact]
       - getMy(links, contract)
       - addMy
@@ -92,7 +91,7 @@ models:
       - delete
       - edit(headOfficeLocation)
       - list
-      - list(name, headOfficeLocation*(id, name))
+      - list(name, headOfficeLocation*(id, name), locations(id, name))
 
   ourCompany:
     description: "ourCompany object"

@@ -38,9 +38,14 @@ var goTmplFuncs = template.FuncMap{
 	"ToLower": func(in string) string {
 		return strings.ToLower(in)
 	},
-	"LowerTitle":   parser.LowerTitle,
-	"Title":        nameToTitle,
-	"NameSQL":      parser.NameSQL,
+	"LowerTitle": parser.LowerTitle,
+	"Title":      nameToTitle,
+
+	"NameSQL":   parser.NameSQL,
+	"Pluralize": parser.Pluralize,
+
+	"IsTypesGoType": parser.IsTypesGoType,
+
 	"IsAdjustList": isAdjustList,
 	"IsAdjustEdit": isAdjustEdit,
 	"IsAdjustGet":  isAdjustGet,
@@ -82,6 +87,20 @@ var goTmplFuncs = template.FuncMap{
 				if options.GoType == modelName2 {
 					for _, options2 := range model2.Columns {
 						if options2.IsStruct == isStruct && options2.IsArray == isArray {
+							return true
+						}
+					}
+				}
+			}
+		}
+		return false
+	},
+	"NeedJSONInsideColumns": func(columns map[string]models.Options, models map[string]models.Model) bool {
+		for _, options := range columns {
+			for modelName2, model2 := range models {
+				if options.GoType == modelName2 {
+					for _, options2 := range model2.Columns {
+						if (!options2.IsStruct  && options2.IsArray) || options2.IsCustom {
 							return true
 						}
 					}
@@ -328,7 +347,7 @@ var goTmplFuncs = template.FuncMap{
 		switch {
 		case columnOptions.TitleName == "ID" && columnOptions.Type == "uuid":
 			appValue = fmt.Sprintf("%s.String()", appValue)
-		case strings.HasPrefix(columnOptions.GoType, parser.TypesPrefix):
+		case parser.IsTypesGoType(columnOptions.GoType):
 			appValue = fmt.Sprintf("%s(%s.Decimal)", columnOptions.GoType, appValue)
 		case parser.IsTimeFormat(columnOptions.Format):
 			appValue = fmt.Sprintf("%s", appValue)

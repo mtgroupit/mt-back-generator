@@ -51,17 +51,13 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 	{{- end}}
 
 	{{- if IsList $method}}
-	mockApp.EXPECT().{{$method}}{{$modelName}}({{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(test{{$modelName}}s, {{if $model.DetailedPagination}}2, {{end}}[]string{}, nil)
-	b, {{if $model.DetailedPagination}}count, {{end}}_, err := a.{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}offset, limit, filters, logicFilter, sortBy, orderBy)
+	mockApp.EXPECT().{{$method}}{{$modelName}}({{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return(test{{$modelName}}s, {{if $model.DetailedPagination}}2, {{end}}[]string{}, nil)
+	b, {{if $model.DetailedPagination}}count, {{end}}_, err := a.{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}listParams)
 	t.Nil(err)
 	{{- if $model.DetailedPagination}}
 	t.Equal(2, count)
 	{{- end}}
 	t.DeepEqual(test{{$modelName}}s, b)
 	{{- end}}
-	{{/* {{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsAdjustList $method))}}
-	mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any()).Return(nil)
-	err := a.{{$method}}{{$modelName}}(test{{$modelName}}1)
-	t.Nil(err){{end}} */}}
 }
 {{end}}{{end}}

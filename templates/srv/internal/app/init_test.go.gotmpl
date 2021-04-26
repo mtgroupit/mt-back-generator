@@ -51,11 +51,14 @@ var (
 {{end}}
 
 {{- if .HaveListMethod}}
-	offset int64 = 0
-	limit int64 = 5
-	logicFilter = false
-	sortBy = ""
-	orderBy = "ASC"
+	listParams = &ListParams{
+		Offset: 0,
+		Limit: 5,
+		Filters: filters,
+		LogicFilter: false,
+		SortBy: "",
+		OrderBy:"ASC",
+	}
 	
 	filters = []*Filter{
 		&Filter{
