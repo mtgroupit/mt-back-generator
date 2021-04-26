@@ -438,10 +438,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 				SQLSelect = append(SQLSelect, sqlName)
 				if !options.IsArray && !options.IsCustom {
+					sqlColumn := NameSQL(column)
 					if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
-						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 					} else {
-						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND\n\t\t(CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))", column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND\n\t\t(CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 					}
 				}
 				if options.TitleName != "ID" {
@@ -452,9 +453,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			} else {
 				if !options.IsArray {
+					sqlColumn := NameSQL(column)
 					sqlName := NameSQL(options.TitleName) + "_id"
 					SQLSelect = append(SQLSelect, sqlName)
-					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 					sqlAdd = append(sqlAdd, sqlName)
 					sqlEdit = append(sqlEdit, fmt.Sprintf("%s=:%s", sqlName, sqlName))
 				}
@@ -1317,17 +1319,20 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 							}
 							SQLSelect = append(SQLSelect, sqlName)
 							if needFilter && !options.IsArray {
+								sqlColumn := NameSQL(column)
 								if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 								} else {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND\n\t\t(CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))", column, sqlName, column, "not_"+column, sqlName, "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND\n\t\t(CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 								}
 							}
 						} else {
 							if !options.IsArray {
-								SQLSelect = append(SQLSelect, NameSQL(options.TitleName)+"_id")
+								sqlColumn := NameSQL(column)
+								sqlName := NameSQL(options.TitleName) + "_id"
+								SQLSelect = append(SQLSelect, sqlName)
 								if needFilter {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", column, NameSQL(options.TitleName)+"_id", column, "not_"+column, NameSQL(options.TitleName)+"_id", "not_"+column))
+									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 								}
 							} else {
 								structIsArr = true
@@ -1477,7 +1482,7 @@ func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, m
 							sqlEdit = append(sqlEdit, fmt.Sprintf("%s=:%s", sqlName, sqlName))
 						} else {
 							if !options.IsArray {
-								sqlName+="_id"
+								sqlName += "_id"
 								sqlEdit = append(sqlEdit, fmt.Sprintf("%s=:%s", sqlName, sqlName))
 							}
 						}

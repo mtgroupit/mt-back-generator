@@ -300,15 +300,15 @@ type {{$modelName}} struct {
 			{{- if IsAdjustList $method}}
 				{{- range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
 					{{- if not (index (index $model.MethodsProps $i).JSONColumns $column)}}
-						"{{$column}}": nil,
-						"not_{{$column}}": nil,
+						"{{NameSQL $column}}": nil,
+						"not_{{NameSQL $column}}": nil,
 					{{- end}}
 				{{- end}}
 			{{- else}}
 				{{- range $column, $options := $model.Columns}}
 					{{- if and (not $options.IsArray) (not $options.IsCustom)}}
-						"{{$column}}": nil,
-						"not_{{$column}}": nil,
+						"{{NameSQL $column}}": nil,
+						"not_{{NameSQL $column}}": nil,
 					{{- end}}
 				{{- end}}
 			{{- end}}
@@ -330,9 +330,9 @@ type {{$modelName}} struct {
 						{{- if not (index (index $model.MethodsProps $i).JSONColumns $column)}}
 						case "{{$column}}":
 							if filter.Include {
-								mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+								mapQuery["{{NameSQL $column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
 							} else {
-								mapQuery["not_{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+								mapQuery["not_{{NameSQL $column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
 							}
 						{{- end}}
 					{{- end}}
@@ -341,9 +341,9 @@ type {{$modelName}} struct {
 						{{- if  and (not $options.IsArray) (not $options.IsCustom)}}
 						case "{{$column}}":
 							if filter.Include {
-								mapQuery["{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+								mapQuery["{{NameSQL $column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
 							} else {
-								mapQuery["not_{{$column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
+								mapQuery["not_{{NameSQL $column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
 							}
 						{{- end}}
 					{{- end}}
