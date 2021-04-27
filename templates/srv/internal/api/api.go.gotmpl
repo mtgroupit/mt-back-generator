@@ -5,11 +5,7 @@ import (
 	"context"
 	"net/http"
 	"path"
-	{{- if .HaveTime}}
-		"time"
-	{{- end}}
 
-	"{{.Module}}/internal/api/restapi/models"
 	"{{.Module}}/internal/api/restapi/restapi"
 	"{{.Module}}/internal/api/restapi/restapi/operations"
 	"{{.Module}}/internal/api/restapi/restapi/operations/standard"
@@ -22,9 +18,6 @@ import (
 
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/runtime/middleware"
-	{{- if or .HaveTime .HaveEmail}}
-		"github.com/go-openapi/strfmt"
-	{{- end}}
 	"github.com/pkg/errors"
 	"github.com/powerman/structlog"
 	"github.com/sebest/xff"
@@ -126,7 +119,7 @@ func NewServer(appl app.App,{{if .HaveCustomMethod}}cust app.Customs,{{end}} ext
 		return forbidCSRF(handler)
 	}
 
-	handleCORS := cors.New(cors.Options{
+	newCORS := cors.New(cors.Options{
 		AllowedOrigins:   []string{cfg.AllowedOrigin},
 		AllowedMethods:   []string{"POST", "PUT", "GET", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
@@ -135,7 +128,9 @@ func NewServer(appl app.App,{{if .HaveCustomMethod}}cust app.Customs,{{end}} ext
 			// Enable Debugging for testing, consider disabling in production
 			Debug: true,
 		{{- end}}
-	}).Handler
+	})
+	newCORS.Log = cors.Logger(structlog.New(structlog.KeyUnit, "CORS"))
+	handleCORS := newCORS.Handler
 	
 	server.SetHandler(handleCORS(globalMiddlewares(api.Serve(middlewares))))
 
@@ -145,92 +140,3 @@ func NewServer(appl app.App,{{if .HaveCustomMethod}}cust app.Customs,{{end}} ext
 func healthCheck(params standard.HealthCheckParams, profile interface{}) middleware.Responder {
 	return standard.NewHealthCheckOK().WithPayload(&standard.HealthCheckOKBody{Ok: true})
 }
-
-func appAccessManager(am *models.AccessManager) *app.AccessManager {
-	return &app.AccessManager{
-		User:          am.User,
-		Group:         am.Group,
-		Read:          am.Read,
-		Write:         am.Write,
-		Delete:        am.Delete,
-		Add:           am.Add,
-		AccessManager: am.AccessManager,
-	}
-}
-
-{{- if .HaveListMethod}}
-	func appFilters(apiFP []*models.FilterParams) []*app.Filter {
-		appF := []*app.Filter{}
-		for _, fp := range apiFP {
-			appF = append(appF, &app.Filter{
-				Include: fp.Include,
-				Key:     fp.Key,
-				Value:   fp.Value,
-			})
-		}
-		return appF
-	}
-{{- end}}
-
-{{- if .HaveTime}}
-	func fromDateTimesArray(dts []*strfmt.DateTime) (dates []*time.Time) {
-		for _, date := range dts {
-			dates = append(dates, (*time.Time)(date))
-		}
-		return
-	}
-
-	func toDateTimesArray(dates []*time.Time) (dts []*strfmt.DateTime) {
-		for _, date := range dates {
-			dts = append(dts, (*strfmt.DateTime)(date))
-		}
-		return
-	}
-
-	func fromDatesArray(ds []*strfmt.Date) (dates []*time.Time) {
-		for _, date := range ds {
-			dates = append(dates, (*time.Time)(date))
-		}
-		return
-	}
-
-	func toDatesArray(dates []*time.Time) (ds []*strfmt.Date) {
-		for _, date := range dates {
-			ds = append(ds, (*strfmt.Date)(date))
-		}
-		return
-	}
-{{end}}
-
-{{- if .HaveEmail}}
-	func fromEmailsArray(es []strfmt.Email) (emails []string) {
-		for _, email := range es {
-			emails = append(emails, email.String())
-		}
-		return
-	}
-
-	func toEmailsArray(emails []string) (es []strfmt.Email) {
-		for _, email := range emails {
-			es = append(es, strfmt.Email(email))
-		}
-		return
-	}
-{{end}}
-
-{{- if .HaveFloatArr}}
-	func float64to32Array(floats64 []float64) (floats32 []float32) {
-		for _, f64 := range floats64 {
-			floats32 = append(floats32, float32(f64))
-		}
-		return
-	}
-
-
-	func float32to64Array(floats32 []float32) (floats64 []float64) {
-		for _, f32 := range floats32 {
-			floats64 = append(floats64, float64(f32))
-		}
-		return
-	}
-{{end}}

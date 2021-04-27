@@ -160,11 +160,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 		{{- if  and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}
 			prof := profile.(*extauthapi.Profile)
 		{{end}}
-		var offset int64 = 0
-		if params.Body.Offset != nil {
-			offset = *params.Body.Offset
-		}
-		c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}({{if  and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}prof.IsolatedEntityID.String(), {{end}}offset, params.Body.Limit, appFilters(params.Body.Filters), params.Body.LogicFilter, params.Body.SortBy, params.Body.OrderBy)
+		c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}({{if and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}prof.IsolatedEntityID.String(), {{end}}appListParams(params.Body))
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -214,14 +210,8 @@ func (svc *service) Add{{Title $column}}{{$modelName}}(params {{LowerTitle $mode
 }
 
 func (svc *service) Delete{{Title $column}}{{$modelName}}(params {{LowerTitle $modelName}}.Delete{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
-	{{if and (or $model.HaveModifiedBy (not $model.Shared))}}prof := profile.(*extauthapi.Profile)
-	{{end}}err := svc.app.Delete{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if (not $model.Shared)}}prof.IsolatedEntityID.String(), {{end}}params.Body.Items)
-	if err != nil {
-		log.Err("Delete{{Title $column}}{{$modelName}} error", err)
-	} else {
-		log.Info("Delete{{Title $column}}{{$modelName}} ok")
-	}
-	return {{LowerTitle $modelName}}.NewDelete{{Title $column}}{{$modelName}}OK()
+	{{if or $model.HaveModifiedBy (not $model.Shared)}}prof := profile.(*extauthapi.Profile)
+	{{end}}err := svc.app.Delete{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if not $model.Shared}}prof.IsolatedEntityID.String(), {{end}}params.Body.Items)
 	switch {
 	default:
 		log.PrintErr("Delete{{Title $column}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)

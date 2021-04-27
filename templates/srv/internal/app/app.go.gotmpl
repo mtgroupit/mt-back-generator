@@ -20,7 +20,7 @@ type App interface {
             {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}}
         {{- end}}
         {{- if IsList $method}}
-            {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*Filter, logicFilter bool, sortBy, orderBy string) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error)
+            {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}params *ListParams) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error)
         {{- end}}
     {{- end}}
 	{{range $column, $options := $model.Columns}}{{if  and $options.IsArray $options.IsStruct}}
@@ -51,7 +51,7 @@ type Repo interface {
             {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}}
         {{- end}}
         {{- if IsList $method}}
-            {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}offset, limit int64, filters []*Filter, logicFilter bool, sortBy, orderBy string) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error)
+            {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}params *ListParams) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error)
         {{- end}}
     {{- end}}
 	{{range $column, $options := $model.Columns}}{{if  and $options.IsArray $options.IsStruct}}
@@ -75,11 +75,22 @@ type AccessManager struct {
     AccessManager bool
 }
 
-type Filter struct {
-	Key     string
-	Include bool
-	Value   string
-}
+{{if .HaveListMethod}}
+    type ListParams struct {
+        Offset      int64
+        Limit       int64
+        Filters     []*Filter
+        LogicFilter bool
+        SortBy      string
+        OrderBy     string
+    }
+
+    type Filter struct {
+        Key     string
+        Include bool
+        Value   string
+    }
+{{end}}
 
 type app struct {
 	repo     Repo

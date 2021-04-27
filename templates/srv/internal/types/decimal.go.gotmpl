@@ -51,12 +51,8 @@ func (d *Decimal) Float64() (f float64) {
 }
 
 // Value implements the driver.Valuer interface for database serialization.
-func (d Decimal) Value() driver.Value {
-	f, err := (decimal.Decimal)(d).Value()
-	if err != nil {
-		panic(err)
-	}
-	return f
+func (d Decimal) Value() (driver.Value, error) {
+	return (decimal.Decimal)(d).Value()
 }
 
 // Scan implements the sql.Scanner interface for database deserialization.

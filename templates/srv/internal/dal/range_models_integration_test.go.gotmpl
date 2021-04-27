@@ -29,10 +29,10 @@ func Test{{$method}}{{$modelName}}Smoke(tt *testing.T) {
 	{{- end}}
 
 	{{- if IsList $method}}	
-		filters[0].Value = test{{$modelName}}1.ID
-		filters[1].Value = test{{$modelName}}2.ID
+		listParams.Filters[0].Value = test{{$modelName}}1.ID
+		listParams.Filters[1].Value = test{{$modelName}}2.ID
 
-		list, {{if $model.DetailedPagination}}_, {{end}}_,  err := testRepo.{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}offset, limit, filters, logicFilter, sortBy, orderBy)
+		list, {{if $model.DetailedPagination}}_, {{end}}_,  err := testRepo.{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}listParams)
 		t.Nil(err)
 		t.DeepEqual(list, test{{$modelName}}s)
 	{{- end}}
