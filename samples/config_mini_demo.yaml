@@ -120,7 +120,8 @@ models:
       name:
         type: "string"
     methods:
-      - get
+      - get{noSecure}
+      - getMy
       - add
       - edit
       - delete

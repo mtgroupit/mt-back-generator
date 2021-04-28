@@ -48,6 +48,9 @@ paths:
       {{- range $_, $tag := $model.Tags}}
         - {{$tag}}
       {{- end}}
+    {{- if (index $model.MethodsProps $i).NoSecure}}
+      security: []
+    {{- end}}
       operationId: {{LowerTitle $method}}{{$model.TitleName}}
     {{- if not (or (and (IsGet $method) (IsMyMethod $method)) (eq $method "DeleteMy"))}}
       parameters:
