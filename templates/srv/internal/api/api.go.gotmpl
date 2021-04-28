@@ -81,7 +81,6 @@ func NewServer(appl app.App,{{if .HaveCustomMethod}}cust app.Customs,{{end}} ext
 				api.{{$model.TitleName}}Delete{{Title $column}}{{$model.TitleName}}Handler = {{LowerTitle $modelName}}.Delete{{Title $column}}{{$model.TitleName}}HandlerFunc(svc.Delete{{Title $column}}{{$modelName}})
 			{{- end}}
 		{{- end}}
-		api.{{$model.TitleName}}{{$model.TitleName}}AccessManagerHandler = {{LowerTitle $modelName}}.{{$model.TitleName}}AccessManagerHandlerFunc(svc.{{$model.TitleName}}AccessManager)
 	{{- end}}
 	{{- range $modelName, $model := $.Models}}
 		{{range $function, $_ := $.Functions}}

@@ -56,9 +56,6 @@ func (a *app) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}str
 	return a.repo.Delete{{Title $column}}{{$modelName}}(id, {{if $model.HaveModifiedBy}}profileID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}items)
 }
 {{end}}{{end}}
-func (a *app) {{$modelName}}AccessManager(m *AccessManager) error {
-	return a.repo.{{$modelName}}AccessManager(m)
-}
 
 {{range $functionName, $function := $.Functions}}
 func (a *app) {{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$function.OutStrType}}, error) {

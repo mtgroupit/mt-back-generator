@@ -231,15 +231,7 @@ func (svc *service) Delete{{Title $column}}{{$modelName}}(params {{LowerTitle $m
 	}
 }
 {{end}}{{end}}
-func (svc *service) {{$modelName}}AccessManager(params {{LowerTitle $modelName}}.{{$modelName}}AccessManagerParams, profile interface{}) middleware.Responder {
-	err := svc.app.{{$modelName}}AccessManager(appAccessManager(params.Body))
-	if err != nil {
-		log.Err("{{$modelName}}AccessManager error", err)
-	} else {
-		log.Info("{{$modelName}}AccessManager ok")
-	}
-	return {{LowerTitle $modelName}}.New{{$modelName}}AccessManagerOK()
-}
+
 {{range $functionName, $function := $.Functions}}
 func (svc *service) {{$functionName}}{{$modelName}}(params {{LowerTitle $modelName}}.{{$modelName}}{{$functionName}}Params, profile interface{}) middleware.Responder {
 	{{$function.OutStr}}, err := svc.app.{{$functionName}}{{$modelName}}({{$function.InStrParams}})

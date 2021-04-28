@@ -46,18 +46,6 @@ import (
 	}
 {{end}}
 
-func appAccessManager(am *models.AccessManager) *app.AccessManager {
-	return &app.AccessManager{
-		User:          am.User,
-		Group:         am.Group,
-		Read:          am.Read,
-		Write:         am.Write,
-		Delete:        am.Delete,
-		Add:           am.Add,
-		AccessManager: am.AccessManager,
-	}
-}
-
 {{if .HaveTime}}
 	func fromDateTimesArray(dts []*strfmt.DateTime) (dates []*time.Time) {
 		for _, date := range dts {
