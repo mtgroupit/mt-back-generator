@@ -569,12 +569,23 @@ func validate(cfg *models.Config) error {
 	if cfg.AuthSrv == "" {
 		return errors.New("auth-srv is empty")
 	}
-
+	if err := validateAccessAttributes(cfg.AccessAttributes); err != nil {
+		return err
+	}
 	if err := validateModels(cfg); err != nil {
 		return err
 	}
 	if err := validateCustomTypes(cfg.CustomTypes); err != nil {
 		return err
+	}
+	return nil
+}
+
+func validateAccessAttributes(attributes []string) error {
+	for _, attr := range attributes {
+		if !isCorrectName(attr) {
+			return errors.Errorf(`"%s" is invalid name for access attribute. %s`, attr, correctNameDescription)
+		}
 	}
 	return nil
 }

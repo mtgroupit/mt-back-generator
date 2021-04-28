@@ -159,6 +159,8 @@ type Config struct {
 	CustomTypes map[string]CustomType `yaml:"custom-types"`
 	Functions   map[string]Function
 
+	AccessAttributes []string `yaml:"access-attributes"`
+
 	HaveListMethod         bool
 	HaveCustomMethod       bool
 	HaveFloatArr           bool

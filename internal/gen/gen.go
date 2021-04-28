@@ -100,7 +100,7 @@ var goTmplFuncs = template.FuncMap{
 			for modelName2, model2 := range models {
 				if options.GoType == modelName2 {
 					for _, options2 := range model2.Columns {
-						if (!options2.IsStruct  && options2.IsArray) || options2.IsCustom {
+						if (!options2.IsStruct && options2.IsArray) || options2.IsCustom {
 							return true
 						}
 					}
@@ -499,7 +499,7 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 			}
 		}
 	} else {
-		if !cfg.HaveCustomMethod && strings.HasSuffix(name, "custom.go.gotmpl") {
+		if !cfg.HaveCustomMethod && strings.HasSuffix(name, "custom.go.gotmpl") && !strings.HasSuffix(dirTarget, "authorization") {
 			return nil
 		}
 		if !cfg.Debug && name == "00001_reset_all.sql.gotmpl" {
@@ -511,10 +511,24 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 			if err != nil {
 				return err
 			}
-			for modelName, model := range cfg.Models {
-				for _, method := range model.Methods {
-					if isCustomMethod(method) && !regexp.MustCompile(`\s`+method+modelName).Match(file) {
-						file = []byte(regexp.MustCompile(`(?s)\n}\n`).ReplaceAllString(string(file), "\n\t"+method+modelName+`(m *`+modelName+") error\n}\n"))
+			if strings.HasSuffix(dirTarget, "authorization") {
+				for _, attr := range cfg.AccessAttributes {
+					attrName := nameToTitle(attr)
+					if !regexp.MustCompile(`func \(attr \*attributes\) ` + attrName + `\(\) bool`).Match(file) {
+						t := template.Must(template.New("func").Parse(fmt.Sprintf(attrPattern, attrName)))
+						var buf bytes.Buffer
+						if err := t.Execute(&buf, nil); err != nil {
+							return err
+						}
+						file = append(file, buf.Bytes()...)
+					}
+				}
+			} else {
+				for modelName, model := range cfg.Models {
+					for _, method := range model.Methods {
+						if isCustomMethod(method) && !regexp.MustCompile(`\s`+method+modelName).Match(file) {
+							file = []byte(regexp.MustCompile(`(?s)\n}\n`).ReplaceAllString(string(file), "\n\t"+method+modelName+`(m *`+modelName+") error\n}\n"))
+						}
 					}
 				}
 			}
@@ -580,6 +594,9 @@ func buildTreeDirs(p, srvName string) error {
 		return err
 	}
 	if err := ensureDir(path.Join(p, srvName, "internal"), "types"); err != nil {
+		return err
+	}
+	if err := ensureDir(path.Join(p, srvName, "internal"), "authorization"); err != nil {
 		return err
 	}
 	if err := ensureDir(path.Join(p, srvName), "migration"); err != nil {
@@ -663,5 +680,9 @@ func (a *app) {{.Method}}{{.ModelName}}(m *{{.ModelName}}) error {
 	dalPattern = `
 func (a *Customs) {{.Method}}{{.ModelName}}(m *app.{{.ModelName}}) error {
 	return nil
+}`
+	attrPattern = `
+func (attr *attributes) %s() bool {
+	return true
 }`
 )
