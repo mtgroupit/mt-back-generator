@@ -28,6 +28,8 @@ var (
 
 	timeFormats = []string{"date", "date-time"}
 	formats     = map[string][]string{"string": append([]string{"email", "phone", "url"}, timeFormats...)}
+
+	roles = []string{"admin", "manager", "user", "guest"}
 )
 
 const (
@@ -572,6 +574,9 @@ func validate(cfg *models.Config) error {
 	if err := validateAccessAttributes(cfg.AccessAttributes); err != nil {
 		return err
 	}
+	if err := validateRules(cfg); err != nil {
+		return err
+	}
 	if err := validateModels(cfg); err != nil {
 		return err
 	}
@@ -587,6 +592,34 @@ func validateAccessAttributes(attributes []string) error {
 			return errors.Errorf(`"%s" is invalid name for access attribute. %s`, attr, correctNameDescription)
 		}
 	}
+	return nil
+}
+
+func validateRules(cfg *models.Config) error {
+	for name, rule := range cfg.Rules {
+		if !isCorrectName(name) {
+			return errors.Errorf(`"%s" is invalid name for rule. %s`, name, correctNameDescription)
+		}
+		if len(rule.Attributes) == 0 {
+			return errors.Errorf(`Rule "%s" has no any access attributes`, name)
+		}
+		if len(rule.Roles) == 0 {
+			return errors.Errorf(`Rule "%s" has no any roles`, name)
+		}
+
+		for _, attr := range rule.Attributes {
+			if !ContainsStr(cfg.AccessAttributes, attr) {
+				return errors.Errorf(`Rule "%s" has access attribute "%s" that not exist`, name, attr)
+			}
+		}
+
+		for _, role := range rule.Roles {
+			if !ContainsStr(roles, role) {
+				return errors.Errorf(`Rule "%s" has role "%s" that not exist. Available roles: %s`, name, role, strings.Join(roles, ", "))
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -1543,6 +1576,15 @@ func isCreatedStandardColumn(column string) bool {
 func isModifiedStandardColumn(column string) bool {
 	if column == "modifiedAt" || column == "modifiedBy" {
 		return true
+	}
+	return false
+}
+
+func ContainsStr(slice []string, str string) bool {
+	for i := range slice {
+		if slice[i] == str {
+			return true
+		}
 	}
 	return false
 }

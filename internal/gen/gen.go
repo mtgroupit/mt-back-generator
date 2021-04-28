@@ -54,15 +54,8 @@ var goTmplFuncs = template.FuncMap{
 		return strings.Contains(method, modelName)
 	},
 	"IsCustomMethod": isCustomMethod,
-	"ContainsStr": func(slice []string, str string) bool {
-		for i := range slice {
-			if slice[i] == str {
-				return true
-			}
-		}
-		return false
-	},
-	"IsMyMethod": parser.IsMyMethod,
+	"ContainsStr":    parser.ContainsStr,
+	"IsMyMethod":     parser.IsMyMethod,
 	"HaveMyMethod": func(methods []string) bool {
 		for _, method := range methods {
 			if parser.IsMyMethod(method) {
@@ -371,6 +364,18 @@ var goTmplFuncs = template.FuncMap{
 	"GenAppTestValue": genAppTestValue,
 	"EnumPrint": func(enum []string) string {
 		return fmt.Sprintf(`[%s]`, strings.Join(enum, ", "))
+	},
+	"GenRule": func(rule models.Rule) string {
+		var checkRole, checkNotRole, checkAttr []string
+		for _, role := range rule.Roles {
+			roleChecker := "r.attributes.Is" + strings.Title(role) + "()"
+			checkRole = append(checkRole, roleChecker)
+			checkNotRole = append(checkNotRole, "!"+roleChecker)
+		}
+		for _, attr := range rule.Attributes {
+			checkAttr = append(checkAttr, "r.attributes."+strings.Title(attr)+"()")
+		}
+		return fmt.Sprintf("(%s) || ((%s) && %s)", strings.Join(checkNotRole, " && "), strings.Join(checkRole, " || "), strings.Join(checkAttr, " && "))
 	},
 }
 

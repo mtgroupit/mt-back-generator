@@ -9,6 +9,26 @@ access-attributes:
   - location
   - gadget
 
+rules:
+  checkUserLocation:
+    attributes:
+      - location
+    roles:
+      - user
+      - guest
+  checkAccessHappensInWorkingTimeAndAllowedPlace:
+    attributes:
+      - location
+      - workTime
+    roles:
+      - admin
+      - manager
+  checkAdminUsingAllowedDevices:
+    attributes:
+      - gadget
+    roles:
+      - admin
+
 models:
 
   employee:

@@ -107,11 +107,11 @@ type Model struct {
 	HaveModifiedAt bool
 	HaveModifiedBy bool
 
-	Psql              []PsqlParams
-	SQLSelectStr      string
-	SQLWhereParams    string
-	SQLAddStr         string
-	SQLEditStr        string
+	Psql           []PsqlParams
+	SQLSelectStr   string
+	SQLWhereParams string
+	SQLAddStr      string
+	SQLEditStr     string
 
 	Binds        []Bind
 	Methods      []string
@@ -160,6 +160,7 @@ type Config struct {
 	Functions   map[string]Function
 
 	AccessAttributes []string `yaml:"access-attributes"`
+	Rules            map[string]Rule
 
 	HaveListMethod         bool
 	HaveCustomMethod       bool
@@ -199,4 +200,10 @@ type CustomType struct {
 	Fields      map[string]Options
 
 	NeedTime bool
+}
+
+// Rule - contains rule properties
+type Rule struct {
+	Attributes []string
+	Roles      []string
 }
