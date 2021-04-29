@@ -77,6 +77,8 @@ type MethodProps struct {
 	FilteredFields          []string
 	EditableFields          []string
 	NestedObjs              []NestedObjProps
+
+	Rules []string
 }
 
 // Model - description one component of models
@@ -116,6 +118,8 @@ type Model struct {
 	Binds        []Bind
 	Methods      []string
 	MethodsProps []MethodProps
+
+	RulesSet map[string][]string `yaml:"rules-set"`
 }
 
 // Function contain input and output params

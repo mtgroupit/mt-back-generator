@@ -9,6 +9,8 @@ import (
 	"{{.Module}}/internal/api/restapi/models"
 	"{{.Module}}/internal/app"
 
+	extauthapi "{{.AuthSrv}}"
+
 	{{- if or .HaveTime .HaveEmail}}
 		"github.com/go-openapi/strfmt"
 	{{- end}}
@@ -107,3 +109,16 @@ import (
 		return
 	}
 {{end}}
+
+func toAppProfile(prof *extauthapi.Profile) app.Profile {
+	return app.Profile{
+		ID:    prof.ID.String(),
+		Authn: prof.Authn,
+		Authz: app.Authz{
+			User:    prof.Authz.User,
+			Manager: prof.Authz.Manager,
+			Admin:   prof.Authz.Admin,
+		},
+		IsolatedEntityID: prof.IsolatedEntityID.String(),
+	}
+}

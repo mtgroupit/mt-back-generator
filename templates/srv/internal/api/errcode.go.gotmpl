@@ -18,6 +18,7 @@ func newErrCode(statusCode int, extraCode int32) errCode {
 //nolint:gochecknoglobals
 var (
 	codeInternal          = newErrCode(500, 0)
+	codeForbidden         = newErrCode(403, 0)
 	codeNotFound          = newErrCode(404, 0)
 	codeNotFoundArrayItem = newErrCode(404, 700)
 	codeDuplicateID       = newErrCode(409, 0)

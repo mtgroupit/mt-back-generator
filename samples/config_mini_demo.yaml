@@ -90,6 +90,24 @@ models:
       - list
       - list(id, name*, company*(name, locations(id, name)))[withCompanyLocations]
       - custom
+    rules-set:
+      checkUserLocation:
+        - deleteMy
+      checkAccessHappensInWorkingTimeAndAllowedPlace:
+        - getMy
+        - getMy(links, contract)
+        - addMy
+        - editMy
+        - editOrAddMy
+        - editMy(defaultPhone, phones)[phones]
+        - editMy(links)
+        - deleteMy
+      checkAdminUsingAllowedDevices:
+        - get
+        - get(id, name, email, defaultPhone, phones)[contact]
+        - list
+        - list(id, name*, company*(name, locations(id, name)))[withCompanyLocations]
+        - custom
 
   company:
     description: "company object"
@@ -117,6 +135,16 @@ models:
       - edit(headOfficeLocation)
       - list
       - list(name, headOfficeLocation*(id, name), locations(id, name))
+    rules-set:
+      checkUserLocation:
+        - delete
+      checkAccessHappensInWorkingTimeAndAllowedPlace:
+        - get
+        - add
+        - delete
+        - edit(headOfficeLocation)
+        - list
+        - list(name, headOfficeLocation*(id, name), locations(id, name))
 
   ourCompany:
     description: "ourCompany object"
@@ -133,6 +161,14 @@ models:
       - addMy
       - editMy
       - deleteMy
+    rules-set:
+      checkUserLocation:
+        - deleteMy
+      checkAccessHappensInWorkingTimeAndAllowedPlace:
+        - getMy
+        - addMy
+        - editMy
+        - deleteMy
 
   location:
     description: "location object"
@@ -146,11 +182,15 @@ models:
         type: "string"
     methods:
       - get{noSecure}
-      - getMy
       - add
       - edit
       - delete
       - list
+    rules-set:
+      checkAdminUsingAllowedDevices:
+      - add
+      - edit
+      - delete
 
   document:
     description: "document object for save files"
@@ -174,6 +214,21 @@ models:
       - edit
       - delete
       - list
+    rules-set:
+      checkUserLocation:
+        - add
+        - edit
+        - delete
+      checkAccessHappensInWorkingTimeAndAllowedPlace:
+        - get
+        - add
+        - edit
+        - delete
+        - list
+      checkAdminUsingAllowedDevices:
+        - add
+        - edit
+        - delete
     
 custom-types:
   

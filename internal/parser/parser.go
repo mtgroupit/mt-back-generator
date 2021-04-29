@@ -194,11 +194,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		model.Tags = append([]string{strings.Title(name)}, model.Tags...)
 
 		var props []models.MethodProps
-		for i, method := range model.Methods {
+		for _, method := range model.Methods {
 			noSecure := false
 			if strings.Contains(method, "{noSecure}") {
-				method = strings.Replace(method, "{noSecure}", "", -1)
-				model.Methods[i] = method
 				noSecure = true
 			}
 			if isCustomMethod(method) {
@@ -215,12 +213,21 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				prop.HTTPMethod = "post"
 			}
 			prop.NoSecure = noSecure
-			props = append(props, prop)
 
 			if method == "list" || isAdjustList(method) {
 				cfg.HaveListMethod = true
 				model.HaveListMethod = true
 			}
+
+			rules := []string{}
+			for ruleName, ruleMethods := range model.RulesSet {
+				if ContainsStr(ruleMethods, method) {
+					rules = append(rules, ruleName)
+				}
+			}
+			prop.Rules = rules
+
+			props = append(props, prop)
 		}
 		model.MethodsProps = props
 
@@ -747,6 +754,24 @@ func validateModels(cfg *models.Config) error {
 				return errors.Wrapf(err, `Model: "%s". Column: "%s"`, name, column)
 			}
 		}
+
+		if err := validateRulesSet(model.RulesSet, cfg.Rules, model.Methods); err != nil {
+			return errors.Wrapf(err, `Model: "%s"`, name)
+		}
+	}
+	return nil
+}
+
+func validateRulesSet(rulesSet map[string][]string, rules map[string]models.Rule, modelMethods []string) error {
+	for rule, methods := range rulesSet {
+		if _, ok := rules[rule]; !ok {
+			return errors.Errorf(`Rule "%s" has not exist`, rule)
+		}
+		for _, method := range methods {
+			if !ContainsStr(modelMethods, method) {
+				return errors.Errorf(`Method "%s" from rule "%s" has not exist`, method, rule)
+			}
+		}
 	}
 	return nil
 }
@@ -1053,6 +1078,9 @@ func convertStandardTypeToGoType(columnType, format string) string {
 
 // isCustomMethod return true if method is custom
 func isCustomMethod(method string) bool {
+	if strings.Contains(method, "{noSecure}") {
+		method = strings.Replace(method, "{noSecure}", "", -1)
+	}
 	method = strings.ToLower(method)
 	fmt.Println(method, isAdjustGet(method))
 	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isAdjustList(method) || isAdjustGet(method) || isAdjustEdit(method) || IsMyMethod(method) {
@@ -1097,8 +1125,11 @@ func LowerTitle(in string) string {
 func titleize(cfg *models.Config) {
 	titleModels := make(map[string]models.Model)
 	for modelName, model := range cfg.Models {
-		for i := range cfg.Models[modelName].Methods {
-			model.Methods[i] = strings.Title(model.Methods[i])
+		for i, method := range cfg.Models[modelName].Methods {
+			if strings.Contains(method, "{noSecure}") {
+				method = strings.Replace(method, "{noSecure}", "", -1)
+			}
+			model.Methods[i] = strings.Title(method)
 		}
 		titleModels[strings.Title(modelName)] = model
 	}
