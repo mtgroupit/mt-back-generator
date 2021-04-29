@@ -37,7 +37,7 @@ import (
 func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}Params{{if not (index $model.MethodsProps $i).NoSecure}}, profile interface{}{{end}}) middleware.Responder {
 	prof := {{if (index $model.MethodsProps $i).NoSecure}}&extauthapi.Profile{Authn: false}{{else}}profile.(*extauthapi.Profile){{end}}
 	{{- if IsGet $method}}
-		c, err := svc.app.{{$method}}{{$modelName}}(params.HTTPRequest, toAppProfile(prof), {{if not $model.BoundToIsolatedEntity}}{{if IsMyMethod $method}}prof.ID.String(){{else}}params.Body.ID{{end}}{{end}}{{if and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}{{if not $model.BoundToIsolatedEntity}}, {{end}}prof.IsolatedEntityID.String(){{end}})
+		c, err := svc.app.{{$method}}{{$modelName}}(params.HTTPRequest, toAppProfile(prof){{if not (IsMyMethod $method)}}, params.Body.ID{{end}})
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -63,7 +63,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 		}
 	{{- end}}
 	{{- if IsAdd $method}}
-		c, err := svc.app.{{$method}}{{$modelName}}(params.HTTPRequest, toAppProfile(prof), prof.ID.String(), {{if and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}prof.IsolatedEntityID.String(), {{end}}app{{$modelName}}Add(params.Body))
+		c, err := svc.app.{{$method}}{{$modelName}}(params.HTTPRequest, toAppProfile(prof), app{{$modelName}}Add(params.Body))
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -91,7 +91,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 		}
 	{{- end}}
 	{{- if IsDelete $method}}
-		err := svc.app.{{$method}}{{$modelName}}(params.HTTPRequest, toAppProfile(prof), {{if not (IsMyMethod $method)}}params.Body.ID, {{end}}prof.ID.String(){{if  and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}, prof.IsolatedEntityID.String(){{end}})
+		err := svc.app.{{$method}}{{$modelName}}(params.HTTPRequest, toAppProfile(prof){{if not (IsMyMethod $method)}}, params.Body.ID{{end}})
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -149,7 +149,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 				{{- end}}
 			{{- end}}
 		{{- end}}
-		{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}(params.HTTPRequest, toAppProfile(prof), {{if not (IsMyMethod $method)}}params.Body.ID, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if  and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}prof.IsolatedEntityID.String(), {{end}}{{if IsAdjustEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
+		{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}(params.HTTPRequest, toAppProfile(prof), {{if not (IsMyMethod $method)}}params.Body.ID, {{end}}{{if IsAdjustEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -175,7 +175,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 		}
 	{{- end}}
 	{{- if  IsList $method}}
-		c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}(params.HTTPRequest, toAppProfile(prof), {{if and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}prof.IsolatedEntityID.String(), {{end}}appListParams(params.Body))
+		c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}(params.HTTPRequest, toAppProfile(prof), appListParams(params.Body))
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
