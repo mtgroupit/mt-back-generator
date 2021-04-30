@@ -3,6 +3,7 @@ package app
 
 import (
 	"testing"
+	"net/http"
 
 	"github.com/golang/mock/gomock"
 	"github.com/powerman/check"
@@ -17,47 +18,49 @@ func Test{{$method}}{{$modelName}}(tt *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockApp := NewMockApp(ctrl)
+	mockRepo := NewMockRepo(ctrl)
 	{{- if $haveCustomMethod}}
-	mockCust := NewMockCustoms(ctrl)
+	mockCustRepo := NewMockCustomsRepo(ctrl)
 	{{- end}}
+	rulesSet := NewMockRulesSet(ctrl)
 
-	a{{if $haveCustomMethod}}, _{{end}} := New(mockApp{{if $haveCustomMethod}}, mockCust{{end}})
+	a{{if $haveCustomMethod}}, _{{end}} := New(mockRepo{{if $haveCustomMethod}}, mockCustRepo{{end}}, rulesSet)
+
+	rulesSet.EXPECT().{{$method}}{{$modelName}}AccessManager(gomock.Any(), gomock.Any()).Return(true)
 
 	{{- if IsGet $method}} 
-		mockApp.EXPECT().{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}gomock.Any(){{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}gomock.Any(){{end}}).Return(test{{$modelName}}1, nil)
-		b, err := a.{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}test{{$modelName}}1.ID{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}})
+		mockRepo.EXPECT().{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}gomock.Any(){{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}gomock.Any(){{end}}).Return(test{{$modelName}}1, nil)
+		b, err := a.{{$method}}{{$modelName}}(&http.Request{}, profile{{if not (IsMyMethod $method)}}, test{{$modelName}}1.ID{{end}})
 		t.Nil(err)
 		t.DeepEqual(test{{$modelName}}1, b)
 	{{- end}}
 	{{- if IsAdd $method}}
-		mockApp.EXPECT().{{$method}}{{$modelName}}(gomock.Any(), {{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return(test{{$modelName}}1, nil)
-		b, err := a.{{$method}}{{$modelName}}(profileID, {{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}1)
+		mockRepo.EXPECT().{{$method}}{{$modelName}}(gomock.Any(), {{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return(test{{$modelName}}1, nil)
+		b, err := a.{{$method}}{{$modelName}}(&http.Request{}, profile, test{{$modelName}}1)
 		t.Nil(err)
 		t.DeepEqual(test{{$modelName}}1, b)
 	{{- end}}
 	{{- if IsDelete $method}}
-		mockApp.EXPECT().{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}gomock.Any(), {{end}}gomock.Any(){{if not $model.Shared}}, gomock.Any(){{end}}).Return(nil)
-		err := a.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}test{{$modelName}}1.ID, {{end}}profileID{{if not $model.Shared}}, isolatedEntityID{{end}})
+		mockRepo.EXPECT().{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}gomock.Any(), {{end}}gomock.Any(){{if not $model.Shared}}, gomock.Any(){{end}}).Return(nil)
+		err := a.{{$method}}{{$modelName}}(&http.Request{}, profile{{if not (IsMyMethod $method)}}, test{{$modelName}}1.ID{{end}})
 		t.Nil(err)
 	{{- end}}
 	{{- if IsEdit $method}}
-		mockApp.EXPECT().{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}gomock.Any(), {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}test{{$modelName}}2, {{end}}nil)
-		{{if $model.ReturnWhenEdit}}b, {{end}}err := a.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}test{{$modelName}}1.ID, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profileID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}1)
+		mockRepo.EXPECT().{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}gomock.Any(), {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}test{{$modelName}}2, {{end}}nil)
+		{{if $model.ReturnWhenEdit}}b, {{end}}err := a.{{$method}}{{$modelName}}(&http.Request{}, profile, {{if not (IsMyMethod $method)}}test{{$modelName}}1.ID, {{end}}test{{$modelName}}1)
 		t.Nil(err)
 		{{- if $model.ReturnWhenEdit}}
 			t.DeepEqual(test{{$modelName}}2, b)
 		{{- end}}
 	{{- end}}
-
 	{{- if IsList $method}}
-	mockApp.EXPECT().{{$method}}{{$modelName}}({{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return(test{{$modelName}}s, {{if $model.DetailedPagination}}2, {{end}}[]string{}, nil)
-	b, {{if $model.DetailedPagination}}count, {{end}}_, err := a.{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}listParams)
-	t.Nil(err)
-	{{- if $model.DetailedPagination}}
-	t.Equal(2, count)
-	{{- end}}
-	t.DeepEqual(test{{$modelName}}s, b)
+		mockRepo.EXPECT().{{$method}}{{$modelName}}({{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return(test{{$modelName}}s, {{if $model.DetailedPagination}}2, {{end}}[]string{}, nil)
+		b, {{if $model.DetailedPagination}}count, {{end}}_, err := a.{{$method}}{{$modelName}}(&http.Request{}, profile, listParams)
+		t.Nil(err)
+		{{- if $model.DetailedPagination}}
+		t.Equal(2, count)
+		{{- end}}
+		t.DeepEqual(test{{$modelName}}s, b)
 	{{- end}}
 }
 {{end}}{{end}}

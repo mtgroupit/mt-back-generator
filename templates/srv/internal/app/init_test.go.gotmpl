@@ -18,6 +18,26 @@ import (
 var (
 	isolatedEntityID = uuid.New().String()
 	profileID = uuid.New().String()
+	profile          = Profile{
+		ID:    profileID,
+		Authn: true,
+		Authz: Authz{
+			User:    true,
+			Admin:   true,
+			Manager: true,
+		},
+		IsolatedEntityID: isolatedEntityID,
+	}
+	profileUnAuth = &Profile{
+		ID:    profileID,
+		Authn: false,
+		Authz: Authz{
+			User:    false,
+			Admin:   false,
+			Manager: false,
+		},
+		IsolatedEntityID: isolatedEntityID,
+	}
 
 {{- range $modelName, $model := $.Models}}
 	test{{$modelName}}1 = &{{$modelName}}{  
