@@ -16,7 +16,7 @@ import (
 	{{$customTypeName = (Title $customTypeName)}}
 	type {{$customTypeName}} struct {
 		{{- range $field, $options := $customType.Fields}}
-			{{Title $field}} {{if $options.IsArray}}[]{{end}}{{if $options.IsCustom}}*{{end}}{{$options.GoType}}
+			{{Title $field}} {{if $options.IsArray}}[]{{end}}{{if $options.IsCustom}}*{{end}}{{AppType $options}}
 		{{- end}}
 	}
 
