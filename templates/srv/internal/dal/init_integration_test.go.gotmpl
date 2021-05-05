@@ -28,17 +28,19 @@ var (
 	
 {{- range $modelName, $model := $.Models}}
 	test{{$modelName}}1 = &app.{{$modelName}}{
-		{{- range $column, $options := $model.Columns}}
+		{{- range $_, $column := (SortColumns $model.Columns)}}
+			{{- $options := (index $model.Columns $column)}}
 			{{- if not (and (eq $column "id") (eq $options.Type "uuid"))}}
-			{{$options.TitleName}}: {{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
+				{{$options.TitleName}}: {{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
 			{{- end}}
 		{{- end}}
 	}
 	{{- if not $model.BoundToIsolatedEntity}}
-		test{{$modelName}}2 = &app.{{$modelName}}{  
-			{{- range $column, $options := $model.Columns}}
+		test{{$modelName}}2 = &app.{{$modelName}}{
+			{{- range $_, $column := (SortColumns $model.Columns)}}
+				{{- $options := (index $model.Columns $column)}}
 				{{- if not (and (eq $column "id") (eq $options.Type "uuid"))}}
-				{{$options.TitleName}}: {{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
+					{{$options.TitleName}}: {{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
 				{{- end}}
 			{{- end}}
 		}

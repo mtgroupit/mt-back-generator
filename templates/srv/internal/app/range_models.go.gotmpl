@@ -13,7 +13,8 @@ import (
 
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
 type {{$modelName}} struct {
-	{{- range $name, $options := $model.Columns}}
+	{{- range $_, $name := (SortColumns $model.Columns)}}
+		{{- $options := (index $model.Columns $name)}}
 		{{$options.TitleName}} {{if $options.IsArray}}[]{{end}}{{if or $options.IsStruct $options.IsCustom}}*{{end}}{{$options.GoType}}
 	{{- end}}
 }

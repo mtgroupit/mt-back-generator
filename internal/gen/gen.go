@@ -100,7 +100,7 @@ var goTmplFuncs = template.FuncMap{
 			for modelName2, model2 := range models {
 				if options.GoType == modelName2 {
 					for _, options2 := range model2.Columns {
-						if (!options2.IsStruct  && options2.IsArray) || options2.IsCustom {
+						if (!options2.IsStruct && options2.IsArray) || options2.IsCustom {
 							return true
 						}
 					}
@@ -372,6 +372,7 @@ var goTmplFuncs = template.FuncMap{
 	"EnumPrint": func(enum []string) string {
 		return fmt.Sprintf(`[%s]`, strings.Join(enum, ", "))
 	},
+	"SortColumns": parser.SortColumns,
 }
 
 // Srv - generate dir with service
