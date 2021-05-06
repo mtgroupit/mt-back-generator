@@ -546,6 +546,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		cfg.Functions[funcName] = newFunc
 	}
 
+	sort.Slice(cfg.ExtraTables, func(i, j int) bool { return cfg.ExtraTables[i].Name < cfg.ExtraTables[j].Name })
+
 	titleize(cfg)
 
 	return
