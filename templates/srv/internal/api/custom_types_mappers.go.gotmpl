@@ -51,7 +51,7 @@ import (
         {{LowerTitle $customTypeName}} := &app.{{$customTypeName}}{}
         {{- range $field, $options := $customType.Fields}}
             {{- if $options.IsCustom}}
-                {{LowerTitle $customTypeName}}.{{Title $field}} = app{{AppType $options}}{{if $options.IsArray}}s{{end}}(a.{{Title $field}})
+                {{LowerTitle $customTypeName}}.{{Title $field}} = app{{$options.AppType}}{{if $options.IsArray}}s{{end}}(a.{{Title $field}})
             {{- end}}
         {{- end}}
         {{- range $field, $options := $customType.Fields}}

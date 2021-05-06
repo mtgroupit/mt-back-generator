@@ -287,7 +287,7 @@ type (
 				{{- else}}
 					{{- if not $options.IsArray}}
 						{{- if or (ne $options.TitleName "ID") ($model.IDIsUUID)}}
-							{{$options.TitleName}} {{AppType $options}} `db:"{{NameSQL $column}}"`
+							{{$options.TitleName}} {{$options.AppType}} `db:"{{NameSQL $column}}"`
 						{{- end}} 
 					{{- else}}
 						{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
@@ -337,7 +337,7 @@ type (
 					{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
 				{{- else}}
 					{{- if not $options.IsArray}}
-						{{$options.TitleName}} {{AppType $options}} `db:"{{NameSQL $column}}"`
+						{{$options.TitleName}} {{$options.AppType}} `db:"{{NameSQL $column}}"`
 					{{- else}}
 						{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
 					{{- end}}
@@ -363,7 +363,7 @@ type (
 								{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
 							{{- else}}
 								{{- if not $options.IsArray}}
-									{{$options.TitleName}} {{AppType $options}} `db:"{{NameSQL $column}}"`
+									{{$options.TitleName}} {{$options.AppType}} `db:"{{NameSQL $column}}"`
 								{{- else}}
 									{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
 								{{- end}}

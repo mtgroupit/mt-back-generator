@@ -374,9 +374,9 @@ var goTmplFuncs = template.FuncMap{
 	"EnumPrint": func(enum []string) string {
 		return fmt.Sprintf(`[%s]`, strings.Join(enum, ", "))
 	},
-	"AppType": func(o models.Options) string {
-		return o.AppType()
-	},
+	// "AppType": func(o models.Options) string {
+	//		return o.AppType()
+	//	},
 }
 
 // Srv - generate dir with service

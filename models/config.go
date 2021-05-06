@@ -27,7 +27,7 @@ type Options struct {
 	Pk          string
 }
 
-func (o *Options) AppType() string {
+func (o Options) AppType() string {
 	switch o.BusinessType {
 	case "date":
 		return "*time.Time"
