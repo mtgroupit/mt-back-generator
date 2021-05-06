@@ -276,7 +276,8 @@ type (
 		{{- end}}
     }
 	argAdd{{$modelName}} struct {
-		{{- range $column, $options := $model.Columns}}
+		{{- range $_, $column := (SortColumns $model.Columns)}}
+			{{- $options := (index $model.Columns $column)}}
 			{{- if $options.IsStruct}}
 				{{- if not $options.IsArray}}
 					{{$options.TitleName}}ID interface{} `db:"{{NameSQL $column}}_id"`
@@ -327,7 +328,8 @@ type (
 		{{- end}}
 	}
 	argEdit{{$modelName}} struct {
-		{{- range $column, $options := $model.Columns}}
+		{{- range $_, $column := (SortColumns $model.Columns)}}
+			{{- $options := (index $model.Columns $column)}}
 			{{- if $options.IsStruct}}
 				{{- if not $options.IsArray}}
 					{{$options.TitleName}}ID interface{} `db:"{{NameSQL $column}}_id"`
@@ -352,7 +354,8 @@ type (
 		{{- if IsAdjustEdit $method}}
 			arg{{$method}}{{$modelName}} struct {
 				ID {{if $model.IDIsUUID}}string{{else}}int64{{end}} `db:"id"`
-				{{- range $column, $options := $model.Columns}}
+				{{- range $_, $column := (SortColumns $model.Columns)}}
+					{{- $options := (index $model.Columns $column)}}
 					{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $column}}
 						{{- if $options.IsStruct}}
 							{{- if not $options.IsArray}}
