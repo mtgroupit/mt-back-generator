@@ -45,7 +45,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
-		case errors.Is(err, app.ErrNoAcess):
+		case errors.Is(err, app.ErrAccessDenied):
 			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
 			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeForbidden.extra),
@@ -71,7 +71,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
-		case errors.Is(err, app.ErrNoAcess):
+		case errors.Is(err, app.ErrAccessDenied):
 			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
 			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeForbidden.extra),
@@ -99,7 +99,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
-		case errors.Is(err, app.ErrNoAcess):
+		case errors.Is(err, app.ErrAccessDenied):
 			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
 			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeForbidden.extra),
@@ -157,7 +157,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
-		case errors.Is(err, app.ErrNoAcess):
+		case errors.Is(err, app.ErrAccessDenied):
 			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
 			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeForbidden.extra),
@@ -183,7 +183,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
-		case errors.Is(err, app.ErrNoAcess):
+		case errors.Is(err, app.ErrAccessDenied):
 			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
 			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeForbidden.extra),

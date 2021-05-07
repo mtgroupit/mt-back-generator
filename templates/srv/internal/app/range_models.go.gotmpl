@@ -22,7 +22,7 @@ type {{$modelName}} struct {
 	{{- if IsGet $method}}
 		func (a *app) {{$method}}{{$modelName}}(prof Profile{{if not (IsMyMethod $method)}}, id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}) (*{{$modelName}}, error) {
 			if !a.rulesSet.{{$method}}{{$modelName}}AccessManager(prof) {
-				return nil, ErrNoAcess
+				return nil, ErrAccessDenied
 			}
 			return a.repo.{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}{{if not (IsMyMethod $method)}}id{{else}}prof.ID{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}prof.IsolatedEntityID{{end}})
 		}
@@ -30,7 +30,7 @@ type {{$modelName}} struct {
 	{{- if IsAdd $method}}
 		func (a *app) {{$method}}{{$modelName}}(prof Profile, m *{{$modelName}}) (*{{$modelName}}, error) {
 			if !a.rulesSet.{{$method}}{{$modelName}}AccessManager(prof) {
-				return nil, ErrNoAcess
+				return nil, ErrAccessDenied
 			}
 			return a.repo.{{$method}}{{$modelName}}(prof.ID, {{if not $model.Shared}}prof.IsolatedEntityID, {{end}}m)
 		}
@@ -38,7 +38,7 @@ type {{$modelName}} struct {
 	{{- if IsDelete $method}}
 		func (a *app) {{$method}}{{$modelName}}(prof Profile{{if not (IsMyMethod $method)}}, id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}) error {
 			if !a.rulesSet.{{$method}}{{$modelName}}AccessManager(prof) {
-				return ErrNoAcess
+				return ErrAccessDenied
 			}
 			return a.repo.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id, {{end}}prof.ID{{if not $model.Shared}}, prof.IsolatedEntityID{{end}})
 		}
@@ -46,7 +46,7 @@ type {{$modelName}} struct {
 	{{- if IsEdit $method}}
 		func (a *app) {{$method}}{{$modelName}}(prof Profile, {{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}} {
 			if !a.rulesSet.{{$method}}{{$modelName}}AccessManager(prof) {
-				return {{if $model.ReturnWhenEdit}}nil, {{end}}ErrNoAcess
+				return {{if $model.ReturnWhenEdit}}nil, {{end}}ErrAccessDenied
 			}
 			return a.repo.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}prof.ID, {{end}}{{if not $model.Shared}}prof.IsolatedEntityID, {{end}}m)
 		}
@@ -54,7 +54,7 @@ type {{$modelName}} struct {
 	{{- if IsList $method}}
 		func (a *app) {{$method}}{{$modelName}}(prof Profile, params *ListParams) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error) {
 			if !a.rulesSet.{{$method}}{{$modelName}}AccessManager(prof) {
-				return nil, {{if $model.DetailedPagination}}0, {{end}}nil, ErrNoAcess
+				return nil, {{if $model.DetailedPagination}}0, {{end}}nil, ErrAccessDenied
 			}
 			return a.repo.{{$method}}{{$modelName}}({{if not $model.Shared}}prof.IsolatedEntityID, {{end}}params)
 		}
