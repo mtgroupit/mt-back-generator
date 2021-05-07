@@ -36,7 +36,7 @@ import (
 {{- else}}
 	{{- $inputed := false}}
 	{{- range $name, $options := $model.Columns}}
-		{{- $model2 := (index $.Models $options.GoType)}}
+		{{- $model2 := (index $.Models $options.BusinessType)}}
 		{{- if and $model2.IDIsUUID (not $inputed) (not $options.IsArray)}}
 	"github.com/google/uuid"
 			{{- $inputed = true}}
@@ -570,9 +570,9 @@ type {{$modelName}} struct {
 func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID string, {{end}}a *Repo) (err error) { 
 {{- range $modelName2, $model2 := $.Models}}
 	{{- range $column, $options := $model.Columns}}
-		{{- if eq $modelName2 $options.GoType}}
+		{{- if eq $modelName2 $options.BusinessType}}
 			{{- if and $options.IsArray $options.IsStruct}}
-				slice{{$options.TitleName}} := []{{$modelName}}{{$options.GoType}}{}
+				slice{{$options.TitleName}} := []{{$modelName}}{{$options.BusinessType}}{}
 				if err = a.db.NamedSelect(&slice{{$options.TitleName}}, sqlGet{{Title $column}}IDsFor{{$modelName}}LazyLoading, argGet{{$modelName}}{
 					ID: newNull{{if $model.IDIsUUID}}UUID{{else}}Int64ID{{end}}(m.ID{{if $model.IDIsUUID}}.String(){{end}}),
 					{{- if not $model.Shared}}
@@ -582,9 +582,9 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 					return
 				}
 				for _, cd := range slice{{$options.TitleName}} {
-					var {{$column}} {{$options.GoType}}
+					var {{$column}} {{$options.BusinessType}}
 					if err = a.db.NamedGet(&{{$column}}, sqlGet{{Title $column}}For{{$modelName}}LazyLoading, argGet{{$modelName2}}{
-						ID: newNull{{if $model2.IDIsUUID}}UUID{{else}}Int64ID{{end}}(cd.{{$options.GoType}}ID{{if $model2.IDIsUUID}}.String(){{end}}),
+						ID: newNull{{if $model2.IDIsUUID}}UUID{{else}}Int64ID{{end}}(cd.{{$options.BusinessType}}ID{{if $model2.IDIsUUID}}.String(){{end}}),
 						{{- if not $model2.Shared}}
 							IsolatedEntityID: isolatedEntityID,
 						{{- end}}
@@ -642,10 +642,10 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 
 {{- range $column, $options := $model.Columns}}
 {{- if  and $options.IsArray $options.IsStruct}}
-	func (a *Repo) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*app.{{$options.GoType}}) error {
+	func (a *Repo) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models $options.BusinessType).IDIsUUID}}string{{else}}int64{{end}}, items []*app.{{$options.BusinessType}}) error {
 		for _, item := range items {
-			{{- $model2 := (index $.Models $options.GoType)}}
-			id, err := a.add{{$options.GoType}}({{if $model2.IDIsUUID}}uuid.New().String(), {{end}}{{if not $model2.Shared}}isolatedEntityID, {{end}}item)
+			{{- $model2 := (index $.Models $options.BusinessType)}}
+			id, err := a.add{{$options.BusinessType}}({{if $model2.IDIsUUID}}uuid.New().String(), {{end}}{{if not $model2.Shared}}isolatedEntityID, {{end}}item)
 			if err != nil {
 				return err
 			}
@@ -692,7 +692,7 @@ func (m *{{$modelName}}) LazyLoading({{if not $model.Shared}}isolatedEntityID st
 		return nil
 	}
 
-	func (a *Repo) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error {
+	func (a *Repo) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models $options.BusinessType).IDIsUUID}}string{{else}}int64{{end}}) error {
 		for _, item := range items {
 			res, err := a.db.NamedExec(sqlDeleteFrom{{Title $column}}In{{$modelName}}, arg{{Title $column}}In{{$modelName}}{
 				{{$modelName}}ID: id,
@@ -829,7 +829,7 @@ func (a *Repo) add{{$modelName}}(profileID string, {{if not $model.Shared}}isola
 	}
 	{{- range $modelName2, $model2 := $.Models}}
 		{{- range $column, $options := $model.Columns}}
-			{{- if eq $modelName2 $options.GoType}}
+			{{- if eq $modelName2 $options.BusinessType}}
 				{{- if and $options.IsArray $options.IsStruct}}
 					for _, m := range m.{{$options.TitleName}} {
 						if _, err := a.db.NamedExec(sqlAddTo{{Title $column}}In{{$modelName}}, arg{{Title $column}}In{{$modelName}}{
@@ -968,7 +968,7 @@ func (m *{{$modelName}}) NestedFilter(filter *app.Filter) (ok, filterIsValid boo
 			{{- $options := (index $model.Columns $column)}}
 			{{- if and $options.IsStruct (not $options.IsArray)}}
 			case "{{$column}}":
-				ok, filterIsValid = m.{{$options.TitleName}}.{{if (index $models $options.GoType).HaveLazyLoading}}Nested{{end}}Filter(filter)
+				ok, filterIsValid = m.{{$options.TitleName}}.{{if (index $models $options.BusinessType).HaveLazyLoading}}Nested{{end}}Filter(filter)
 			{{- end}}
 		{{- end}}
 		default:
@@ -992,7 +992,7 @@ func (m *{{$modelName}}) Filter(filter *app.Filter) (ok, filterIsValid bool) {
 			{{- end}}
 				{{- if (IsTimeFormat $options.Format)}}
 				value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}{{end}}
-				{{- else}}value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{if eq $options.GoType "types.Decimal"}}Decimal.String(){{else}}{{Title $options.GoType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}}{{end}}{{end}})
+				{{- else}}value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{if eq $options.BusinessType "types.Decimal"}}Decimal.String(){{else}}{{Title $options.BusinessType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}}{{end}}{{end}})
 				equal := {{if or (ne $options.Type "string") $options.StrictFilter}}value == filter.Value{{else}}contains(value, filter.Value){{end}}
 				if (equal && filter.Include) || (!equal && !filter.Include) {
 					ok, filterIsValid = true, true

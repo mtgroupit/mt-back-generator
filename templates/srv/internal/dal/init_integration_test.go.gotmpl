@@ -31,7 +31,7 @@ var (
 		{{- range $_, $column := (SortColumns $model.Columns)}}
 			{{- $options := (index $model.Columns $column)}}
 			{{- if not (and (eq $column "id") (eq $options.Type "uuid"))}}
-				{{$options.TitleName}}: {{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
+			{{$options.TitleName}}: {{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.AppType}}s{{else}}test{{$options.AppType}}1{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
 			{{- end}}
 		{{- end}}
 	}
@@ -40,11 +40,11 @@ var (
 			{{- range $_, $column := (SortColumns $model.Columns)}}
 				{{- $options := (index $model.Columns $column)}}
 				{{- if not (and (eq $column "id") (eq $options.Type "uuid"))}}
-					{{$options.TitleName}}: {{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
+				{{$options.TitleName}}: {{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.AppType}}s{{else}}test{{$options.AppType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
 				{{- end}}
 			{{- end}}
 		}
-		test{{$modelName}}s = []app.{{$modelName}}{test{{$modelName}}1, test{{$modelName}}2}
+		test{{$modelName}}s = []*app.{{$modelName}}{test{{$modelName}}1, test{{$modelName}}2}
 	{{- end}}
 {{- end}}
 
@@ -52,15 +52,15 @@ var (
 	{{- $customTypeName = (Title $customTypeName)}}
 	test{{$customTypeName}}1 = &app.{{$customTypeName}}{  
 		{{- range $field, $options := $customType.Fields}}
-		{{Title $field}}: {{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
+		{{Title $field}}: {{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.AppType}}s{{else}}test{{$options.AppType}}1{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
 		{{- end}}
 	}
 	test{{$customTypeName}}2 = &app.{{$customTypeName}}{  
 		{{- range $field, $options := $customType.Fields}}
-		{{Title $field}}: {{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
+		{{Title $field}}: {{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.AppType}}s{{else}}test{{$options.AppType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
 		{{- end}}
 	}
-	test{{$customTypeName}}s = []app.{{$customTypeName}}{test{{$customTypeName}}1, test{{$customTypeName}}2}
+	test{{$customTypeName}}s = []*app.{{$customTypeName}}{test{{$customTypeName}}1, test{{$customTypeName}}2}
 {{end}}
 
 	{{- if .HaveListMethod}}

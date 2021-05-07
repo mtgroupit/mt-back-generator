@@ -85,10 +85,10 @@ paths:
                   {{$name}}:
                     type: array
                     items:
-                      type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}
+                      type: {{if (index $.Models $options.BusinessType).IDIsUUID}}string{{else}}int64{{end}}
                     {{- else}}            
                   {{$name}}:
-                    type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}
+                    type: {{if (index $.Models $options.BusinessType).IDIsUUID}}string{{else}}int64{{end}}
                     {{- end}}
                   {{- else}}
                   {{$name}}:
@@ -185,11 +185,11 @@ paths:
               itemsID:
                 type: array
                 items:
-                  type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}
+                  type: {{if (index $.Models $options.BusinessType).IDIsUUID}}string{{else}}int64{{end}}
               items:
                 type: array
                 items:
-                  $ref: "#/definitions/{{LowerTitle $options.GoType}}Add" 
+                  $ref: "#/definitions/{{LowerTitle $options.BusinessType}}Add" 
       responses:        
         200:
           description: OK
@@ -215,7 +215,7 @@ paths:
               items:
                 type: array
                 items:
-                  type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}
+                  type: {{if (index $.Models $options.BusinessType).IDIsUUID}}string{{else}}int64{{end}}
       responses:        
         200:
           description: OK
@@ -348,10 +348,10 @@ definitions:
       {{$name}}:
         type: array
         items:
-          type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}
+          type: {{if (index $.Models $options.BusinessType).IDIsUUID}}string{{else}}int64{{end}}
       {{- else}}            
       {{$name}}:
-        type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}
+        type: {{if (index $.Models $options.BusinessType).IDIsUUID}}string{{else}}int64{{end}}
       {{- end}}
     {{- else}}
       {{- if $options.IsCustom}}

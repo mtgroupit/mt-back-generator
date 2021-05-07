@@ -69,7 +69,7 @@ const (
 
 	{{- range $modelName2, $model2 := $.Models}}
 		{{- range $column, $options := $model.Columns}}
-			{{- if eq $modelName2 $options.GoType}}
+			{{- if eq $modelName2 $options.BusinessType}}
 				{{- if and $options.IsArray $options.IsStruct}}
 						sqlAddTo{{Title $column}}In{{$modelName}} = `
 	INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}(
@@ -215,7 +215,7 @@ const (
 	{{- if $model.HaveLazyLoading}}
 		{{- range $modelName2, $model2 := $.Models}}
 			{{- range $column, $options := $model.Columns}}
-				{{- if eq $modelName2 $options.GoType}}
+				{{- if eq $modelName2 $options.BusinessType}}
 					{{- if and $options.IsArray $options.IsStruct}}
 						sqlGet{{Title $column}}IDsFor{{$modelName}}LazyLoading = `
 	SELECT
@@ -288,7 +288,7 @@ type (
 				{{- else}}
 					{{- if not $options.IsArray}}
 						{{- if or (ne $options.TitleName "ID") ($model.IDIsUUID)}}
-							{{$options.TitleName}} {{$options.GoType}} `db:"{{NameSQL $column}}"`
+							{{$options.TitleName}} {{$options.AppType}} `db:"{{NameSQL $column}}"`
 						{{- end}} 
 					{{- else}}
 						{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
@@ -305,7 +305,7 @@ type (
 	}
 	{{- range $modelName2, $model2 := $.Models}}
 		{{- range $column, $options := $model.Columns}}
-			{{- if eq $modelName2 $options.GoType}}
+			{{- if eq $modelName2 $options.BusinessType}}
 				{{- if and $options.IsArray $options.IsStruct}}
 						arg{{Title $column}}In{{$modelName}} struct {
 							{{$modelName}}ID interface{} `db:"{{NameSQL $modelName}}_id"`
@@ -339,7 +339,7 @@ type (
 					{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
 				{{- else}}
 					{{- if not $options.IsArray}}
-						{{$options.TitleName}} {{$options.GoType}} `db:"{{NameSQL $column}}"`
+						{{$options.TitleName}} {{$options.AppType}} `db:"{{NameSQL $column}}"`
 					{{- else}}
 						{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
 					{{- end}}
@@ -366,7 +366,7 @@ type (
 								{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
 							{{- else}}
 								{{- if not $options.IsArray}}
-									{{$options.TitleName}} {{$options.GoType}} `db:"{{NameSQL $column}}"`
+									{{$options.TitleName}} {{$options.AppType}} `db:"{{NameSQL $column}}"`
 								{{- else}}
 									{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
 								{{- end}}
