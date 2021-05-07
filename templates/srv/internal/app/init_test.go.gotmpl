@@ -28,7 +28,7 @@ var (
 		},
 		IsolatedEntityID: isolatedEntityID,
 	}
-	profileUnAuth = &Profile{
+	profileUnAuth = Profile{
 		ID:    profileID,
 		Authn: false,
 		Authz: Authz{
@@ -81,12 +81,12 @@ var (
 	}
 	
 	filters = []*Filter{
-		&Filter{
+		{
 			Key: "ID",
 			Include: true,
 			Value: "1",
 		},
-		&Filter{
+		{
 			Key: "ID",
 			Include: false,
 			Value: "2",
