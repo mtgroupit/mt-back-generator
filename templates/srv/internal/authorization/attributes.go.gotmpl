@@ -3,7 +3,6 @@ package authorization
 
 import (
 	"{{.Module}}/internal/app"
-	"net/http"
 )
 
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
@@ -15,7 +14,7 @@ type Attributes interface {
 	IsGuest(app.Profile) bool
 
 	{{- range $_, $attr := $.AccessAttributes}}
-		{{Title $attr}}(*http.Request, app.Profile) bool
+		{{Title $attr}}(app.Profile) bool
 	{{- end}}
 }
 

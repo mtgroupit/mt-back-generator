@@ -373,7 +373,7 @@ var goTmplFuncs = template.FuncMap{
 			checkNotRole = append(checkNotRole, "!"+roleChecker)
 		}
 		for _, attr := range rule.Attributes {
-			checkAttr = append(checkAttr, "r.attributes."+strings.Title(attr)+"(rq, prof)")
+			checkAttr = append(checkAttr, "r.attributes."+strings.Title(attr)+"(prof)")
 		}
 		return fmt.Sprintf("(%s) || ((%s) && %s)", strings.Join(checkNotRole, " && "), strings.Join(checkRole, " || "), strings.Join(checkAttr, " && "))
 	},
@@ -383,7 +383,7 @@ var goTmplFuncs = template.FuncMap{
 		}
 		ruleMethods := []string{}
 		for _, rule := range rules {
-			ruleMethods = append(ruleMethods, "rs.rules."+nameToTitle(rule)+"(rq, prof)")
+			ruleMethods = append(ruleMethods, "rs.rules."+nameToTitle(rule)+"(prof)")
 		}
 		return strings.Join(ruleMethods, " && ")
 	},

@@ -2,7 +2,6 @@
 package authorization
 
 import (
-	"net/http"
 	"{{.Module}}/internal/app"
 )
 
@@ -20,7 +19,7 @@ func NewRulesSet() *rulesSet {
 
 {{range $modelName, $model := $.Models}}
 	{{- range $i, $method := $model.Methods}}
-		func (rs *rulesSet) {{$method}}{{$modelName}}AccessManager(rq *http.Request, prof app.Profile) bool {
+		func (rs *rulesSet) {{$method}}{{$modelName}}AccessManager(prof app.Profile) bool {
 			return {{GenRulesSet (index $model.MethodsProps $i).Rules}}
 		}
 	{{- end}}

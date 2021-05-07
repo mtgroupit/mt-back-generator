@@ -3,11 +3,10 @@ package authorization
 
 import (
 	"{{.Module}}/internal/app"
-	"net/http"
 )
 
 {{range $_, $attr := $.AccessAttributes}}
-    func (attr *attributes) {{Title $attr}}(r *http.Request, prof app.Profile) bool {
+    func (attr *attributes) {{Title $attr}}(prof app.Profile) bool {
         return true
     }
 {{end}}

@@ -2,7 +2,6 @@
 package authorization
 
 import (
-	"net/http"
 	"{{.Module}}/internal/app"
 )
 
@@ -10,7 +9,7 @@ import (
 
 type Rules interface {
 	{{- range $ruleName, $rule := $.Rules}}
-		{{Title $ruleName}}(*http.Request, app.Profile) bool
+		{{Title $ruleName}}(app.Profile) bool
 	{{- end}}
 }
 
@@ -25,7 +24,7 @@ func newRules() Rules {
 }
 
 {{range $ruleName, $rule := $.Rules}}
-	func (r *rules) {{Title $ruleName}}(rq *http.Request, prof app.Profile) bool {
+	func (r *rules) {{Title $ruleName}}(prof app.Profile) bool {
 		return {{GenRule $rule}}
 	}
 {{end}}
