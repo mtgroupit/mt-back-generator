@@ -185,6 +185,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 	for name, model := range cfg.Models {
 		model.TitleName = strings.Title(name)
+		columns := SortColumns(model.Columns)
 
 		for i := range model.Tags {
 			model.Tags[i] = strings.Title(model.Tags[i])
@@ -224,7 +225,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 		psql := []models.PsqlParams{}
 		var indexLastNotArrOfStruct int
-		for column, options := range model.Columns {
+		for _, column := range columns {
+			options := model.Columns[column]
 			switch column {
 			case "createdAt":
 				options.Type = "string"
@@ -417,7 +419,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 						pp.TypeSQL = options.Type
 					}
 				}
-
 			}
 
 			model.Columns[column] = options
@@ -433,7 +434,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		model.Psql = psql
 
 		var SQLSelect, sqlWhereParams, sqlAdd, sqlEdit []string
-		for column, options := range model.Columns {
+		for _, column := range columns {
+			options := model.Columns[column]
 			if !options.IsStruct {
 				sqlName := NameSQL(options.TitleName)
 				titleName := options.TitleName
@@ -543,6 +545,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 		cfg.Functions[funcName] = newFunc
 	}
+
+	sort.Slice(cfg.ExtraTables, func(i, j int) bool { return cfg.ExtraTables[i].Name < cfg.ExtraTables[j].Name })
 
 	titleize(cfg)
 
@@ -1007,6 +1011,26 @@ func convertStandardTypeToBusinessType(columnType, format string) string {
 	default:
 		return columnType
 	}
+}
+
+// SortColumns returns sorted keys for columns map ("id" will be first, if it exist).
+func SortColumns(columns map[string]models.Options) []string {
+	keys := make([]string, 0, len(columns))
+	for k := range columns {
+		keys = append(keys, k)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		if strings.ToLower(keys[i]) == "id" {
+			return true
+		}
+		if strings.ToLower(keys[j]) == "id" {
+			return false
+		}
+		return keys[i] < keys[j]
+	})
+
+	return keys
 }
 
 // isCustomMethod return true if method is custom

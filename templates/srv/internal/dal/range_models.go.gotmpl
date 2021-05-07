@@ -203,7 +203,8 @@ type {{$modelName}} struct {
 
 			res, err := a.db.NamedExec(sql{{$method}}{{$modelName}}, arg{{$method}}{{$modelName}}{
 				ID: id,
-				{{- range $column, $options := $model.Columns}}
+				{{- range $_, $column := (SortColumns $model.Columns)}}
+					{{- $options := (index $model.Columns $column)}}
 					{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $column}}
 						{{- if $options.IsStruct}}
 							{{- if not $options.IsArray}}
@@ -253,7 +254,8 @@ type {{$modelName}} struct {
 			var nestedSort bool
 		{{- end}}
 		switch params.SortBy {
-			{{- range $column, $options := $model.Columns }}
+			{{- range $_, $column := (SortColumns $model.Columns)}}
+				{{- $options := (index $model.Columns $column)}}
 				{{- if and $options.SortOn (not $options.IsStruct) }}
 					case "{{$column}}":
 						orderQuery = "ORDER BY {{NameSQL $column}}"
@@ -263,11 +265,9 @@ type {{$modelName}} struct {
 				{{- $completeIfStmt := false }}
 				{{- range $column, $options := $model.Columns}}
 					{{- if $options.SortDefault }}
-						{{/* {{- if $haveNestedSorts }} */}}
-							{{- $completeIfStmt = true }}
-							if params.SortBy == "" { 
-						{{/* {{- end}} */}}
-								orderQuery = "ORDER BY {{NameSQL $column}}"
+						{{- $completeIfStmt = true }}
+						if params.SortBy == "" { 
+							orderQuery = "ORDER BY {{NameSQL $column}}"
 						{{- if $options.SortOrderDefault}}
 								if params.OrderBy == "" {
 									params.OrderBy = "{{$options.SortOrderDefault}}"
@@ -305,7 +305,8 @@ type {{$modelName}} struct {
 					{{- end}}
 				{{- end}}
 			{{- else}}
-				{{- range $column, $options := $model.Columns}}
+				{{- range $_, $column := (SortColumns $model.Columns)}}
+					{{- $options := (index $model.Columns $column)}}
 					{{- if and (not $options.IsArray) (not $options.IsCustom)}}
 						"{{NameSQL $column}}": nil,
 						"not_{{NameSQL $column}}": nil,
@@ -337,7 +338,8 @@ type {{$modelName}} struct {
 						{{- end}}
 					{{- end}}
 				{{- else}}
-					{{- range $column, $options := $model.Columns}}
+					{{- range $_, $column := (SortColumns $model.Columns)}}
+						{{- $options := (index $model.Columns $column)}}
 						{{- if  and (not $options.IsArray) (not $options.IsCustom)}}
 						case "{{$column}}":
 							if filter.Include {
@@ -478,8 +480,9 @@ type {{$modelName}} struct {
 				case "DESC":
 					orderByASC = false
 				}
-				switch params.SortBy { 
-			{{- range $column, $options := $model.Columns}}
+				switch params.SortBy {
+			{{- range $_, $column := (SortColumns $model.Columns)}}
+				{{- $options := (index $model.Columns $column)}}
 				{{- range $j, $sort := $options.SortBy}}
 				case "{{$column}}.{{$sort}}":
 					if orderByASC {
@@ -792,7 +795,8 @@ func (a *Repo) add{{$modelName}}(profileID string, {{if not $model.Shared}}isola
 		{{- if $model.IDIsUUID}}
 			ID: {{$modelName}}ID,
 		{{- end}}
-		{{- range $column, $options := $model.Columns}}
+		{{- range $_, $column := (SortColumns $model.Columns)}}
+			{{- $options := (index $model.Columns $column)}}
 			{{- if $options.IsStruct}}
 				{{- if not $options.IsArray}}
 					{{$options.TitleName}}ID: {{$column}}ID,
@@ -903,7 +907,8 @@ func (a *Repo) edit{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{
 	{{- end}}
 
 	res, err := a.db.NamedExec(sqlEdit{{$modelName}}, argEdit{{$modelName}}{
-		{{- range $column, $options := $model.Columns}}
+		{{- range $_, $column := (SortColumns $model.Columns)}}
+			{{- $options := (index $model.Columns $column)}}
 			{{- if $options.IsStruct}}
 				{{- if not $options.IsArray}}
 					{{$options.TitleName}}ID: {{$column}}ID,
@@ -959,7 +964,8 @@ func (m *{{$modelName}}) NestedFilter(filter *app.Filter) (ok, filterIsValid boo
 		splitedFilter := strings.SplitN(filter.Key, ".", 2)
 		filter.Key = splitedFilter[1]
 		switch splitedFilter[0] {
-		{{- range $column, $options := $model.Columns}}
+		{{- range $_, $column := (SortColumns $model.Columns)}}
+			{{- $options := (index $model.Columns $column)}}
 			{{- if and $options.IsStruct (not $options.IsArray)}}
 			case "{{$column}}":
 				ok, filterIsValid = m.{{$options.TitleName}}.{{if (index $models $options.BusinessType).HaveLazyLoading}}Nested{{end}}Filter(filter)
@@ -977,7 +983,8 @@ func (m *{{$modelName}}) NestedFilter(filter *app.Filter) (ok, filterIsValid boo
 
 func (m *{{$modelName}}) Filter(filter *app.Filter) (ok, filterIsValid bool) {
 	switch filter.Key {
-	{{- range $column, $options := $model.Columns}}
+	{{- range $_, $column := (SortColumns $model.Columns)}}
+		{{- $options := (index $model.Columns $column)}}
 		{{- if and (not $options.IsStruct) (not $options.IsCustom)}}
 		case "{{$column}}":
 			{{- if $options.IsArray}}
@@ -1008,7 +1015,8 @@ func app{{$modelName}}(m {{$modelName}}) *app.{{$modelName}} {
 		return nil
 	}
 	return &app.{{$modelName}}{
-		{{- range $name, $options := $model.Columns}}
+		{{- range $_, $name := (SortColumns $model.Columns)}}
+			{{- $options := (index $model.Columns $name)}}
 			{{$options.TitleName}}: {{ConvertDalToAppColumn $options}},
 		{{- end}}
 	}

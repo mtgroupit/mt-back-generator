@@ -262,7 +262,8 @@ func api{{$modelName}}(a *app.{{$modelName}}) *models.{{$modelName}} {
 		return nil
 	}
 	return &models.{{$modelName}}{
-		{{- range $name, $options := $model.Columns}}
+		{{- range $_, $name := (SortColumns $model.Columns)}}
+			{{- $options := (index $model.Columns $name)}}
 			{{$options.TitleName}}: {{ConvertAppToApiColumn "a" $name $options}},
 		{{- end}}
 	}
@@ -283,14 +284,16 @@ func app{{$modelName}}(a *models.{{$modelName}}{{if $model.HaveLazyLoading}}, wi
 	{{LowerTitle $modelName}} := &app.{{$modelName}}{}
 	{{- if $model.HaveLazyLoading}}
 		if withStructs {
-			{{- range $name, $options := $model.Columns}}
+			{{- range $_, $name := (SortColumns $model.Columns)}}
+				{{- $options := (index $model.Columns $name)}}
 				{{- if $options.IsStruct}}
 					{{LowerTitle $modelName}}.{{$options.TitleName}} = app{{$options.BusinessType}}{{if $options.IsArray}}s{{end}}(a.{{$options.TitleName}}{{if (index $models $options.BusinessType).HaveLazyLoading}}, false{{end}})
 				{{- end}}
 			{{- end}}
 		}
 	{{- end}}
-	{{- range $name, $options := $model.Columns}}
+	{{- range $_, $name := (SortColumns $model.Columns)}}
+		{{- $options := (index $model.Columns $name)}}
 		{{- if not $options.IsStruct}}
 			{{LowerTitle $modelName}}.{{$options.TitleName}} = {{ConvertApiToAppColumn "a" $name $options}}
 		{{- end}}
@@ -313,19 +316,22 @@ func app{{$modelName}}Add(a *models.{{$modelName}}Add) *app.{{$modelName}} {
 	}
 	{{LowerTitle $modelName}} := &app.{{$modelName}}{}
 
-	{{- range $name, $options := $model.Columns}}
+	{{- range $_, $name := (SortColumns $model.Columns)}}
+		{{- $options := (index $model.Columns $name)}}
 		{{- if and (not $options.IsStruct) (ne $name "id") (not (IsStandardColumn $name))}}
 			{{LowerTitle $modelName}}.{{$options.TitleName}} = {{ConvertApiToAppColumn "a" $name $options}}
 		{{- end}}
 	{{- end}}
-	{{- range $name, $options := $model.Columns}}
+	{{- range $_, $name := (SortColumns $model.Columns)}}
+		{{- $options := (index $model.Columns $name)}}
 		{{- if and $options.IsStruct (not $options.IsArray)}}
 			if a.{{$options.TitleName}} != "" {
 				{{LowerTitle $modelName}}.{{$options.TitleName}} = &app.{{$options.BusinessType}}{ID: a.{{$options.TitleName}}}
 			}
 		{{- end}}
 	{{- end}}
-	{{- range $name, $options := $model.Columns}}
+	{{- range $_, $name := (SortColumns $model.Columns)}}
+		{{- $options := (index $model.Columns $name)}}
 		{{- if  and $options.IsArray $options.IsStruct}}
 			if len(a.{{$options.TitleName}}) > 0 {
 				for _, id := range a.{{$options.TitleName}} {
