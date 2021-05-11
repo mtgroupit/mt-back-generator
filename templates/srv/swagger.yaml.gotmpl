@@ -77,17 +77,18 @@ paths:
             {{- if IsAdjustEdit $method}}
                 type: object
                 properties:
-              {{- range $name, $options := $model.Columns}}
+              {{- range $_, $name := (SortColumns $model.Columns)}}
+                {{- $options := (index $model.Columns $name)}}
                 {{- if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}
                   {{- if $options.IsStruct}}
                     {{- if $options.IsArray}}  
                   {{$name}}:
                     type: array
                     items:
-                      type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}
+                      type: {{if (index $.Models $options.BusinessType).IDIsUUID}}string{{else}}int64{{end}}
                     {{- else}}            
                   {{$name}}:
-                    type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}
+                    type: {{if (index $.Models $options.BusinessType).IDIsUUID}}string{{else}}int64{{end}}
                     {{- end}}
                   {{- else}}
                   {{$name}}:
@@ -102,11 +103,11 @@ paths:
                       {{- if $options.Format}}
                       format: {{$options.Format}}
                       {{- end}}
-                      {{- if .Length}}
-                      maxLength: {{.Length}}
+                      {{- if $options.Length}}
+                      maxLength: {{$options.Length}}
                       {{- end}}
-                      {{- if .Default}}
-                      default: {{.Default}}
+                      {{- if $options.Default}}
+                      default: {{$options.Default}}
                       {{- end}}
                       {{- if $options.Enum}}
                       enum: {{EnumPrint $options.Enum}}
@@ -162,8 +163,9 @@ paths:
           description: error
           schema:
             $ref: "#/definitions/error"
-  {{- end}} 
-  {{- range $column, $options := $model.Columns}}
+  {{- end}}
+	{{- range $_, $column := (SortColumns $model.Columns)}}
+  {{- $options := (index $model.Columns $column)}}
   {{- if and $options.IsStruct $options.IsArray}}
   /{{LowerTitle $modelName}}/add{{Title $column}}:    
     post:
@@ -183,11 +185,11 @@ paths:
               itemsID:
                 type: array
                 items:
-                  type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}
+                  type: {{if (index $.Models $options.BusinessType).IDIsUUID}}string{{else}}int64{{end}}
               items:
                 type: array
                 items:
-                  $ref: "#/definitions/{{LowerTitle $options.GoType}}Add" 
+                  $ref: "#/definitions/{{LowerTitle $options.BusinessType}}Add" 
       responses:        
         200:
           description: OK
@@ -213,7 +215,7 @@ paths:
               items:
                 type: array
                 items:
-                  type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}
+                  type: {{if (index $.Models $options.BusinessType).IDIsUUID}}string{{else}}int64{{end}}
       responses:        
         200:
           description: OK
@@ -260,8 +262,9 @@ definitions:
   {{LowerTitle $modelName}}:
     type: object
     description: "{{.Description}}"
-    properties:      
-  {{- range $name, $options := $model.Columns}}
+    properties:
+	{{- range $_, $name := (SortColumns $model.Columns)}}
+		{{- $options := (index $model.Columns $name)}}
     {{- if or $options.IsStruct $options.IsCustom}}
       {{- if $options.IsArray}}  
       {{$name}}:
@@ -284,11 +287,11 @@ definitions:
           x-nullable: true
           {{- end}}
         {{- end}}
-        {{- if .Length}}
-          maxLength: {{.Length}}
+        {{- if $options.Length}}
+          maxLength: {{$options.Length}}
         {{- end}}
-        {{- if .Default}}
-          default: {{.Default}}
+        {{- if $options.Default}}
+          default: {{$options.Default}}
         {{- end}}
         {{- if $options.Enum}}
           enum: {{EnumPrint $options.Enum}}
@@ -302,11 +305,11 @@ definitions:
         x-nullable: true
         {{- end}}
         {{- end}}
-        {{- if .Length}}
-        maxLength: {{.Length}}
+        {{- if $options.Length}}
+        maxLength: {{$options.Length}}
         {{- end}}
-        {{- if .Default}}
-        default: {{.Default}}
+        {{- if $options.Default}}
+        default: {{$options.Default}}
         {{- end}}
         {{- if $options.Enum}}
         enum: {{EnumPrint $options.Enum}}
@@ -318,17 +321,18 @@ definitions:
     type: object
     description: "{{LowerTitle $modelName}} model for add and edit methods"
     properties:
-  {{- range $name, $options := $model.Columns}}
+	{{- range $_, $name := (SortColumns $model.Columns)}}
+  {{- $options := (index $model.Columns $name)}}
   {{- if and (ne $name "id") (not (IsStandardColumn $name))}}
     {{- if $options.IsStruct}}
       {{- if $options.IsArray}}  
       {{$name}}:
         type: array
         items:
-          type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}
+          type: {{if (index $.Models $options.BusinessType).IDIsUUID}}string{{else}}int64{{end}}
       {{- else}}            
       {{$name}}:
-        type: {{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}
+        type: {{if (index $.Models $options.BusinessType).IDIsUUID}}string{{else}}int64{{end}}
       {{- end}}
     {{- else}}
       {{- if $options.IsCustom}}
@@ -353,11 +357,11 @@ definitions:
           x-nullable: true
           {{- end}}
         {{- end}}
-        {{- if .Length}}
-          maxLength: {{.Length}}
+        {{- if $options.Length}}
+          maxLength: {{$options.Length}}
         {{- end}}
-        {{- if .Default}}
-          default: {{.Default}}
+        {{- if $options.Default}}
+          default: {{$options.Default}}
         {{- end}}
         {{- if $options.Enum}}
           enum: {{EnumPrint $options.Enum}}
@@ -370,11 +374,11 @@ definitions:
         x-nullable: true
         {{- end}}
         {{- end}}
-        {{- if .Length}}
-        maxLength: {{.Length}}
+        {{- if $options.Length}}
+        maxLength: {{$options.Length}}
         {{- end}}
-        {{- if .Default}}
-        default: {{.Default}}
+        {{- if $options.Default}}
+        default: {{$options.Default}}
         {{- end}}
         {{- if $options.Enum}}
         enum: {{EnumPrint $options.Enum}}
@@ -413,11 +417,11 @@ definitions:
           x-nullable: true
           {{- end}}
         {{- end}}
-        {{- if .Length}}
-          maxLength: {{.Length}}
+        {{- if $options.Length}}
+          maxLength: {{$options.Length}}
         {{- end}}
-        {{- if .Default}}
-          default: {{.Default}}
+        {{- if $options.Default}}
+          default: {{$options.Default}}
         {{- end}}
         {{- if $options.Enum}}
           enum: {{EnumPrint $options.Enum}}
@@ -431,11 +435,11 @@ definitions:
         x-nullable: true
         {{- end}}
         {{- end}}
-        {{- if .Length}}
-        maxLength: {{.Length}}
+        {{- if $options.Length}}
+        maxLength: {{$options.Length}}
         {{- end}}
-        {{- if .Default}}
-        default: {{.Default}}
+        {{- if $options.Default}}
+        default: {{$options.Default}}
         {{- end}}
         {{- if $options.Enum}}
         enum: {{EnumPrint $options.Enum}}

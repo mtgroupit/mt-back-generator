@@ -13,7 +13,7 @@ import (
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
 type {{$modelName}} struct {
 	{{- range $name, $options := $model.Columns}}
-		{{$options.TitleName}} {{if $options.IsArray}}[]{{end}}{{if or $options.IsStruct $options.IsCustom}}*{{end}}{{$options.GoType}}
+		{{$options.TitleName}} {{if $options.IsArray}}[]{{end}}{{if or $options.IsStruct $options.IsCustom}}*{{end}}{{$options.AppType}}
 	{{- end}}
 }
 
@@ -62,11 +62,11 @@ type {{$modelName}} struct {
 {{- end}}
 {{- end}}
 {{range $column, $options := $model.Columns}} {{if  and $options.IsArray $options.IsStruct}}
-func (a *app) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*{{$options.GoType}}) error {
+func (a *app) Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models ($options.AppType)).IDIsUUID}}string{{else}}int64{{end}}, items []*{{$options.AppType}}) error {
 	return a.repo.Add{{Title $column}}{{$modelName}}(id, {{if $model.HaveModifiedBy}}profileID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}itemsID, items)
 }
 
-func (a *app) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error {
+func (a *app) Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models ($options.AppType)).IDIsUUID}}string{{else}}int64{{end}}) error {
 	return a.repo.Delete{{Title $column}}{{$modelName}}(id, {{if $model.HaveModifiedBy}}profileID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}items)
 }
 {{end}}{{end}}

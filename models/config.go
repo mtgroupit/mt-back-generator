@@ -8,7 +8,7 @@ import (
 type Options struct {
 	TitleName        string
 	Type             string
-	GoType           string
+	BusinessType     string
 	Format           string
 	Enum             []string
 	Unique           bool
@@ -25,6 +25,17 @@ type Options struct {
 	IsCustom    bool
 	IsArray     bool
 	Pk          string
+}
+
+func (o Options) AppType() string {
+	switch o.BusinessType {
+	case "date":
+		return "*time.Time"
+	case "date-time":
+		return "*time.Time"
+	default:
+		return o.BusinessType
+	}
 }
 
 // PsqlParams - contain properties for postgres generate

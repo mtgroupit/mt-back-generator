@@ -24,8 +24,8 @@ type App interface {
         {{- end}}
     {{- end}}
 	{{range $column, $options := $model.Columns}}{{if  and $options.IsArray $options.IsStruct}}
-    Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*{{$options.GoType}}) error
-    Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error{{end}}{{end}}
+    Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models ($options.AppType)).IDIsUUID}}string{{else}}int64{{end}}, items []*{{$options.AppType}}) error
+    Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models ($options.AppType)).IDIsUUID}}string{{else}}int64{{end}}) error{{end}}{{end}}
 {{- end}}
 
     {{range $modelName, $model := $.Models}}{{range $functionName, $function := $.Functions}}
@@ -54,8 +54,8 @@ type Repo interface {
         {{- end}}
     {{- end}}
 	{{range $column, $options := $model.Columns}}{{if  and $options.IsArray $options.IsStruct}}
-    Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}, items []*{{$options.GoType}}) error
-    Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models $options.GoType).IDIsUUID}}string{{else}}int64{{end}}) error{{end}}{{end}}
+    Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models ($options.AppType)).IDIsUUID}}string{{else}}int64{{end}}, items []*{{$options.AppType}}) error
+    Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models ($options.AppType)).IDIsUUID}}string{{else}}int64{{end}}) error{{end}}{{end}}
 {{- end}}
 
     {{range $modelName, $model := $.Models}}{{range $functionName, $function := $.Functions}}

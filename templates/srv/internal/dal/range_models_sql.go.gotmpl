@@ -69,7 +69,7 @@ const (
 
 	{{- range $modelName2, $model2 := $.Models}}
 		{{- range $column, $options := $model.Columns}}
-			{{- if eq $modelName2 $options.GoType}}
+			{{- if eq $modelName2 $options.BusinessType}}
 				{{- if and $options.IsArray $options.IsStruct}}
 						sqlAddTo{{Title $column}}In{{$modelName}} = `
 	INSERT INTO {{NameSQL $modelName}}_{{NameSQL $column}}(
@@ -215,7 +215,7 @@ const (
 	{{- if $model.HaveLazyLoading}}
 		{{- range $modelName2, $model2 := $.Models}}
 			{{- range $column, $options := $model.Columns}}
-				{{- if eq $modelName2 $options.GoType}}
+				{{- if eq $modelName2 $options.BusinessType}}
 					{{- if and $options.IsArray $options.IsStruct}}
 						sqlGet{{Title $column}}IDsFor{{$modelName}}LazyLoading = `
 	SELECT
@@ -276,7 +276,8 @@ type (
 		{{- end}}
     }
 	argAdd{{$modelName}} struct {
-		{{- range $column, $options := $model.Columns}}
+		{{- range $_, $column := (SortColumns $model.Columns)}}
+			{{- $options := (index $model.Columns $column)}}
 			{{- if $options.IsStruct}}
 				{{- if not $options.IsArray}}
 					{{$options.TitleName}}ID interface{} `db:"{{NameSQL $column}}_id"`
@@ -287,7 +288,7 @@ type (
 				{{- else}}
 					{{- if not $options.IsArray}}
 						{{- if or (ne $options.TitleName "ID") ($model.IDIsUUID)}}
-							{{$options.TitleName}} {{$options.GoType}} `db:"{{NameSQL $column}}"`
+							{{$options.TitleName}} {{$options.AppType}} `db:"{{NameSQL $column}}"`
 						{{- end}} 
 					{{- else}}
 						{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
@@ -304,7 +305,7 @@ type (
 	}
 	{{- range $modelName2, $model2 := $.Models}}
 		{{- range $column, $options := $model.Columns}}
-			{{- if eq $modelName2 $options.GoType}}
+			{{- if eq $modelName2 $options.BusinessType}}
 				{{- if and $options.IsArray $options.IsStruct}}
 						arg{{Title $column}}In{{$modelName}} struct {
 							{{$modelName}}ID interface{} `db:"{{NameSQL $modelName}}_id"`
@@ -327,7 +328,8 @@ type (
 		{{- end}}
 	}
 	argEdit{{$modelName}} struct {
-		{{- range $column, $options := $model.Columns}}
+		{{- range $_, $column := (SortColumns $model.Columns)}}
+			{{- $options := (index $model.Columns $column)}}
 			{{- if $options.IsStruct}}
 				{{- if not $options.IsArray}}
 					{{$options.TitleName}}ID interface{} `db:"{{NameSQL $column}}_id"`
@@ -337,7 +339,7 @@ type (
 					{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
 				{{- else}}
 					{{- if not $options.IsArray}}
-						{{$options.TitleName}} {{$options.GoType}} `db:"{{NameSQL $column}}"`
+						{{$options.TitleName}} {{$options.AppType}} `db:"{{NameSQL $column}}"`
 					{{- else}}
 						{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
 					{{- end}}
@@ -352,7 +354,8 @@ type (
 		{{- if IsAdjustEdit $method}}
 			arg{{$method}}{{$modelName}} struct {
 				ID {{if $model.IDIsUUID}}string{{else}}int64{{end}} `db:"id"`
-				{{- range $column, $options := $model.Columns}}
+				{{- range $_, $column := (SortColumns $model.Columns)}}
+					{{- $options := (index $model.Columns $column)}}
 					{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $column}}
 						{{- if $options.IsStruct}}
 							{{- if not $options.IsArray}}
@@ -363,7 +366,7 @@ type (
 								{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
 							{{- else}}
 								{{- if not $options.IsArray}}
-									{{$options.TitleName}} {{$options.GoType}} `db:"{{NameSQL $column}}"`
+									{{$options.TitleName}} {{$options.AppType}} `db:"{{NameSQL $column}}"`
 								{{- else}}
 									{{$options.TitleName}}JSON []byte `db:"{{NameSQL $column}}_json"`
 								{{- end}}

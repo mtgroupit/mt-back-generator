@@ -44,7 +44,7 @@ var goTmplFuncs = template.FuncMap{
 	"NameSQL":   parser.NameSQL,
 	"Pluralize": parser.Pluralize,
 
-	"IsTypesGoType": parser.IsTypesGoType,
+	"IsTypesAdditionalType": parser.IsTypesAdditionalType,
 
 	"IsAdjustList": isAdjustList,
 	"IsAdjustEdit": isAdjustEdit,
@@ -77,7 +77,7 @@ var goTmplFuncs = template.FuncMap{
 	"HaveColumnWithModelThatIsStructAndIsArray": func(columns map[string]models.Options, models map[string]models.Model, isStruct, isArray bool) bool {
 		for _, options := range columns {
 			for modelName2, model2 := range models {
-				if options.GoType == modelName2 {
+				if options.BusinessType == modelName2 {
 					for _, options2 := range model2.Columns {
 						if options2.IsStruct == isStruct && options2.IsArray == isArray {
 							return true
@@ -91,7 +91,7 @@ var goTmplFuncs = template.FuncMap{
 	"NeedJSONInsideColumns": func(columns map[string]models.Options, models map[string]models.Model) bool {
 		for _, options := range columns {
 			for modelName2, model2 := range models {
-				if options.GoType == modelName2 {
+				if options.BusinessType == modelName2 {
 					for _, options2 := range model2.Columns {
 						if (!options2.IsStruct && options2.IsArray) || options2.IsCustom {
 							return true
@@ -184,7 +184,7 @@ var goTmplFuncs = template.FuncMap{
 			if columnOptions.IsArray {
 				s = "s"
 			}
-			return fmt.Sprintf("app%s%s(%s)", columnOptions.GoType, s, appValue)
+			return fmt.Sprintf("app%s%s(%s)", columnOptions.BusinessType, s, appValue)
 		}
 
 		switch columnOptions.Format {
@@ -217,18 +217,18 @@ var goTmplFuncs = template.FuncMap{
 			}
 		default:
 			if columnOptions.Default != "" {
-				switch columnOptions.GoType {
+				switch columnOptions.BusinessType {
 				case "float64":
 					appValue = fmt.Sprintf("swag.Float32Value(%s)", appValue)
 				case parser.TypesPrefix + "Decimal":
 					appValue = fmt.Sprintf("swag.Float64Value(%s)", appValue)
 				default:
-					appValue = fmt.Sprintf("swag.%sValue(%s)", strings.Title(columnOptions.GoType), appValue)
+					appValue = fmt.Sprintf("swag.%sValue(%s)", strings.Title(columnOptions.BusinessType), appValue)
 				}
 			}
 		}
 
-		if columnOptions.GoType == "float64" {
+		if columnOptions.BusinessType == "float64" {
 			if columnOptions.IsArray {
 				appValue = fmt.Sprintf("float32to64Array(%s)", appValue)
 			} else {
@@ -236,7 +236,7 @@ var goTmplFuncs = template.FuncMap{
 			}
 		}
 
-		if columnOptions.GoType == parser.TypesPrefix+"Decimal" {
+		if columnOptions.BusinessType == parser.TypesPrefix+"Decimal" {
 			if columnOptions.IsArray {
 				appValue = fmt.Sprintf("%sFloat64ToDecimalsArray(%s)", parser.TypesPrefix, appValue)
 			} else {
@@ -254,10 +254,10 @@ var goTmplFuncs = template.FuncMap{
 			if columnOptions.IsArray {
 				s = "s"
 			}
-			return fmt.Sprintf("api%s%s(%s)", columnOptions.GoType, s, apiValue)
+			return fmt.Sprintf("api%s%s(%s)", columnOptions.BusinessType, s, apiValue)
 		}
 
-		switch columnOptions.GoType {
+		switch columnOptions.BusinessType {
 		case "float64":
 			if columnOptions.IsArray {
 				apiValue = fmt.Sprintf("float64to32Array(%s)", apiValue)
@@ -302,13 +302,13 @@ var goTmplFuncs = template.FuncMap{
 			}
 		default:
 			if columnOptions.Default != "" {
-				switch columnOptions.GoType {
+				switch columnOptions.BusinessType {
 				case "float64":
 					apiValue = fmt.Sprintf("swag.Float32(%s)", apiValue)
 				case parser.TypesPrefix + "Decimal":
 					apiValue = fmt.Sprintf("swag.Float64(%s)", apiValue)
 				default:
-					apiValue = fmt.Sprintf("swag.%s(%s)", strings.Title(columnOptions.GoType), apiValue)
+					apiValue = fmt.Sprintf("swag.%s(%s)", strings.Title(columnOptions.BusinessType), apiValue)
 				}
 			}
 		}
@@ -320,7 +320,7 @@ var goTmplFuncs = template.FuncMap{
 
 		if columnOptions.IsCustom {
 			if columnOptions.IsArray {
-				return fmt.Sprintf("app.%ssToPointers(%s)", columnOptions.GoType, appValue)
+				return fmt.Sprintf("app.%ssToPointers(%s)", columnOptions.BusinessType, appValue)
 			}
 			return fmt.Sprintf("&%s", appValue)
 		}
@@ -330,7 +330,7 @@ var goTmplFuncs = template.FuncMap{
 			if columnOptions.IsArray {
 				s = "s"
 			}
-			return fmt.Sprintf("app%s%s(%s)", columnOptions.GoType, s, appValue)
+			return fmt.Sprintf("app%s%s(%s)", columnOptions.BusinessType, s, appValue)
 		} else {
 			if columnOptions.IsArray {
 				return appValue
@@ -340,12 +340,12 @@ var goTmplFuncs = template.FuncMap{
 		switch {
 		case columnOptions.TitleName == "ID" && columnOptions.Type == "uuid":
 			appValue = fmt.Sprintf("%s.String()", appValue)
-		case parser.IsTypesGoType(columnOptions.GoType):
-			appValue = fmt.Sprintf("%s(%s.Decimal)", columnOptions.GoType, appValue)
+		case parser.IsTypesAdditionalType(columnOptions.BusinessType):
+			appValue = fmt.Sprintf("%s(%s.Decimal)", columnOptions.BusinessType, appValue)
 		case parser.IsTimeFormat(columnOptions.Format):
 			appValue = fmt.Sprintf("%s", appValue)
 		default:
-			appValue = fmt.Sprintf("%s.%s", appValue, strings.Title(columnOptions.GoType))
+			appValue = fmt.Sprintf("%s.%s", appValue, strings.Title(columnOptions.BusinessType))
 		}
 
 		return appValue
@@ -354,7 +354,9 @@ var goTmplFuncs = template.FuncMap{
 		switch psqlType {
 		case parser.TypesPrefix + "Decimal":
 			return fmt.Sprintf("%sNullDecimal", parser.TypesPrefix)
-		case "*time.Time":
+		case "date":
+			return "*time.Time"
+		case "date-time":
 			return "*time.Time"
 		default:
 			return fmt.Sprintf("sql.Null%s", strings.Title(psqlType))
@@ -387,6 +389,7 @@ var goTmplFuncs = template.FuncMap{
 		}
 		return strings.Join(ruleMethods, " && ")
 	},
+	"SortColumns": parser.SortColumns,
 }
 
 // Srv - generate dir with service

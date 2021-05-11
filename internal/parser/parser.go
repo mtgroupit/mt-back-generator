@@ -80,9 +80,9 @@ func IsTimeFormat(format string) bool {
 	return false
 }
 
-// IsTypesGoType return true if go type is from types package
-func IsTypesGoType(goType string) bool {
-	return strings.HasPrefix(goType, TypesPrefix)
+// IsTypesAdditionalType return true if go type is from types package
+func IsTypesAdditionalType(BusinessType string) bool {
+	return strings.HasPrefix(BusinessType, TypesPrefix)
 }
 
 // ReadYAMLCfg create models.Config from configFile
@@ -119,11 +119,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 	for customTypeName, customType := range cfg.CustomTypes {
 		for field, options := range customType.Fields {
-			if options.IsCustom, options.IsArray, options.GoType, err = parseFieldType(options, cfg.CustomTypes); err != nil {
+			if options.IsCustom, options.IsArray, options.BusinessType, err = parseFieldType(options, cfg.CustomTypes); err != nil {
 				return nil, errors.Wrapf(err, `Custom type: "%s". Field: "%s"`, customTypeName, field)
 			}
 
-			if IsTypesGoType(options.GoType) {
+			if IsTypesAdditionalType(options.BusinessType) {
 				cfg.HaveTypesInCustomTypes = true
 			}
 			if options.Default != "" {
@@ -144,25 +144,25 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			}
 
 			if options.IsCustom {
-				options.Type = LowerTitle(options.GoType)
+				options.Type = LowerTitle(options.BusinessType)
 			} else {
 				if options.Type == "int" {
 					options.Type = "int32"
-					options.GoType = "int32"
+					options.BusinessType = "int32"
 				}
 				if options.IsArray {
-					switch options.GoType {
+					switch options.BusinessType {
 					case "int":
 						options.Type = "int32"
-						options.GoType = "int32"
+						options.BusinessType = "int32"
 					case "float64":
 						options.Type = "float"
 					case TypesPrefix + "Decimal":
 						options.Type = "decimal"
-					case "*time.Time":
+					case "date", "date-time":
 						options.Type = "string"
 					default:
-						options.Type = options.GoType
+						options.Type = options.BusinessType
 					}
 				}
 
@@ -187,6 +187,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 	for name, model := range cfg.Models {
 		model.TitleName = strings.Title(name)
+		columns := SortColumns(model.Columns)
 
 		for i := range model.Tags {
 			model.Tags[i] = strings.Title(model.Tags[i])
@@ -233,7 +234,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 		psql := []models.PsqlParams{}
 		var indexLastNotArrOfStruct int
-		for column, options := range model.Columns {
+		for _, column := range columns {
+			options := model.Columns[column]
 			switch column {
 			case "createdAt":
 				options.Type = "string"
@@ -250,11 +252,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				options.Type = "string"
 				model.HaveModifiedBy = true
 			}
-			if options.IsStruct, options.IsCustom, options.IsArray, options.GoType, err = parseColumnType(options, cfg); err != nil {
+			if options.IsStruct, options.IsCustom, options.IsArray, options.BusinessType, err = parseColumnType(options, cfg); err != nil {
 				return nil, errors.Wrapf(err, `Model: "%s". Column: "%s"`, name, column)
 			}
 
-			if IsTypesGoType(options.GoType) {
+			if IsTypesAdditionalType(options.BusinessType) {
 				cfg.HaveTypes = true
 				model.NeedTypes = true
 			}
@@ -289,7 +291,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			if options.IsStruct {
 				model.HaveLazyLoading = true
 
-				modelNameForBind := LowerTitle(options.GoType)
+				modelNameForBind := LowerTitle(options.BusinessType)
 
 				err = cfg.AddBind(modelNameForBind, models.Bind{
 					ModelName: name,
@@ -314,10 +316,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 						et.TypeIDOne = "integer"
 					}
 
-					et.RefTableTwo = options.GoType
+					et.RefTableTwo = options.BusinessType
 					et.RefIDTwo = "id"
 					et.FieldIDTwo = NameSQL(column) + "_id"
-					if cfg.Models[LowerTitle(options.GoType)].Columns["id"].Type == "uuid" {
+					if cfg.Models[LowerTitle(options.BusinessType)].Columns["id"].Type == "uuid" {
 						et.TypeIDTwo = "uuid"
 					} else {
 						et.TypeIDTwo = "integer"
@@ -338,7 +340,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			if column == "id" {
 				switch options.Type {
 				case "uuid":
-					options.GoType = "string"
+					options.BusinessType = "string"
 					model.IDIsUUID = true
 
 					pp.Type = "string"
@@ -360,26 +362,26 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					options.TitleName = strings.Title(column)
 				}
 				if options.IsStruct || options.IsCustom {
-					options.Type = LowerTitle(options.GoType)
+					options.Type = LowerTitle(options.BusinessType)
 				} else {
 					if options.Type == "int" {
 						options.Type = "int32"
-						options.GoType = "int32"
+						options.BusinessType = "int32"
 					}
 					if options.IsArray {
-						switch options.GoType {
+						switch options.BusinessType {
 						case "int":
 							options.Type = "int32"
-							options.GoType = "int32"
+							options.BusinessType = "int32"
 						case "float64":
 							options.Type = "float"
 							cfg.HaveFloatArr = true
 						case TypesPrefix + "Decimal":
 							options.Type = "decimal"
-						case "*time.Time":
+						case "date", "date-time":
 							options.Type = "string"
 						default:
-							options.Type = options.GoType
+							options.Type = options.BusinessType
 						}
 					}
 
@@ -398,12 +400,12 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					}
 				}
 
-				pp.Type = options.GoType
+				pp.Type = options.BusinessType
 				pp.Name = options.TitleName
 				if pp.IsStruct {
 					pp.SQLName = NameSQL(column) + "_id"
 					pp.FK = "id"
-					if cfg.Models[LowerTitle(options.GoType)].Columns["id"].Type == "uuid" {
+					if cfg.Models[LowerTitle(options.BusinessType)].Columns["id"].Type == "uuid" {
 						pp.TypeSQL = "uuid"
 					} else {
 						pp.TypeSQL = "integer"
@@ -426,7 +428,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 						pp.TypeSQL = options.Type
 					}
 				}
-
 			}
 
 			model.Columns[column] = options
@@ -442,7 +443,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		model.Psql = psql
 
 		var SQLSelect, sqlWhereParams, sqlAdd, sqlEdit []string
-		for column, options := range model.Columns {
+		for _, column := range columns {
+			options := model.Columns[column]
 			if !options.IsStruct {
 				sqlName := NameSQL(options.TitleName)
 				titleName := options.TitleName
@@ -552,6 +554,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 		cfg.Functions[funcName] = newFunc
 	}
+
+	sort.Slice(cfg.ExtraTables, func(i, j int) bool { return cfg.ExtraTables[i].Name < cfg.ExtraTables[j].Name })
 
 	titleize(cfg)
 
@@ -686,21 +690,21 @@ func validateModels(cfg *models.Config) error {
 					if strings.HasPrefix(options.Type, arrayTypePrefix) {
 						options.Type = options.Type[len(arrayTypePrefix):]
 					}
-					goType := convertTypeToGoType(options.Type, options.Format)
-					lowerTitleGoType := LowerTitle(goType)
+					BusinessType := convertTypeToBusinessType(options.Type, options.Format)
+					lowerTitleBusinessType := LowerTitle(BusinessType)
 					if strings.HasPrefix(options.Type, structTypePrefix) {
-						if _, ok := cfg.Models[lowerTitleGoType]; !ok {
-							return errors.Errorf(`Model: "%s". Column "%s" refers to "%s" model which is not described anywhere`, name, column, lowerTitleGoType)
+						if _, ok := cfg.Models[lowerTitleBusinessType]; !ok {
+							return errors.Errorf(`Model: "%s". Column "%s" refers to "%s" model which is not described anywhere`, name, column, lowerTitleBusinessType)
 						}
 					} else if strings.HasPrefix(options.Type, customTypePrefix) {
-						if _, ok := cfg.CustomTypes[lowerTitleGoType]; !ok {
-							return errors.Errorf(`Model: "%s". Column "%s" refers to "%s" custom type which is not described anywhere`, name, column, lowerTitleGoType)
+						if _, ok := cfg.CustomTypes[lowerTitleBusinessType]; !ok {
+							return errors.Errorf(`Model: "%s". Column "%s" refers to "%s" custom type which is not described anywhere`, name, column, lowerTitleBusinessType)
 						}
 					} else {
 						if !IsStandardType(options.Type) {
 							_, ok := cfg.CustomTypes[options.Type]
 							if !ok {
-								return errors.Errorf(`Model: "%s". Column: "%s". "%s" is not correct type. You can use only one of standarad types %s, custom types or types refers to any other model`, name, column, goType, strings.Join(standardTypes, ", "))
+								return errors.Errorf(`Model: "%s". Column: "%s". "%s" is not correct type. You can use only one of standarad types %s, custom types or types refers to any other model`, name, column, BusinessType, strings.Join(standardTypes, ", "))
 							}
 						}
 					}
@@ -714,7 +718,7 @@ func validateModels(cfg *models.Config) error {
 			}
 
 			if options.IsStruct {
-				modelNameForBind := LowerTitle(options.GoType)
+				modelNameForBind := LowerTitle(options.BusinessType)
 				if modelForBind, ok := cfg.Models[modelNameForBind]; ok && !modelForBind.Shared && model.Shared {
 					return errors.Errorf(`Model: "%s". Column: "%s". "%s" is invalid type for column. Shared models can not use non-shared models as column type`, name, column, options.Type)
 				}
@@ -956,7 +960,7 @@ func countDeepNesting(model string, cfg *models.Config) (int, error) {
 	var err error
 	deepNesting := 0
 	for _, options := range cfg.Models[model].Columns {
-		if options.IsStruct, _, options.IsArray, options.GoType, err = parseColumnType(options, cfg); err != nil {
+		if options.IsStruct, _, options.IsArray, options.BusinessType, err = parseColumnType(options, cfg); err != nil {
 			return 0, err
 		}
 		if options.IsStruct {
@@ -985,66 +989,66 @@ func countDeepNesting(model string, cfg *models.Config) (int, error) {
 
 func parseFieldType(options models.Options, customTypes map[string]models.CustomType) (bool, bool, string, error) {
 	fieldType := options.Type
-	goType := convertTypeToGoType(fieldType, options.Format)
-	lowerTitleGoType := LowerTitle(goType)
+	BusinessType := convertTypeToBusinessType(fieldType, options.Format)
+	lowerTitleBusinessType := LowerTitle(BusinessType)
 	switch {
 	case strings.HasPrefix(fieldType, customTypePrefix):
-		if _, ok := customTypes[lowerTitleGoType]; !ok {
-			return false, false, "", errors.Errorf(`Field refers to "%s" custom type which is not described anywhere`, lowerTitleGoType)
+		if _, ok := customTypes[lowerTitleBusinessType]; !ok {
+			return false, false, "", errors.Errorf(`Field refers to "%s" custom type which is not described anywhere`, lowerTitleBusinessType)
 		}
-		return true, false, goType, nil
+		return true, false, BusinessType, nil
 	case strings.HasPrefix(fieldType, arrayOfCustomTypePrefix):
-		if _, ok := customTypes[lowerTitleGoType]; !ok {
-			return false, false, "", errors.Errorf(`Fields refers to "%s" custom type which is not described anywhere`, lowerTitleGoType)
+		if _, ok := customTypes[lowerTitleBusinessType]; !ok {
+			return false, false, "", errors.Errorf(`Fields refers to "%s" custom type which is not described anywhere`, lowerTitleBusinessType)
 		}
-		return true, true, goType, nil
+		return true, true, BusinessType, nil
 	case strings.HasPrefix(fieldType, arrayTypePrefix) && !strings.HasPrefix(fieldType, arrayOfCustomTypePrefix):
 		if IsStandardType(fieldType[len(arrayTypePrefix):]) {
-			return false, true, goType, nil
+			return false, true, BusinessType, nil
 		}
 
-		return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarad types %s or custom types`, goType, strings.Join(standardTypes, ", "))
+		return false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarad types %s or custom types`, BusinessType, strings.Join(standardTypes, ", "))
 	default:
-		return false, false, goType, nil
+		return false, false, BusinessType, nil
 	}
 }
 
 func parseColumnType(options models.Options, cfg *models.Config) (bool, bool, bool, string, error) {
 	columnType := options.Type
-	goType := convertTypeToGoType(columnType, options.Format)
-	lowerTitleGoType := LowerTitle(goType)
+	BusinessType := convertTypeToBusinessType(columnType, options.Format)
+	lowerTitleBusinessType := LowerTitle(BusinessType)
 	switch {
 	case strings.HasPrefix(columnType, structTypePrefix):
-		if _, ok := cfg.Models[lowerTitleGoType]; !ok {
-			return false, false, false, "", errors.Errorf(`Field refers to "%s" model which is not described anywhere`, lowerTitleGoType)
+		if _, ok := cfg.Models[lowerTitleBusinessType]; !ok {
+			return false, false, false, "", errors.Errorf(`Field refers to "%s" model which is not described anywhere`, lowerTitleBusinessType)
 		}
-		return true, false, false, goType, nil
+		return true, false, false, BusinessType, nil
 	case strings.HasPrefix(columnType, arrayOfStructTypePrefix):
-		if _, ok := cfg.Models[lowerTitleGoType]; !ok {
-			return false, false, false, "", errors.Errorf(`Fields refers to "%s" model which is not described anywhere`, lowerTitleGoType)
+		if _, ok := cfg.Models[lowerTitleBusinessType]; !ok {
+			return false, false, false, "", errors.Errorf(`Fields refers to "%s" model which is not described anywhere`, lowerTitleBusinessType)
 		}
-		return true, false, true, goType, nil
+		return true, false, true, BusinessType, nil
 	case strings.HasPrefix(columnType, customTypePrefix):
-		if _, ok := cfg.CustomTypes[lowerTitleGoType]; !ok {
-			return false, false, false, "", errors.Errorf(`Field refers to "%s" custom type which is not described anywhere`, lowerTitleGoType)
+		if _, ok := cfg.CustomTypes[lowerTitleBusinessType]; !ok {
+			return false, false, false, "", errors.Errorf(`Field refers to "%s" custom type which is not described anywhere`, lowerTitleBusinessType)
 		}
-		return false, true, false, goType, nil
+		return false, true, false, BusinessType, nil
 	case strings.HasPrefix(columnType, arrayOfCustomTypePrefix):
-		if _, ok := cfg.CustomTypes[lowerTitleGoType]; !ok {
-			return false, false, false, "", errors.Errorf(`Fields refers to "%s" custom type which is not described anywhere`, lowerTitleGoType)
+		if _, ok := cfg.CustomTypes[lowerTitleBusinessType]; !ok {
+			return false, false, false, "", errors.Errorf(`Fields refers to "%s" custom type which is not described anywhere`, lowerTitleBusinessType)
 		}
-		return false, true, true, goType, nil
+		return false, true, true, BusinessType, nil
 	case strings.HasPrefix(columnType, arrayTypePrefix) && !strings.HasPrefix(columnType, arrayOfStructTypePrefix) && !strings.HasPrefix(columnType, arrayOfCustomTypePrefix):
 		if IsStandardType(columnType[len(arrayTypePrefix):]) {
-			return false, false, true, goType, nil
+			return false, false, true, BusinessType, nil
 		}
-		return false, false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarad types %s or refers to any other model`, goType, strings.Join(standardTypes, ", "))
+		return false, false, false, "", errors.Errorf(`"%s" is not correct type. You can use only one of standarad types %s or refers to any other model`, BusinessType, strings.Join(standardTypes, ", "))
 	default:
-		return false, false, false, goType, nil
+		return false, false, false, BusinessType, nil
 	}
 }
 
-func convertTypeToGoType(columnType, format string) string {
+func convertTypeToBusinessType(columnType, format string) string {
 	switch {
 	case strings.HasPrefix(columnType, structTypePrefix):
 		return strings.Title(columnType[len(structTypePrefix):])
@@ -1055,13 +1059,13 @@ func convertTypeToGoType(columnType, format string) string {
 	case strings.HasPrefix(columnType, arrayOfCustomTypePrefix):
 		return strings.Title(columnType[len(arrayOfCustomTypePrefix):])
 	case strings.HasPrefix(columnType, arrayTypePrefix) && !strings.HasPrefix(columnType, arrayOfStructTypePrefix) && !strings.HasPrefix(columnType, arrayOfCustomTypePrefix):
-		return convertStandardTypeToGoType(columnType[len(arrayTypePrefix):], format)
+		return convertStandardTypeToBusinessType(columnType[len(arrayTypePrefix):], format)
 	default:
-		return convertStandardTypeToGoType(columnType, format)
+		return convertStandardTypeToBusinessType(columnType, format)
 	}
 }
 
-func convertStandardTypeToGoType(columnType, format string) string {
+func convertStandardTypeToBusinessType(columnType, format string) string {
 	switch {
 	case columnType == "decimal":
 		return TypesPrefix + "Decimal"
@@ -1069,11 +1073,33 @@ func convertStandardTypeToGoType(columnType, format string) string {
 	// 	return TypesPrefix + "UUID"
 	case columnType == "float":
 		return "float64"
-	case columnType == "string" && IsTimeFormat(format):
-		return "*time.Time"
+	case columnType == "string" && format == "date":
+		return "date"
+	case columnType == "string" && format == "date-time":
+		return "date-time"
 	default:
 		return columnType
 	}
+}
+
+// SortColumns returns sorted keys for columns map ("id" will be first, if it exist).
+func SortColumns(columns map[string]models.Options) []string {
+	keys := make([]string, 0, len(columns))
+	for k := range columns {
+		keys = append(keys, k)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		if strings.ToLower(keys[i]) == "id" {
+			return true
+		}
+		if strings.ToLower(keys[j]) == "id" {
+			return false
+		}
+		return keys[i] < keys[j]
+	})
+
+	return keys
 }
 
 // isCustomMethod return true if method is custom
@@ -1249,7 +1275,7 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 		var structModel string
 		for column, options := range modelsIn[modelName].Columns {
 			if column == fields[i] {
-				structModel = LowerTitle(options.GoType)
+				structModel = LowerTitle(options.BusinessType)
 				obj.Type = strings.Title(modelName)
 				haveFieldInColumns = true
 				break
@@ -1319,7 +1345,7 @@ func handleSorts(modelsMap map[string]models.Model, model *models.Model, modelNa
 			}
 
 			for i, sort := range options.SortBy {
-				subModelName := options.GoType
+				subModelName := options.BusinessType
 				fields := strings.Split(sort, ".")
 				options.NestedSorts = append(options.NestedSorts, "."+strings.Title(column))
 				for j, field := range fields {
@@ -1332,15 +1358,15 @@ func handleSorts(modelsMap map[string]models.Model, model *models.Model, modelNa
 					for subColumn, subOptions := range subModel.Columns {
 						if subColumn == field {
 							if j == len(fields)-1 {
-								switch subOptions.GoType {
+								switch subOptions.BusinessType {
 								case "int32", "int64", "string":
-									typeSortByColumn = strings.Title(subOptions.GoType)
+									typeSortByColumn = strings.Title(subOptions.BusinessType)
 								default:
-									return errors.Errorf(`Model: "%s". Column: "%s". Sort-by: "%s". Type "%s" is not avaliable for sorting`, modelName, column, sort, subOptions.GoType)
+									return errors.Errorf(`Model: "%s". Column: "%s". Sort-by: "%s". Type "%s" is not avaliable for sorting`, modelName, column, sort, subOptions.BusinessType)
 								}
 							}
 							ok = true
-							subModelName = subOptions.GoType
+							subModelName = subOptions.BusinessType
 						}
 					}
 					if !ok {

@@ -42,13 +42,13 @@ var (
 {{- range $modelName, $model := $.Models}}
 	test{{$modelName}}1 = &{{$modelName}}{  
 		{{- range $column, $options := $model.Columns}}
-		{{$options.TitleName}}: {{if and (eq $column "id") (eq $options.Type "uuid")}}uuid.New().String(){{else}}{{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{GenAppTestValue $options}}{{end}}{{end}},
+		{{$options.TitleName}}: {{if and (eq $column "id") (eq $options.Type "uuid")}}uuid.New().String(){{else}}{{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.AppType}}s{{else}}test{{$options.AppType}}1{{end}}{{else}}{{GenAppTestValue $options}}{{end}}{{end}},
 		{{- end}}
 	}
 	{{- if not $model.BoundToIsolatedEntity}}
 		test{{$modelName}}2 = &{{$modelName}}{  
 			{{- range $column, $options := $model.Columns}}
-			{{$options.TitleName}}: {{if and (eq $column "id") (eq $options.Type "uuid")}}uuid.New().String(){{else}}{{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}}{{end}},
+			{{$options.TitleName}}: {{if and (eq $column "id") (eq $options.Type "uuid")}}uuid.New().String(){{else}}{{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.AppType}}s{{else}}test{{$options.AppType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}}{{end}},
 			{{- end}}
 		}
 		test{{$modelName}}s = []*{{$modelName}}{test{{$modelName}}1, test{{$modelName}}2}
@@ -59,12 +59,12 @@ var (
 	{{- $customTypeName = (Title $customTypeName)}}
 	test{{$customTypeName}}1 = &{{$customTypeName}}{  
 		{{- range $field, $options := $customType.Fields}}
-		{{Title $field}}: {{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}1{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
+		{{Title $field}}: {{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.AppType}}s{{else}}test{{$options.AppType}}1{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
 		{{- end}}
 	}
 	test{{$customTypeName}}2 = &{{$customTypeName}}{  
 		{{- range $field, $options := $customType.Fields}}
-		{{Title $field}}: {{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.GoType}}s{{else}}test{{$options.GoType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
+		{{Title $field}}: {{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.AppType}}s{{else}}test{{$options.AppType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
 		{{- end}}
 	}
 	test{{$customTypeName}}s = []*{{$customTypeName}}{test{{$customTypeName}}1, test{{$customTypeName}}2}

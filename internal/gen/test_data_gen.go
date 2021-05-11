@@ -13,8 +13,8 @@ import (
 )
 
 func genApiTestValue(columnOptions models.Options) string {
-	if columnOptions.GoType == parser.TypesPrefix+"Decimal" {
-		columnOptions.GoType = "float64"
+	if columnOptions.BusinessType == parser.TypesPrefix+"Decimal" {
+		columnOptions.BusinessType = "float64"
 	}
 	if columnOptions.IsArray {
 		return genApiTestArray(columnOptions)
@@ -51,7 +51,7 @@ func genApiTestArray(columnOptions models.Options) string {
 	case "float":
 		return fmt.Sprintf("[]float32{%s}", strings.Join(arr, ", "))
 	default:
-		return fmt.Sprintf("[]%s{%s}", columnOptions.GoType, strings.Join(arr, ", "))
+		return fmt.Sprintf("[]%s{%s}", columnOptions.BusinessType, strings.Join(arr, ", "))
 	}
 }
 
@@ -79,7 +79,7 @@ func genApiTestValueWithFormat(columnOptions models.Options) string {
 			case "float":
 				testValue = fmt.Sprintf("swag.Float32(%s)", testValue)
 			default:
-				testValue = fmt.Sprintf("swag.%s(%s)", strings.Title(columnOptions.GoType), testValue)
+				testValue = fmt.Sprintf("swag.%s(%s)", strings.Title(columnOptions.BusinessType), testValue)
 			}
 		}
 	}
@@ -91,7 +91,7 @@ func genAppTestArray(columnOptions models.Options) string {
 	for i := gofakeit.Number(minLenthArray, maxLenthArray); i <= maxLenthArray; i++ {
 		arr = append(arr, genAppTestValueWithFormat(columnOptions))
 	}
-	return fmt.Sprintf("[]%s{%s}", columnOptions.GoType, strings.Join(arr, ", "))
+	return fmt.Sprintf("[]%s{%s}", columnOptions.BusinessType, strings.Join(arr, ", "))
 }
 
 func genAppTestValueWithFormat(columnOptions models.Options) string {
@@ -106,20 +106,13 @@ func genTestValue(columnOptions models.Options) (str string) {
 	gofakeit.Seed(time.Now().UnixNano())
 	if len(columnOptions.Enum) > 0 {
 		str = columnOptions.Enum[gofakeit.Number(0, len(columnOptions.Enum)-1)]
-		if columnOptions.GoType == "string" {
+		if columnOptions.BusinessType == "string" {
 			str = fmt.Sprintf(`"%s"`, str)
 		}
 	} else {
-		switch columnOptions.GoType {
-		case "string", "*time.Time", "time.Time":
+		switch columnOptions.BusinessType {
+		case "string":
 			switch columnOptions.Format {
-			case "date-time":
-				dateTime := strfmt.NewDateTime()
-				dateTime.Scan(gofakeit.Date())
-				str = dateTime.String()
-			case "date":
-				date := strfmt.Date(gofakeit.Date())
-				str = date.String()
 			case "email":
 				str = gofakeit.Email()
 			case "url":
@@ -130,6 +123,10 @@ func genTestValue(columnOptions models.Options) (str string) {
 				str = gofakeit.Word()
 			}
 			str = fmt.Sprintf(`"%s"`, str)
+		case "date", "date-time":
+			dateTime := strfmt.NewDateTime()
+			dateTime.Scan(gofakeit.Date())
+			str = fmt.Sprintf(`"%s"`, dateTime.String())
 		case "int", "int32", "int64":
 			str = fmt.Sprintf("%d", gofakeit.Int32())
 		case "float32", "float64":
@@ -139,7 +136,7 @@ func genTestValue(columnOptions models.Options) (str string) {
 		case parser.TypesPrefix + "Decimal":
 			str = fmt.Sprintf("%sNewDecimal(%.2f)", parser.TypesPrefix, gofakeit.Float64Range(1.0, 1000.0))
 		default:
-			str = fmt.Sprintf("interface{}.(%s)", columnOptions.GoType)
+			str = fmt.Sprintf("interface{}.(%s)", columnOptions.BusinessType)
 		}
 	}
 	return

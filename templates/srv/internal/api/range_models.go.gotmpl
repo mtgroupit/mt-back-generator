@@ -130,7 +130,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 				{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}
 					{{- if and $options.IsStruct (not $options.IsArray)}}
 						if params.Body.Data.{{$options.TitleName}} != "" {
-							in.{{$options.TitleName}} = &app.{{$options.GoType}}{ID: params.Body.Data.{{$options.TitleName}}}
+							in.{{$options.TitleName}} = &app.{{$options.BusinessType}}{ID: params.Body.Data.{{$options.TitleName}}}
 						}
 					{{- end}}
 				{{- end}}
@@ -140,7 +140,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 					{{- if and $options.IsArray $options.IsStruct}}
 						if len(params.Body.Data.{{$options.TitleName}}) > 0 {
 							for _, id := range params.Body.Data.{{$options.TitleName}} {
-								in.{{$options.TitleName}} = append(in.{{$options.TitleName}}, &app.{{$options.GoType}}{
+								in.{{$options.TitleName}} = append(in.{{$options.TitleName}}, &app.{{$options.BusinessType}}{
 									ID: id,
 								})
 							}
@@ -204,7 +204,7 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 {{range $column, $options := $model.Columns}} {{if and $options.IsArray $options.IsStruct}}
 func (svc *service) Add{{Title $column}}{{$modelName}}(params {{LowerTitle $modelName}}.Add{{Title $column}}{{$model.TitleName}}Params, profile interface{}) middleware.Responder {
 	{{if or $model.HaveModifiedBy (not $model.Shared)}}prof := profile.(*extauthapi.Profile)
-	{{end}}err := svc.app.Add{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if (not $model.Shared)}}prof.IsolatedEntityID.String(), {{end}}params.Body.ItemsID, app{{$options.GoType}}sAdd(params.Body.Items))
+	{{end}}err := svc.app.Add{{Title $column}}{{$modelName}}(params.Body.ID, {{if $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if (not $model.Shared)}}prof.IsolatedEntityID.String(), {{end}}params.Body.ItemsID, app{{$options.BusinessType}}sAdd(params.Body.Items))
 	switch {
 	default:
 		log.PrintErr("Add{{Title $column}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
@@ -275,7 +275,8 @@ func api{{$modelName}}(a *app.{{$modelName}}) *models.{{$modelName}} {
 		return nil
 	}
 	return &models.{{$modelName}}{
-		{{- range $name, $options := $model.Columns}}
+		{{- range $_, $name := (SortColumns $model.Columns)}}
+			{{- $options := (index $model.Columns $name)}}
 			{{$options.TitleName}}: {{ConvertAppToApiColumn "a" $name $options}},
 		{{- end}}
 	}
@@ -296,14 +297,16 @@ func app{{$modelName}}(a *models.{{$modelName}}{{if $model.HaveLazyLoading}}, wi
 	{{LowerTitle $modelName}} := &app.{{$modelName}}{}
 	{{- if $model.HaveLazyLoading}}
 		if withStructs {
-			{{- range $name, $options := $model.Columns}}
+			{{- range $_, $name := (SortColumns $model.Columns)}}
+				{{- $options := (index $model.Columns $name)}}
 				{{- if $options.IsStruct}}
-					{{LowerTitle $modelName}}.{{$options.TitleName}} = app{{$options.GoType}}{{if $options.IsArray}}s{{end}}(a.{{$options.TitleName}}{{if (index $models $options.GoType).HaveLazyLoading}}, false{{end}})
+					{{LowerTitle $modelName}}.{{$options.TitleName}} = app{{$options.BusinessType}}{{if $options.IsArray}}s{{end}}(a.{{$options.TitleName}}{{if (index $models $options.BusinessType).HaveLazyLoading}}, false{{end}})
 				{{- end}}
 			{{- end}}
 		}
 	{{- end}}
-	{{- range $name, $options := $model.Columns}}
+	{{- range $_, $name := (SortColumns $model.Columns)}}
+		{{- $options := (index $model.Columns $name)}}
 		{{- if not $options.IsStruct}}
 			{{LowerTitle $modelName}}.{{$options.TitleName}} = {{ConvertApiToAppColumn "a" $name $options}}
 		{{- end}}
@@ -326,23 +329,26 @@ func app{{$modelName}}Add(a *models.{{$modelName}}Add) *app.{{$modelName}} {
 	}
 	{{LowerTitle $modelName}} := &app.{{$modelName}}{}
 
-	{{- range $name, $options := $model.Columns}}
+	{{- range $_, $name := (SortColumns $model.Columns)}}
+		{{- $options := (index $model.Columns $name)}}
 		{{- if and (not $options.IsStruct) (ne $name "id") (not (IsStandardColumn $name))}}
 			{{LowerTitle $modelName}}.{{$options.TitleName}} = {{ConvertApiToAppColumn "a" $name $options}}
 		{{- end}}
 	{{- end}}
-	{{- range $name, $options := $model.Columns}}
+	{{- range $_, $name := (SortColumns $model.Columns)}}
+		{{- $options := (index $model.Columns $name)}}
 		{{- if and $options.IsStruct (not $options.IsArray)}}
 			if a.{{$options.TitleName}} != "" {
-				{{LowerTitle $modelName}}.{{$options.TitleName}} = &app.{{$options.GoType}}{ID: a.{{$options.TitleName}}}
+				{{LowerTitle $modelName}}.{{$options.TitleName}} = &app.{{$options.BusinessType}}{ID: a.{{$options.TitleName}}}
 			}
 		{{- end}}
 	{{- end}}
-	{{- range $name, $options := $model.Columns}}
+	{{- range $_, $name := (SortColumns $model.Columns)}}
+		{{- $options := (index $model.Columns $name)}}
 		{{- if  and $options.IsArray $options.IsStruct}}
 			if len(a.{{$options.TitleName}}) > 0 {
 				for _, id := range a.{{$options.TitleName}} {
-					{{LowerTitle $modelName}}.{{$options.TitleName}} = append({{LowerTitle $modelName}}.{{$options.TitleName}}, &app.{{$options.GoType}}{
+					{{LowerTitle $modelName}}.{{$options.TitleName}} = append({{LowerTitle $modelName}}.{{$options.TitleName}}, &app.{{$options.BusinessType}}{
 						ID: id,
 					})
 				}
