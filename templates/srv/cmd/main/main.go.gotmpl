@@ -10,6 +10,7 @@ import (
 
 	"{{.Module}}/internal/api"
 	"{{.Module}}/internal/app"
+	"{{.Module}}/internal/authorization"
 	"{{.Module}}/internal/dal"
 	"{{.Module}}/internal/def"
 
@@ -95,8 +96,10 @@ func connect() (app.App,{{if .HaveCustomMethod}} app.Customs,{{end}} *extauthapi
 	if err != nil {
 		return nil,{{if .HaveCustomMethod}} nil,{{end}} nil, err
 	}
+
+	rulesSet := authorization.NewRulesSet()
 	
-	app{{if .HaveCustomMethod}}, cust{{end}} := app.New(r{{if .HaveCustomMethod}}, cr{{end}})
+	app{{if .HaveCustomMethod}}, cust{{end}} := app.New(r{{if .HaveCustomMethod}}, cr{{end}}, rulesSet)
 	return app{{if .HaveCustomMethod}}, cust{{end}}, extAuthSvc, nil
 }
 

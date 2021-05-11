@@ -225,25 +225,6 @@ paths:
             $ref: "#/definitions/error"
   {{- end}}
   {{- end}}
-  /{{LowerTitle $modelName}}/accessManager:    
-    post:
-      tags:
-      {{- range $_, $tag := $model.Tags}}
-        - {{$tag}}
-      {{- end}}
-      operationId: {{LowerTitle $modelName}}AccessManager
-      parameters:
-        - name: body
-          in: body
-          schema: 
-            $ref: "#/definitions/accessManager" 
-      responses:        
-        200:
-          description: OK
-        default:
-          description: error
-          schema:
-            $ref: "#/definitions/error"
   {{- range $funcName, $func := $.Functions}}
   /{{LowerTitle $modelName}}/{{$funcName}}:
     post:
@@ -467,24 +448,6 @@ definitions:
     {{- end}}
   {{- end}}
 {{end}}
-  accessManager:
-    type: object
-    description: params for set access
-    properties:
-      user:
-        type: string
-      group:
-        type: string
-      read:
-        type: boolean 
-      write:
-        type: boolean 
-      delete:
-        type: boolean 
-      add:
-        type: boolean 
-      accessManager:
-        type: boolean
 {{if .HaveListMethod}}
   listParams:
     type: object

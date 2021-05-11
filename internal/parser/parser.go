@@ -28,6 +28,8 @@ var (
 
 	timeFormats = []string{"date", "date-time"}
 	formats     = map[string][]string{"string": append([]string{"email", "phone", "url"}, timeFormats...)}
+
+	roles = []string{"admin", "manager", "user", "guest"}
 )
 
 const (
@@ -193,11 +195,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		model.Tags = append([]string{strings.Title(name)}, model.Tags...)
 
 		var props []models.MethodProps
-		for i, method := range model.Methods {
+		for _, method := range model.Methods {
 			noSecure := false
 			if strings.Contains(method, "{noSecure}") {
-				method = strings.Replace(method, "{noSecure}", "", -1)
-				model.Methods[i] = method
 				noSecure = true
 			}
 			if isCustomMethod(method) {
@@ -214,12 +214,21 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				prop.HTTPMethod = "post"
 			}
 			prop.NoSecure = noSecure
-			props = append(props, prop)
 
 			if method == "list" || isAdjustList(method) {
 				cfg.HaveListMethod = true
 				model.HaveListMethod = true
 			}
+
+			rules := []string{}
+			for ruleName, ruleMethods := range model.RulesSet {
+				if ContainsStr(ruleMethods, method) {
+					rules = append(rules, ruleName)
+				}
+			}
+			prop.Rules = rules
+
+			props = append(props, prop)
 		}
 		model.MethodsProps = props
 
@@ -573,13 +582,55 @@ func validate(cfg *models.Config) error {
 	if cfg.AuthSrv == "" {
 		return errors.New("auth-srv is empty")
 	}
-
+	if err := validateAccessAttributes(cfg.AccessAttributes); err != nil {
+		return err
+	}
+	if err := validateRules(cfg); err != nil {
+		return err
+	}
 	if err := validateModels(cfg); err != nil {
 		return err
 	}
 	if err := validateCustomTypes(cfg.CustomTypes); err != nil {
 		return err
 	}
+	return nil
+}
+
+func validateAccessAttributes(attributes []string) error {
+	for _, attr := range attributes {
+		if !isCorrectName(attr) {
+			return errors.Errorf(`"%s" is invalid name for access attribute. %s`, attr, correctNameDescription)
+		}
+	}
+	return nil
+}
+
+func validateRules(cfg *models.Config) error {
+	for name, rule := range cfg.Rules {
+		if !isCorrectName(name) {
+			return errors.Errorf(`"%s" is invalid name for rule. %s`, name, correctNameDescription)
+		}
+		if len(rule.Attributes) == 0 {
+			return errors.Errorf(`Rule "%s" has no any access attributes`, name)
+		}
+		if len(rule.Roles) == 0 {
+			return errors.Errorf(`Rule "%s" has no any roles`, name)
+		}
+
+		for _, attr := range rule.Attributes {
+			if !ContainsStr(cfg.AccessAttributes, attr) {
+				return errors.Errorf(`Rule "%s" has access attribute "%s" that not exist`, name, attr)
+			}
+		}
+
+		for _, role := range rule.Roles {
+			if !ContainsStr(roles, role) {
+				return errors.Errorf(`Rule "%s" has role "%s" that not exist. Available roles: %s`, name, role, strings.Join(roles, ", "))
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -705,6 +756,24 @@ func validateModels(cfg *models.Config) error {
 
 			if err := validateOptions(options); err != nil {
 				return errors.Wrapf(err, `Model: "%s". Column: "%s"`, name, column)
+			}
+		}
+
+		if err := validateRulesSet(model.RulesSet, cfg.Rules, model.Methods); err != nil {
+			return errors.Wrapf(err, `Model: "%s"`, name)
+		}
+	}
+	return nil
+}
+
+func validateRulesSet(rulesSet map[string][]string, rules map[string]models.Rule, modelMethods []string) error {
+	for rule, methods := range rulesSet {
+		if _, ok := rules[rule]; !ok {
+			return errors.Errorf(`Rule "%s" has not exist`, rule)
+		}
+		for _, method := range methods {
+			if !ContainsStr(modelMethods, method) {
+				return errors.Errorf(`Method "%s" from rule "%s" has not exist`, method, rule)
 			}
 		}
 	}
@@ -1035,6 +1104,9 @@ func SortColumns(columns map[string]models.Options) []string {
 
 // isCustomMethod return true if method is custom
 func isCustomMethod(method string) bool {
+	if strings.Contains(method, "{noSecure}") {
+		method = strings.Replace(method, "{noSecure}", "", -1)
+	}
 	method = strings.ToLower(method)
 	fmt.Println(method, isAdjustGet(method))
 	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isAdjustList(method) || isAdjustGet(method) || isAdjustEdit(method) || IsMyMethod(method) {
@@ -1079,8 +1151,11 @@ func LowerTitle(in string) string {
 func titleize(cfg *models.Config) {
 	titleModels := make(map[string]models.Model)
 	for modelName, model := range cfg.Models {
-		for i := range cfg.Models[modelName].Methods {
-			model.Methods[i] = strings.Title(model.Methods[i])
+		for i, method := range cfg.Models[modelName].Methods {
+			if strings.Contains(method, "{noSecure}") {
+				method = strings.Replace(method, "{noSecure}", "", -1)
+			}
+			model.Methods[i] = strings.Title(method)
 		}
 		titleModels[strings.Title(modelName)] = model
 	}
@@ -1558,6 +1633,15 @@ func isCreatedStandardColumn(column string) bool {
 func isModifiedStandardColumn(column string) bool {
 	if column == "modifiedAt" || column == "modifiedBy" {
 		return true
+	}
+	return false
+}
+
+func ContainsStr(slice []string, str string) bool {
+	for i := range slice {
+		if slice[i] == str {
+			return true
+		}
 	}
 	return false
 }

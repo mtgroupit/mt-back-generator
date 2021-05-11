@@ -13,16 +13,6 @@ CREATE TABLE {{Pluralize (NameSQL $modelName)}}
     deleted_by uuid{{if not $model.Shared}},
     isolated_entity_id uuid NOT NULL{{end}}
 );
-CREATE TABLE {{Pluralize (NameSQL $modelName)}}_access 
-(
-    user_name text,
-    group_name text,
-    read_access boolean,
-    write_access boolean,
-    delete_access boolean,
-    add_access boolean, 
-    access_manager boolean
-);
 {{range $i, $et := $.ExtraTables}}{{if eq $et.RefTableOne $modelName}}
 CREATE TABLE {{$et.Name}}
 (
@@ -31,8 +21,6 @@ CREATE TABLE {{$et.Name}}
     isolated_entity_id uuid NOT NULL{{end}}
 );{{end}}{{end}}
 
-
 -- +goose Down{{range $i, $et := $.ExtraTables}}{{if eq $et.RefTableOne $modelName}}
 DROP TABLE IF EXISTS {{$et.Name}};{{end}}{{end}}
 DROP TABLE IF EXISTS {{Pluralize (NameSQL $modelName)}};
-DROP TABLE IF EXISTS {{Pluralize (NameSQL $modelName)}}_access;

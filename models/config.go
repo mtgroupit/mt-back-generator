@@ -88,6 +88,8 @@ type MethodProps struct {
 	FilteredFields          []string
 	EditableFields          []string
 	NestedObjs              []NestedObjProps
+
+	Rules []string
 }
 
 // Model - description one component of models
@@ -127,6 +129,8 @@ type Model struct {
 	Binds        []Bind
 	Methods      []string
 	MethodsProps []MethodProps
+
+	RulesSet map[string][]string `yaml:"rules-set"`
 }
 
 // Function contain input and output params
@@ -170,6 +174,9 @@ type Config struct {
 	CustomTypes map[string]CustomType `yaml:"custom-types"`
 	Functions   map[string]Function
 
+	AccessAttributes []string `yaml:"access-attributes"`
+	Rules            map[string]Rule
+
 	HaveListMethod         bool
 	HaveCustomMethod       bool
 	HaveFloatArr           bool
@@ -208,4 +215,10 @@ type CustomType struct {
 	Fields      map[string]Options
 
 	NeedTime bool
+}
+
+// Rule - contains rule properties
+type Rule struct {
+	Attributes []string
+	Roles      []string
 }

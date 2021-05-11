@@ -19,7 +19,8 @@ import (
 		"{{.Module}}/internal/types"
 	{{- end}}
 
-	{{if or (HaveMyMethod $model.Methods) $model.HaveCreatedBy $model.HaveModifiedBy (ContainsStr $model.Methods "Delete") (ContainsStr $model.Methods "Add") (and (not $model.Shared) ($model.Methods))}}extauthapi "{{.AuthSrv}}"{{end}}
+	extauthapi "{{.AuthSrv}}"
+	
 	{{- if or $model.HaveEmail $model.NeedTime}}
 		"github.com/go-openapi/strfmt"
 	{{- end}}
@@ -34,17 +35,21 @@ import (
 {{- range $i, $method := $model.Methods}}
 {{- if not (IsCustomMethod $method)}}
 func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}Params{{if not (index $model.MethodsProps $i).NoSecure}}, profile interface{}{{end}}) middleware.Responder {
+	prof := {{if (index $model.MethodsProps $i).NoSecure}}&extauthapi.Profile{Authn: false}{{else}}profile.(*extauthapi.Profile){{end}}
 	{{- if IsGet $method}}
-		{{- if and (or (IsMyMethod $method) (not $model.Shared)) (not (index $model.MethodsProps $i).NoSecure)}}
-			prof := profile.(*extauthapi.Profile)
-		{{- end}}
-		c, err := svc.app.{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}{{if IsMyMethod $method}}prof.ID.String(){{else}}params.Body.ID{{end}}{{end}}{{if and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}{{if not $model.BoundToIsolatedEntity}}, {{end}}prof.IsolatedEntityID.String(){{end}})
+		c, err := svc.app.{{$method}}{{$modelName}}(toAppProfile(prof){{if not (IsMyMethod $method)}}, params.Body.ID{{end}})
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
 			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
+			})
+		case errors.Is(err, app.ErrAccessDenied):
+			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
+				Code:    swag.Int32(codeForbidden.extra),
+				Message: swag.String(err.Error()),
 			})
 		case errors.Is(err, app.ErrNotFound):
 			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
@@ -53,19 +58,24 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 				Message: swag.String(err.Error()),
 			})
 		case err == nil:
-		log.Info("{{$method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}{{if $model.BoundToIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}})
+			log.Info("{{$method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}{{if $model.BoundToIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}})
 			return {{LowerTitle $modelName}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c))
 		}
 	{{- end}}
 	{{- if IsAdd $method}}
-		prof := profile.(*extauthapi.Profile)
-		c, err := svc.app.{{$method}}{{$modelName}}(prof.ID.String(), {{if and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}prof.IsolatedEntityID.String(), {{end}}app{{$modelName}}Add(params.Body))
+		c, err := svc.app.{{$method}}{{$modelName}}(toAppProfile(prof), app{{$modelName}}Add(params.Body))
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
 			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
+			})
+		case errors.Is(err, app.ErrAccessDenied):
+			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
+				Code:    swag.Int32(codeForbidden.extra),
+				Message: swag.String(err.Error()),
 			})
 		{{- if IsMyMethod $method}}
 			case errors.Is(err, app.ErrDuplicateID):
@@ -81,14 +91,19 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 		}
 	{{- end}}
 	{{- if IsDelete $method}}
-		prof := profile.(*extauthapi.Profile)
-		err := svc.app.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}params.Body.ID, {{end}}prof.ID.String(){{if  and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}, prof.IsolatedEntityID.String(){{end}})
+		err := svc.app.{{$method}}{{$modelName}}(toAppProfile(prof){{if not (IsMyMethod $method)}}, params.Body.ID{{end}})
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
 			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
+			})
+		case errors.Is(err, app.ErrAccessDenied):
+			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
+				Code:    swag.Int32(codeForbidden.extra),
+				Message: swag.String(err.Error()),
 			})
 		case errors.Is(err, app.ErrNotFound):
 			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
@@ -102,9 +117,6 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 		}
 	{{- end}}
 	{{- if IsEdit $method}}
-		{{- if and (or (IsMyMethod $method) $model.HaveModifiedBy (not $model.Shared)) (not (index $model.MethodsProps $i).NoSecure)}}
-			prof := profile.(*extauthapi.Profile)
-		{{- end}}
 		{{- if IsAdjustEdit $method}}
 			in := &app.{{$modelName}}{}
 			{{- range $name, $options := $model.Columns}}
@@ -137,13 +149,19 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 				{{- end}}
 			{{- end}}
 		{{- end}}
-		{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}params.Body.ID, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}prof.ID.String(), {{end}}{{if  and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}prof.IsolatedEntityID.String(), {{end}}{{if IsAdjustEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
+		{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}(toAppProfile(prof), {{if not (IsMyMethod $method)}}params.Body.ID, {{end}}{{if IsAdjustEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
 			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
+			})
+		case errors.Is(err, app.ErrAccessDenied):
+			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
+				Code:    swag.Int32(codeForbidden.extra),
+				Message: swag.String(err.Error()),
 			})
 		case errors.Is(err, app.ErrNotFound):
 			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
@@ -157,16 +175,19 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 		}
 	{{- end}}
 	{{- if  IsList $method}}
-		{{- if  and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}
-			prof := profile.(*extauthapi.Profile)
-		{{end}}
-		c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}({{if and (not $model.Shared) (not (index $model.MethodsProps $i).NoSecure)}}prof.IsolatedEntityID.String(), {{end}}appListParams(params.Body))
+		c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}(toAppProfile(prof), appListParams(params.Body))
 		switch {
 		default:
 			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
 			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
+			})
+		case errors.Is(err, app.ErrAccessDenied):
+			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
+				Code:    swag.Int32(codeForbidden.extra),
+				Message: swag.String(err.Error()),
 			})
 		case err == nil:
 			log.Info("{{$method}}{{$modelName}} ok")
@@ -231,15 +252,7 @@ func (svc *service) Delete{{Title $column}}{{$modelName}}(params {{LowerTitle $m
 	}
 }
 {{end}}{{end}}
-func (svc *service) {{$modelName}}AccessManager(params {{LowerTitle $modelName}}.{{$modelName}}AccessManagerParams, profile interface{}) middleware.Responder {
-	err := svc.app.{{$modelName}}AccessManager(appAccessManager(params.Body))
-	if err != nil {
-		log.Err("{{$modelName}}AccessManager error", err)
-	} else {
-		log.Info("{{$modelName}}AccessManager ok")
-	}
-	return {{LowerTitle $modelName}}.New{{$modelName}}AccessManagerOK()
-}
+
 {{range $functionName, $function := $.Functions}}
 func (svc *service) {{$functionName}}{{$modelName}}(params {{LowerTitle $modelName}}.{{$modelName}}{{$functionName}}Params, profile interface{}) middleware.Responder {
 	{{$function.OutStr}}, err := svc.app.{{$functionName}}{{$modelName}}({{$function.InStrParams}})

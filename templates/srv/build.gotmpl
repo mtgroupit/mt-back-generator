@@ -25,6 +25,7 @@ mockgen -source=./internal/app/app.go -destination=./internal/app/app_mock.gener
 {{- if .HaveCustomMethod}}
 mockgen -source=./internal/app/app_custom.go -destination=./internal/app/custom_mock.generated.go -package=app
 {{- end}}
+mockgen -source=./internal/app/rules_set.go -destination=./internal/app/rules_set_mock.generated.go -package=app
 mockgen -source=./internal/api/auth.go -destination=./internal/api/auth_mock.generated.go -package=api
 echo "Mock generate stopped"
 

@@ -54,15 +54,8 @@ var goTmplFuncs = template.FuncMap{
 		return strings.Contains(method, modelName)
 	},
 	"IsCustomMethod": isCustomMethod,
-	"ContainsStr": func(slice []string, str string) bool {
-		for i := range slice {
-			if slice[i] == str {
-				return true
-			}
-		}
-		return false
-	},
-	"IsMyMethod": parser.IsMyMethod,
+	"ContainsStr":    parser.ContainsStr,
+	"IsMyMethod":     parser.IsMyMethod,
 	"HaveMyMethod": func(methods []string) bool {
 		for _, method := range methods {
 			if parser.IsMyMethod(method) {
@@ -374,6 +367,28 @@ var goTmplFuncs = template.FuncMap{
 	"EnumPrint": func(enum []string) string {
 		return fmt.Sprintf(`[%s]`, strings.Join(enum, ", "))
 	},
+	"GenRule": func(rule models.Rule) string {
+		var checkRole, checkNotRole, checkAttr []string
+		for _, role := range rule.Roles {
+			roleChecker := "r.attributes.Is" + strings.Title(role) + "(prof)"
+			checkRole = append(checkRole, roleChecker)
+			checkNotRole = append(checkNotRole, "!"+roleChecker)
+		}
+		for _, attr := range rule.Attributes {
+			checkAttr = append(checkAttr, "r.attributes."+strings.Title(attr)+"(prof)")
+		}
+		return fmt.Sprintf("(%s) || ((%s) && %s)", strings.Join(checkNotRole, " && "), strings.Join(checkRole, " || "), strings.Join(checkAttr, " && "))
+	},
+	"GenRulesSet": func(rules []string) string {
+		if len(rules) == 0 {
+			return "true"
+		}
+		ruleMethods := []string{}
+		for _, rule := range rules {
+			ruleMethods = append(ruleMethods, "rs.rules."+nameToTitle(rule)+"(prof)")
+		}
+		return strings.Join(ruleMethods, " && ")
+	},
 	"SortColumns": parser.SortColumns,
 }
 
@@ -502,7 +517,7 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 			}
 		}
 	} else {
-		if !cfg.HaveCustomMethod && strings.HasSuffix(name, "custom.go.gotmpl") {
+		if !cfg.HaveCustomMethod && strings.HasSuffix(name, "custom.go.gotmpl") && !strings.HasSuffix(dirTarget, "authorization") {
 			return nil
 		}
 		if !cfg.Debug && name == "00001_reset_all.sql.gotmpl" {
@@ -514,10 +529,27 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 			if err != nil {
 				return err
 			}
-			for modelName, model := range cfg.Models {
-				for _, method := range model.Methods {
-					if isCustomMethod(method) && !regexp.MustCompile(`\s`+method+modelName).Match(file) {
-						file = []byte(regexp.MustCompile(`(?s)\n}\n`).ReplaceAllString(string(file), "\n\t"+method+modelName+`(m *`+modelName+") error\n}\n"))
+			if strings.HasSuffix(dirTarget, "authorization") {
+				for _, attr := range cfg.AccessAttributes {
+					attrName := nameToTitle(attr)
+					if !regexp.MustCompile(`func \(attr \*attributes\) ` + attrName + `\(.*\) bool`).Match(file) {
+						t := template.Must(template.New("func").Parse(fmt.Sprintf(attrPattern, attrName)))
+						var buf bytes.Buffer
+						if err := t.Execute(&buf, nil); err != nil {
+							return err
+						}
+						file = append(file, buf.Bytes()...)
+					}
+				}
+			} else {
+				for modelName, model := range cfg.Models {
+					for _, method := range model.Methods {
+						if isCustomMethod(method) && !regexp.MustCompile(`\s`+method+modelName).Match(file) {
+							parts := strings.SplitN(string(file), "\n}\n", 3)
+							file = []byte(parts[0] + "\n\t" + method + modelName + `(r *http.Request, prof Profile, m *` + modelName + ") error\n}\n" +
+								parts[1] + "\n\t" + method + modelName + `(m *` + modelName + ") error\n}\n" +
+								parts[2])
+						}
 					}
 				}
 			}
@@ -583,6 +615,9 @@ func buildTreeDirs(p, srvName string) error {
 		return err
 	}
 	if err := ensureDir(path.Join(p, srvName, "internal"), "types"); err != nil {
+		return err
+	}
+	if err := ensureDir(path.Join(p, srvName, "internal"), "authorization"); err != nil {
 		return err
 	}
 	if err := ensureDir(path.Join(p, srvName), "migration"); err != nil {
@@ -660,11 +695,15 @@ func (svc *service) {{.Method}}{{.ModelName}}(params {{if .Tag}}{{.Tag}}{{else}}
 	return {{if .Tag}}{{.Tag}}{{else}}operations{{end}}.New{{.Method}}{{.ModelName}}OK()
 }`
 	appPattern = `
-func (a *app) {{.Method}}{{.ModelName}}(m *{{.ModelName}}) error {
+func (a *app) {{.Method}}{{.ModelName}}(r *http.Request, prof Profile, m *{{.ModelName}}) error {
 	return a.cust.{{.Method}}{{.ModelName}}(m)
 }`
 	dalPattern = `
 func (a *Customs) {{.Method}}{{.ModelName}}(m *app.{{.ModelName}}) error {
 	return nil
+}`
+	attrPattern = `
+func (attr *attributes) %s() bool {
+	return true
 }`
 )

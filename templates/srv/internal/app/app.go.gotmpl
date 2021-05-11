@@ -8,25 +8,24 @@ type App interface {
 {{- range $modelName, $model := $.Models}}
     {{- range $i, $method := $model.Methods}}
 	    {{- if IsGet $method}}
-            {{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID string{{end}}) (*{{$modelName}}, error)
+            {{$method}}{{$modelName}}(prof Profile{{if not (IsMyMethod $method)}}, id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}) (*{{$modelName}}, error)
         {{- end}}
         {{- if IsAdd $method}}
-            {{$method}}{{$modelName}}(profileID string, {{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) (*{{$modelName}}, error)
+            {{$method}}{{$modelName}}(prof Profile, m *{{$modelName}}) (*{{$modelName}}, error)
         {{- end}}
 	    {{- if IsDelete $method}}
-            {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}profileID string{{if not $model.Shared}}, isolatedEntityID string{{end}}) error
+            {{$method}}{{$modelName}}(prof Profile{{if not (IsMyMethod $method)}}, id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}) error
         {{- end}}
         {{- if IsEdit $method}}
-            {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}}
+            {{$method}}{{$modelName}}(prof Profile, {{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}}
         {{- end}}
         {{- if IsList $method}}
-            {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}params *ListParams) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error)
+            {{$method}}{{$modelName}}(prof Profile, params *ListParams) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error)
         {{- end}}
     {{- end}}
 	{{range $column, $options := $model.Columns}}{{if  and $options.IsArray $options.IsStruct}}
     Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models ($options.AppType)).IDIsUUID}}string{{else}}int64{{end}}, items []*{{$options.AppType}}) error
     Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models ($options.AppType)).IDIsUUID}}string{{else}}int64{{end}}) error{{end}}{{end}}
-    {{$modelName}}AccessManager(m *AccessManager) error
 {{- end}}
 
     {{range $modelName, $model := $.Models}}{{range $functionName, $function := $.Functions}}
@@ -57,22 +56,11 @@ type Repo interface {
 	{{range $column, $options := $model.Columns}}{{if  and $options.IsArray $options.IsStruct}}
     Add{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}itemsID []{{if (index $.Models ($options.AppType)).IDIsUUID}}string{{else}}int64{{end}}, items []*{{$options.AppType}}) error
     Delete{{Title $column}}{{$modelName}}(id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{if $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}items []{{if (index $.Models ($options.AppType)).IDIsUUID}}string{{else}}int64{{end}}) error{{end}}{{end}}
-    {{$modelName}}AccessManager(m *AccessManager) error
 {{- end}}
 
     {{range $modelName, $model := $.Models}}{{range $functionName, $function := $.Functions}}
 	{{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$function.InStrType}}, error)
     {{end}}{{end}}
-}
-
-type AccessManager struct {
-    User string
-    Group string
-    Read bool
-    Write bool
-    Delete bool
-    Add bool 
-    AccessManager bool
 }
 
 {{if .HaveListMethod}}
@@ -97,13 +85,16 @@ type app struct {
     {{- if .HaveCustomMethod}}
         custRepo CustomsRepo
     {{- end}}
+	rulesSet RulesSet
 }
 
-func New(r Repo{{if .HaveCustomMethod}}, cr CustomsRepo{{end}}) (App{{if .HaveCustomMethod}}, Customs{{end}}) {
+func New(r Repo{{if .HaveCustomMethod}}, cr CustomsRepo{{end}}, rs RulesSet) (App{{if .HaveCustomMethod}}, Customs{{end}}) {
 	return &app{
 		repo: r,
+        rulesSet: rs,
 	}{{if .HaveCustomMethod}}, &app{
 		repo: r,
+        rulesSet: rs,
         custRepo: cr,
 	}{{end}}
 }
