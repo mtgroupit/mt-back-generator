@@ -16,11 +16,13 @@ services:
         GITHUB_USER: ${GITHUB_USER:?}
         GITHUB_PASS: ${GITHUB_PASS:?}
     ports:
-      - "9091:9091"
+      - ${MSRV_PORT:-9091}:${MSRV_PORT:-9091}
     environment:
-      MSRV_PORT: "9091"
-      MSRV_EXTAUTH_ENDPOINT: "http://127.0.0.1:9090"
-      MSRV_RESET_DB: "false"
+      MSRV_PORT: ${MSRV_PORT:-9091}
+      MSRV_EXTAUTH_ENDPOINT: ${MSRV_EXTAUTH_ENDPOINT:-http://127.0.0.1:9090}
+    {{- if .Debug}}
+      MSRV_RESET_DB: ${MSRV_RESET_DB:-false}
+    {{- end}}
       MSRV_DB_HOST: db
       MSRV_DB_PORT: "5432"
       MSRV_DB_USER: postgres
