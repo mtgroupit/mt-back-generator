@@ -5,6 +5,7 @@ import (
 	{{- if .HaveTime}}
 		"time"
 	{{- end}}
+	"strings"
 
 	"{{.Module}}/internal/api/restapi/models"
 	"{{.Module}}/internal/app"
@@ -121,4 +122,14 @@ func toAppProfile(prof *extauthapi.Profile) app.Profile {
 		},
 		IsolatedEntityID: prof.IsolatedEntityID.String(),
 	}
+}
+
+func splitCommaSeparatedStr(commaSeparated string) (result []string) {
+	for _, item := range strings.Split(commaSeparated, ",") {
+		item = strings.TrimSpace(item)
+		if item != "" {
+			result = append(result, item)
+		}
+	}
+	return
 }

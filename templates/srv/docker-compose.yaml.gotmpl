@@ -26,5 +26,5 @@ services:
       MSRV_DB_USER: postgres
       MSRV_DB_PASS: postgres
       MSRV_DB_NAME: back
-      MSRV_CORS_ALLOWED_ORIGIN: http://localhost
+      MSRV_CORS_ALLOWED_ORIGINS: ${MSRV_CORS_ALLOWED_ORIGINS:-http://localhost}
       MSRV_DB_SSL_MODE_IS_REQUIRE: "false"
