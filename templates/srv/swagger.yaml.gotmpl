@@ -39,7 +39,21 @@ paths:
             type: object
             properties:
               ok:
-                type: boolean 
+                type: boolean
+{{- if .Debug}}
+  /addTestData:    
+    post:
+      tags:
+        - Standard
+      operationId: addTestData 
+      responses:        
+        200:
+          description: OK 
+        default:
+          description: error
+          schema:
+            $ref: "#/definitions/error"
+{{- end}}
 {{- range $modelName, $model := $.Models}}
   {{- range $i, $method := $model.Methods}}
   /{{LowerTitle $modelName}}/{{LowerTitle $method}}:    

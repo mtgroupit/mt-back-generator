@@ -31,6 +31,10 @@ type App interface {
     {{range $modelName, $model := $.Models}}{{range $functionName, $function := $.Functions}}
 	{{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$function.InStrType}}, error)
     {{end}}{{end}}
+
+    {{- if .Debug}}
+        AddTestData(prof Profile) error
+    {{end}}
 }
 
 // Repo interface for data repository
@@ -61,6 +65,8 @@ type Repo interface {
     {{range $modelName, $model := $.Models}}{{range $functionName, $function := $.Functions}}
 	{{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$function.InStrType}}, error)
     {{end}}{{end}}
+
+    AddTestData(profileID, isolatedEntityID string) error
 }
 
 {{if .HaveListMethod}}
@@ -98,3 +104,12 @@ func New(r Repo{{if .HaveCustomMethod}}, cr CustomsRepo{{end}}, rs RulesSet) (Ap
         custRepo: cr,
 	}{{end}}
 }
+
+{{- if .Debug}}
+    func (a *app) AddTestData(prof Profile) error {
+        if !prof.Authz.Admin {
+            return ErrAccessDenied
+        }
+        return a.repo.AddTestData(prof.ID, prof.IsolatedEntityID)
+    }
+{{end}}

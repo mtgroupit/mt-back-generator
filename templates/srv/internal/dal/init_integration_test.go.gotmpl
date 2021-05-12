@@ -25,46 +25,9 @@ var (
 	isolatedEntityID = uuid.New().String()
 	profID1 = uuid.New().String()
 	profID2 = uuid.New().String()
-	
-{{- range $modelName, $model := $.Models}}
-	test{{$modelName}}1 = &app.{{$modelName}}{
-		{{- range $_, $column := (SortColumns $model.Columns)}}
-			{{- $options := (index $model.Columns $column)}}
-			{{- if not (and (eq $column "id") (eq $options.Type "uuid"))}}
-			{{$options.TitleName}}: {{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.AppType}}s{{else}}test{{$options.AppType}}1{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
-			{{- end}}
-		{{- end}}
-	}
-	{{- if not $model.BoundToIsolatedEntity}}
-		test{{$modelName}}2 = &app.{{$modelName}}{
-			{{- range $_, $column := (SortColumns $model.Columns)}}
-				{{- $options := (index $model.Columns $column)}}
-				{{- if not (and (eq $column "id") (eq $options.Type "uuid"))}}
-				{{$options.TitleName}}: {{if or $options.IsStruct $options.IsCustom}}{{if $options.IsArray}}test{{$options.AppType}}s{{else}}test{{$options.AppType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
-				{{- end}}
-			{{- end}}
-		}
-		test{{$modelName}}s = []*app.{{$modelName}}{test{{$modelName}}1, test{{$modelName}}2}
-	{{- end}}
-{{- end}}
-
-{{- range $customTypeName, $customType := $.CustomTypes}}
-	{{- $customTypeName = (Title $customTypeName)}}
-	test{{$customTypeName}}1 = &app.{{$customTypeName}}{  
-		{{- range $field, $options := $customType.Fields}}
-		{{Title $field}}: {{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.AppType}}s{{else}}test{{$options.AppType}}1{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
-		{{- end}}
-	}
-	test{{$customTypeName}}2 = &app.{{$customTypeName}}{  
-		{{- range $field, $options := $customType.Fields}}
-		{{Title $field}}: {{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.AppType}}s{{else}}test{{$options.AppType}}2{{end}}{{else}}{{GenAppTestValue $options}}{{end}},
-		{{- end}}
-	}
-	test{{$customTypeName}}s = []*app.{{$customTypeName}}{test{{$customTypeName}}1, test{{$customTypeName}}2}
-{{end}}
 
 	{{- if .HaveListMethod}}
-		listParams = &ListParams{
+		listParams = &app.ListParams{
 			Offset: 0,
 			Limit: 5,
 			Filters: filters,
@@ -73,13 +36,13 @@ var (
 			OrderBy:"ASC",
 		}
 		
-		filters = []*Filter{
-			&Filter{
+		filters = []*app.Filter{
+			{
 				Key: "ID",
 				Include: true,
 				Value: "1",
 			},
-			&Filter{
+			{
 				Key: "ID",
 				Include: false,
 				Value: "2",
@@ -123,21 +86,4 @@ func setupIntegration() {
 func (a *Repo) truncate() error {
 	_, err := a.db.Exec("TRUNCATE {{TruncateParams .Models}} RESTART IDENTITY CASCADE")
 	return err
-}
-
-{{- $MaxDeepNesting:=.MaxDeepNesting}}
-func addTestData(t *check.C){ 
-	var err error
-{{- range $i := Iterate $MaxDeepNesting}}
-	{{- range $modelName, $model := $.Models}}
-		{{- if eq $model.DeepNesting $i}}
-			{{if $model.IDIsUUID}}test{{$modelName}}1.ID{{else}}_{{end}}, err = testRepo.add{{$modelName}}({{if $model.IDIsUUID}}{{if $model.BoundToIsolatedEntity}}isolatedEntityID{{else}}{{if HaveMyMethod $model.Methods}}profID1{{else}}uuid.New().String(){{end}}{{end}}, {{end}}{{if $model.HaveCreatedBy}}profID1, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}1)
-			t.Nil(err)
-			{{- if not $model.BoundToIsolatedEntity}}
-				{{if $model.IDIsUUID}}test{{$modelName}}2.ID{{else}}_{{end}}, err = testRepo.add{{$modelName}}({{if $model.IDIsUUID}}{{if HaveMyMethod $model.Methods}}profID2{{else}}uuid.New().String(){{end}}, {{end}}{{if $model.HaveCreatedBy}}profID2, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}2)
-				t.Nil(err)
-			{{- end}}
-		{{- end}}
-	{{- end}}
-{{- end}}
 }
