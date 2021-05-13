@@ -9,13 +9,9 @@ import (
 	"github.com/powerman/gotest/testinit"
 	"github.com/powerman/pqx"
 	"github.com/powerman/structlog"
-	"github.com/powerman/check"
 
 	"{{.Module}}/internal/app"
 	"{{.Module}}/internal/def"
-	{{- if or .HaveTypes .HaveTypesInCustomTypes}}
-		"{{.Module}}/internal/types"
-	{{- end}}
 )
 
 var testRepo *Repo

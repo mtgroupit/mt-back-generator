@@ -13,19 +13,21 @@ import (
 func Test{{$method}}{{$modelName}}Smoke(tt *testing.T) {
 	t := check.T(tt)
 
-	addTestData(t)
+	t.Nil(testRepo.AddTestData(profID1, isolatedEntityID))
+	{{- if IsMyMethod $method}}
+		t.Nil(testRepo.bindTo{{if $model.BoundToIsolatedEntity}}IsolatedEntity{{else}}Profile{{end}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.BoundToIsolatedEntity}}, profID1{{end}}{{if not $model.Shared}}, isolatedEntityID{{end}}))
+	{{- end}}
 
 	{{- if IsGet $method}}
-		getted, err := testRepo.{{$method}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.Shared}}, isolatedEntityID{{end}})
+		getted, err := testRepo.{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}{{if IsMyMethod $method}}profID1{{else}}test{{$modelName}}1.ID{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}})
 		t.Nil(err)
 		t.DeepEqual(getted, test{{$modelName}}1)
 	{{- end}}
 	{{- if IsDelete $method}}
-		t.Nil(testRepo.{{$method}}{{$modelName}}(test{{$modelName}}1.ID{{if not $model.Shared}}, isolatedEntityID{{end}}))
+		t.Nil(testRepo.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}test{{$modelName}}1.ID, {{end}}profID1{{if not $model.Shared}}, isolatedEntityID{{end}}))
 	{{- end}}
 	{{- if IsEdit $method}}
-		addTestData(t)
-		t.Nil(testRepo.{{$method}}{{$modelName}}(test{{$modelName}}1.ID, {{if $model.HaveModifiedBy}}profID, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}{{if $model.BoundToIsolatedEntity}}1{{else}}2{{end}}))
+		t.Nil(testRepo.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}test{{$modelName}}1.ID, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profID1, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}{{if $model.BoundToIsolatedEntity}}1{{else}}2{{end}}))
 	{{- end}}
 
 	{{- if IsList $method}}	
@@ -36,8 +38,6 @@ func Test{{$method}}{{$modelName}}Smoke(tt *testing.T) {
 		t.Nil(err)
 		t.DeepEqual(list, test{{$modelName}}s)
 	{{- end}}
-	{{/* {{if and (ne $method "Get") (ne $method "Add") (ne $method "Delete") (ne $method "Edit") (ne $method "List") (not (IsAdjustList $method))}}
-	t.Nil(testRepo.{{$method}}{{$modelName}}(test{{$modelName}}1)){{end}} */}}
 
 	t.Nil(testRepo.truncate())
 }
