@@ -21,8 +21,8 @@ import (
 	}
 
 	func {{$customTypeName}}sToPointers(objs []{{$customTypeName}}) (pointers []*{{$customTypeName}}) {
-		for _, obj := range objs {
-			pointers = append(pointers, &obj)
+		for i := range objs {
+			pointers = append(pointers, &objs[i])
 		}
 		return
 	}

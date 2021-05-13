@@ -14,8 +14,15 @@ import (
 		{{LowerTitle $name}} "{{$module}}/internal/api/restapi/restapi/operations/{{NameSQL $name}}"
 	{{- end}}
 	"{{.Module}}/internal/app"
-	"github.com/rs/cors"
+	{{- if .Debug}}
+		"{{.Module}}/internal/def"
+		"{{.Module}}/internal/api/restapi/models"
 
+		extauthapi "{{.AuthSrv}}"
+
+		"github.com/go-openapi/swag"
+	{{- end}}
+	"github.com/rs/cors"
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/pkg/errors"
@@ -71,6 +78,9 @@ func NewServer(appl app.App,{{if .HaveCustomMethod}}cust app.Customs,{{end}} ext
 	api.CsrfTokenAuth = svc.csrfTokenAuth
 
 	api.StandardHealthCheckHandler = standard.HealthCheckHandlerFunc(healthCheck)
+	{{- if .Debug}}
+		api.StandardAddTestDataHandler = standard.AddTestDataHandlerFunc(svc.addTestData)
+	{{- end}}
     {{- range $modelName, $model := $.Models}}
 		{{- range $i, $method := $model.Methods}}
 			api.{{$model.TitleName}}{{$method}}{{$model.TitleName}}Handler = {{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}HandlerFunc(svc.{{$method}}{{$modelName}})
@@ -139,3 +149,27 @@ func NewServer(appl app.App,{{if .HaveCustomMethod}}cust app.Customs,{{end}} ext
 func healthCheck(params standard.HealthCheckParams, profile interface{}) middleware.Responder {
 	return standard.NewHealthCheckOK().WithPayload(&standard.HealthCheckOKBody{Ok: true})
 }
+
+{{- if .Debug}}
+	func (svc *service) addTestData(params standard.AddTestDataParams, profile interface{}) middleware.Responder {
+		prof := profile.(*extauthapi.Profile)
+		err := svc.app.AddTestData(toAppProfile(prof))
+		switch {
+		default:
+			log.PrintErr("AddTestData server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
+			return standard.NewAddTestDataDefault(codeInternal.status).WithPayload(&models.Error{
+				Code:    swag.Int32(codeInternal.extra),
+				Message: swag.String("internal error"),
+			})
+		case errors.Is(err, app.ErrAccessDenied):
+			log.Info("AddTestData client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
+			return standard.NewAddTestDataDefault(codeForbidden.status).WithPayload(&models.Error{
+				Code:    swag.Int32(codeForbidden.extra),
+				Message: swag.String(err.Error()),
+			})
+		case err == nil:
+			log.Info("AddTestData ok")
+			return standard.NewAddTestDataOK()
+		}
+	}
+{{- end}}

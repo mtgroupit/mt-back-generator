@@ -1,7 +1,7 @@
 name: "Demo"
 module: "demo"
 description: "demo generated app"
-debug: true # used for create flag and env variable for reset database
+debug: true
 auth-srv: "github.com/mtgroupit/mt-mock-extauthapi"
 
 access-attributes:

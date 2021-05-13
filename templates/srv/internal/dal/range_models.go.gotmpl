@@ -799,7 +799,7 @@ func (a *Repo) add{{$modelName}}(profileID string, {{if not $model.Shared}}isola
 					{{$options.TitleName}}JSON: {{$column}}JSON,
 				{{- else}}
 					{{- if not $options.IsArray}}
-						{{- if ne $options.TitleName "ID"}}
+						{{- if and (ne $options.TitleName "ID") (ne $options.TitleName "ModifiedBy") (ne $options.TitleName "ModifiedAt")}}
 							{{$options.TitleName}}: m.{{$options.TitleName}},
 						{{- end}} 
 					{{- else}}
