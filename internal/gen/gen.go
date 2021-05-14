@@ -691,11 +691,11 @@ func (svc *service) {{.Method}}{{.ModelName}}(params {{if .Tag}}{{.Tag}}{{else}}
 	return {{if .Tag}}{{.Tag}}{{else}}operations{{end}}.New{{.Method}}{{.ModelName}}OK()
 }`
 	appPattern = `
-func (a *app) {{.Method}}{{.ModelName}}(r *http.Request, prof Profile, m *{{.ModelName}}) error {
-	return a.cust.{{.Method}}{{.ModelName}}(m)
+func (a *app) {{.Method}}{{.ModelName}}(prof Profile, m *{{.ModelName}}) error {
+	return a.custRepo.{{.Method}}{{.ModelName}}(m)
 }`
 	dalPattern = `
-func (a *Customs) {{.Method}}{{.ModelName}}(m *app.{{.ModelName}}) error {
+func (a *CustomsRepo) {{.Method}}{{.ModelName}}(m *app.{{.ModelName}}) error {
 	return nil
 }`
 	attrPattern = `
