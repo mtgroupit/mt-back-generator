@@ -3,14 +3,14 @@ package app
 
 type Customs interface {
     {{range $modelName, $model := $.Models}}{{range $i, $method := $model.Methods}}
-	{{if (IsCustomMethod $method)}}
-	{{$method}}{{$modelName}}(prof Profile, {{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) error{{end}}
+	{{if (not ($model.IsStandardMethod $method))}}
+	{{ToBusinessMethodName $method}}{{$modelName}}(prof Profile, {{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) error{{end}}
 	{{end}}{{end}}
 }
 
 type CustomsRepo interface {
     {{range $modelName, $model := $.Models}}{{range $i, $method := $model.Methods}}
-	{{if (IsCustomMethod $method)}}
-	{{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) error{{end}}
+	{{if (not ($model.IsStandardMethod $method))}}
+	{{ToBusinessMethodName $method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) error{{end}}
 	{{end}}{{end}}
 }

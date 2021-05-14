@@ -13,9 +13,10 @@ import (
 	"text/template"
 
 	"github.com/mtgroupit/mt-back-generator/internal/parser"
+	"github.com/mtgroupit/mt-back-generator/internal/utilities"
 	"github.com/rhysd/abspath"
 
-	"github.com/mtgroupit/mt-back-generator/models"
+	"github.com/mtgroupit/mt-back-generator/internal/models"
 )
 
 var goTmplFuncs = template.FuncMap{
@@ -31,34 +32,34 @@ var goTmplFuncs = template.FuncMap{
 		var keys []string
 		iter := reflect.ValueOf(in).MapRange()
 		for iter.Next() {
-			keys = append(keys, parser.Pluralize(parser.NameSQL(iter.Key().String())))
+			keys = append(keys, utilities.Pluralize(utilities.NameSQL(iter.Key().String())))
 		}
 		return strings.Join(keys, ", ")
 	},
 	"ToLower": func(in string) string {
 		return strings.ToLower(in)
 	},
-	"LowerTitle": parser.LowerTitle,
+	"LowerTitle": utilities.LowerTitle,
 	"Title":      nameToTitle,
 
-	"NameSQL":   parser.NameSQL,
-	"Pluralize": parser.Pluralize,
+	"NameSQL":   utilities.NameSQL,
+	"Pluralize": utilities.Pluralize,
 
 	"IsTypesAdditionalType": parser.IsTypesAdditionalType,
 
-	"IsAdjustList": isAdjustList,
-	"IsAdjustEdit": isAdjustEdit,
-	"IsAdjustGet":  isAdjustGet,
-	"IsTimeFormat": parser.IsTimeFormat,
+	"ToBusinessMethodName": models.ToBusinessMethodName,
+	"IsAdjustList":         models.IsAdjustList,
+	"IsAdjustEdit":         models.IsAdjustEdit,
+	"IsAdjustGet":          models.IsAdjustGet,
+	"IsTimeFormat":         parser.IsTimeFormat,
 	"HaveField": func(method, modelName string) bool {
 		return strings.Contains(method, modelName)
 	},
-	"IsCustomMethod": isCustomMethod,
-	"ContainsStr":    parser.ContainsStr,
-	"IsMyMethod":     parser.IsMyMethod,
+	"ContainsStr": utilities.ContainsStr,
+	"IsMyMethod":  models.IsMyMethod,
 	"HaveMyMethod": func(methods []string) bool {
 		for _, method := range methods {
-			if parser.IsMyMethod(method) {
+			if models.IsMyMethod(method) {
 				return true
 			}
 		}
@@ -103,14 +104,20 @@ var goTmplFuncs = template.FuncMap{
 		return false
 	},
 	"IsGet": func(method string) bool {
+		if strings.Contains(method, "{noSecure}") {
+			method = strings.Replace(method, "{noSecure}", "", -1)
+		}
 		method = strings.ToLower(method)
-		if method == "get" || method == "getmy" || isAdjustGet(method) {
+		if method == "get" || method == "getmy" || models.IsAdjustGet(method) {
 			return true
 		}
 		return false
 	},
 	"IsAdd": isAdd,
 	"IsDelete": func(method string) bool {
+		if strings.Contains(method, "{noSecure}") {
+			method = strings.Replace(method, "{noSecure}", "", -1)
+		}
 		method = strings.ToLower(method)
 		if method == "delete" || method == "deletemy" {
 			return true
@@ -118,8 +125,11 @@ var goTmplFuncs = template.FuncMap{
 		return false
 	},
 	"IsEdit": func(method string) bool {
+		if strings.Contains(method, "{noSecure}") {
+			method = strings.Replace(method, "{noSecure}", "", -1)
+		}
 		method = strings.ToLower(method)
-		if method == "edit" || method == "editmy" || method == "editoraddmy" || isAdjustEdit(method) {
+		if method == "edit" || method == "editmy" || method == "editoraddmy" || models.IsAdjustEdit(method) {
 			return true
 		}
 		return false
@@ -129,7 +139,7 @@ var goTmplFuncs = template.FuncMap{
 		for i, method := range model.Methods {
 			if isList(method) {
 				if model.HaveLazyLoading {
-					if isAdjustList(method) {
+					if models.IsAdjustList(method) {
 						if model.MethodsProps[i].NeedLazyLoading {
 							return true
 						}
@@ -148,7 +158,7 @@ var goTmplFuncs = template.FuncMap{
 			for i, method2 := range model.Methods {
 				if method == method2 {
 					if model.HaveLazyLoading {
-						if isAdjustList(method) {
+						if models.IsAdjustList(method) {
 							if len(model.MethodsProps[i].FilteredFields) != 0 || model.MethodsProps[i].HaveJSON {
 								return true
 							}
@@ -165,7 +175,7 @@ var goTmplFuncs = template.FuncMap{
 	},
 	"NeedErrorsInApi": func(model models.Model) bool {
 		for _, method := range model.Methods {
-			if !isList(method) && !(isAdd(method) && !parser.IsMyMethod(method)) {
+			if !isList(method) && !(isAdd(method) && !models.IsMyMethod(method)) {
 				return true
 			}
 		}
@@ -452,7 +462,7 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 				for modelName, model := range cfg.Models {
 					if model.DeepNesting == i {
 						counter++
-						fileName := fmt.Sprintf("%05d_%s.sql", counter, parser.NameSQL(modelName))
+						fileName := fmt.Sprintf("%05d_%s.sql", counter, utilities.NameSQL(modelName))
 						cfg.CurModel = modelName
 						if err := createFile(fileName, dirTMPL, dirTarget, cfg, tmp); err != nil {
 							return err
@@ -468,20 +478,20 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 				if len(model.Methods) == 0 && strings.HasSuffix(name, "_test.go.gotmpl") {
 					continue
 				}
-				fileName := parser.NameSQL(modelName) + name[len("range_models"):len(name)-len(".gotmpl")]
+				fileName := utilities.NameSQL(modelName) + name[len("range_models"):len(name)-len(".gotmpl")]
 				if strings.HasSuffix(name, "custom.go.gotmpl") && checkExistenseFile(path.Join(dirTarget, fileName)) {
 					file, err := ioutil.ReadFile(path.Join(dirTarget, fileName))
 					if err != nil {
 						return err
 					}
 					for _, method := range model.Methods {
-						if isCustomMethod(method) && !regexp.MustCompile(`func \(.+\) `+method+modelName).Match(file) {
+						if !model.IsStandardMethod(method) && !regexp.MustCompile(`func \(.+\) `+models.ToBusinessMethodName(method)+modelName).Match(file) {
 							var pattern, tag string
 							switch {
 							case strings.HasSuffix(dirTMPL, "api"):
 								pattern = apiPattern
 								if len(model.Tags) != 0 {
-									tag = parser.LowerTitle(model.Tags[0])
+									tag = utilities.LowerTitle(model.Tags[0])
 								}
 							case strings.HasSuffix(dirTMPL, "app"):
 								pattern = appPattern
@@ -495,7 +505,7 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 								ModelName string
 								Tag       string
 							}{
-								method,
+								models.ToBusinessMethodName(method),
 								modelName,
 								tag,
 							}); err != nil {
@@ -544,10 +554,10 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 			} else {
 				for modelName, model := range cfg.Models {
 					for _, method := range model.Methods {
-						if isCustomMethod(method) && !regexp.MustCompile(`\s`+method+modelName).Match(file) {
+						if !model.IsStandardMethod(method) && !regexp.MustCompile(`\s`+models.ToBusinessMethodName(method)+modelName).Match(file) {
 							parts := strings.SplitN(string(file), "\n}\n", 3)
-							file = []byte(parts[0] + "\n\t" + method + modelName + `(r *http.Request, prof Profile, m *` + modelName + ") error\n}\n" +
-								parts[1] + "\n\t" + method + modelName + `(m *` + modelName + ") error\n}\n" +
+							file = []byte(parts[0] + "\n\t" + models.ToBusinessMethodName(method) + modelName + `(prof Profile, m *` + modelName + ") error\n}\n" +
+								parts[1] + "\n\t" + models.ToBusinessMethodName(method) + modelName + `(m *` + modelName + ") error\n}\n" +
 								parts[2])
 						}
 					}
@@ -641,26 +651,6 @@ func checkExistenseFile(file string) bool {
 	return true
 }
 
-func isCustomMethod(method string) bool {
-	method = strings.ToLower(method)
-	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isAdjustGet(method) || isAdjustEdit(method) || isAdjustList(method) || parser.IsMyMethod(method) {
-		return false
-	}
-	return true
-}
-
-func isAdjustList(method string) bool {
-	return regexp.MustCompile(`^(L|l)ist.+`).Match([]byte(method)) && !parser.IsMyMethod(method)
-}
-
-func isAdjustEdit(method string) bool {
-	return regexp.MustCompile(`^(E|e)dit.+`).Match([]byte(method)) && strings.ToLower(method) != "editmy" && strings.ToLower(method) != "editoraddmy"
-}
-
-func isAdjustGet(method string) bool {
-	return regexp.MustCompile(`^(G|g)et.+`).Match([]byte(method)) && strings.ToLower(method) != "getmy"
-}
-
 func formatName(name string) string {
 	splitedName := regexp.MustCompile("[^a-zA-Z0-9]+").Split(name, -1)
 	for i := range splitedName {
@@ -670,6 +660,9 @@ func formatName(name string) string {
 }
 
 func isAdd(method string) bool {
+	if strings.Contains(method, "{noSecure}") {
+		method = strings.Replace(method, "{noSecure}", "", -1)
+	}
 	method = strings.ToLower(method)
 	if method == "add" || method == "addmy" {
 		return true
@@ -678,8 +671,11 @@ func isAdd(method string) bool {
 }
 
 func isList(method string) bool {
+	if strings.Contains(method, "{noSecure}") {
+		method = strings.Replace(method, "{noSecure}", "", -1)
+	}
 	method = strings.ToLower(method)
-	return method == "list" || isAdjustList(method)
+	return method == "list" || models.IsAdjustList(method)
 }
 
 func nameToTitle(name string) string {

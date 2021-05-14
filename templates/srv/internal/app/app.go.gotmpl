@@ -8,19 +8,19 @@ type App interface {
 {{- range $modelName, $model := $.Models}}
     {{- range $i, $method := $model.Methods}}
 	    {{- if IsGet $method}}
-            {{$method}}{{$modelName}}(prof Profile{{if not (IsMyMethod $method)}}, id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}) (*{{$modelName}}, error)
+            {{ToBusinessMethodName $method}}{{$modelName}}(prof Profile{{if not (IsMyMethod $method)}}, id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}) (*{{$modelName}}, error)
         {{- end}}
         {{- if IsAdd $method}}
-            {{$method}}{{$modelName}}(prof Profile, m *{{$modelName}}) (*{{$modelName}}, error)
+            {{ToBusinessMethodName $method}}{{$modelName}}(prof Profile, m *{{$modelName}}) (*{{$modelName}}, error)
         {{- end}}
 	    {{- if IsDelete $method}}
-            {{$method}}{{$modelName}}(prof Profile{{if not (IsMyMethod $method)}}, id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}) error
+            {{ToBusinessMethodName $method}}{{$modelName}}(prof Profile{{if not (IsMyMethod $method)}}, id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}) error
         {{- end}}
         {{- if IsEdit $method}}
-            {{$method}}{{$modelName}}(prof Profile, {{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}}
+            {{ToBusinessMethodName $method}}{{$modelName}}(prof Profile, {{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}}
         {{- end}}
         {{- if IsList $method}}
-            {{$method}}{{$modelName}}(prof Profile, params *ListParams) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error)
+            {{ToBusinessMethodName $method}}{{$modelName}}(prof Profile, params *ListParams) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error)
         {{- end}}
     {{- end}}
 	{{range $column, $options := $model.Columns}}{{if  and $options.IsArray $options.IsStruct}}
@@ -42,19 +42,19 @@ type Repo interface {
 {{- range $modelName, $model := $.Models}}
     {{- range $i, $method := $model.Methods}}
 	    {{- if IsGet $method}}
-            {{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID string{{end}}) (*{{$modelName}}, error)
+            {{ToBusinessMethodName $method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID string{{end}}) (*{{$modelName}}, error)
         {{- end}}
         {{- if IsAdd $method}}
-            {{$method}}{{$modelName}}(profileID string, {{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) (*{{$modelName}}, error)
+            {{ToBusinessMethodName $method}}{{$modelName}}(profileID string, {{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) (*{{$modelName}}, error)
         {{- end}}
 	    {{- if IsDelete $method}}
-            {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}profileID string{{if not $model.Shared}}, isolatedEntityID string{{end}}) error
+            {{ToBusinessMethodName $method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}profileID string{{if not $model.Shared}}, isolatedEntityID string{{end}}) error
         {{- end}}
         {{- if IsEdit $method}}
-            {{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}}
+            {{ToBusinessMethodName $method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profileID string, {{end}}{{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}}
         {{- end}}
         {{- if IsList $method}}
-            {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}params *ListParams) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error)
+            {{ToBusinessMethodName $method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}params *ListParams) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error)
         {{- end}}
     {{- end}}
 	{{range $column, $options := $model.Columns}}{{if  and $options.IsArray $options.IsStruct}}

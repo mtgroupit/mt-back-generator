@@ -83,7 +83,7 @@ func NewServer(appl app.App,{{if .HaveCustomMethod}}cust app.Customs,{{end}} ext
 	{{- end}}
     {{- range $modelName, $model := $.Models}}
 		{{- range $i, $method := $model.Methods}}
-			api.{{$model.TitleName}}{{$method}}{{$model.TitleName}}Handler = {{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}HandlerFunc(svc.{{$method}}{{$modelName}})
+			api.{{$model.TitleName}}{{ToBusinessMethodName $method}}{{$model.TitleName}}Handler = {{LowerTitle $modelName}}.{{ToBusinessMethodName $method}}{{$model.TitleName}}HandlerFunc(svc.{{ToBusinessMethodName $method}}{{$modelName}})
 		{{- end}}
 		{{- range $column, $options := $model.Columns}}
 			{{- if and $options.IsArray $options.IsStruct}}

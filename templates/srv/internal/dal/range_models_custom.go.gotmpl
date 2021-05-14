@@ -5,8 +5,8 @@ import (
 	"{{.Module}}/internal/app"
 )
 
-{{range $i, $method := $model.Methods}}{{if (IsCustomMethod $method)}}
-func (a *CustomsRepo) {{$method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) error {
+{{range $i, $method := $model.Methods}}{{if (not ($model.IsStandardMethod $method))}}
+func (a *CustomsRepo) {{ToBusinessMethodName $method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID string, {{end}}m *app.{{$modelName}}) error {
 	return nil
 }
 {{end}}{{end}}

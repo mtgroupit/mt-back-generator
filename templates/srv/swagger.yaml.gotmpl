@@ -56,7 +56,7 @@ paths:
 {{- end}}
 {{- range $modelName, $model := $.Models}}
   {{- range $i, $method := $model.Methods}}
-  /{{LowerTitle $modelName}}/{{LowerTitle $method}}:    
+  /{{LowerTitle $modelName}}/{{LowerTitle (ToBusinessMethodName $method)}}:    
     {{(index $model.MethodsProps $i).HTTPMethod}}: 
       tags:
       {{- range $_, $tag := $model.Tags}}
@@ -65,13 +65,13 @@ paths:
     {{- if (index $model.MethodsProps $i).NoSecure}}
       security: []
     {{- end}}
-      operationId: {{LowerTitle $method}}{{$model.TitleName}}
-    {{- if not (or (and (IsGet $method) (IsMyMethod $method)) (eq $method "DeleteMy"))}}
+      operationId: {{LowerTitle (ToBusinessMethodName $method)}}{{$model.TitleName}}
+    {{- if not (or (and (IsGet $method) (IsMyMethod $method)) (eq $method "deleteMy"))}}
       parameters:
         - name: body
           in: body
           schema: 
-      {{- if or (and (IsGet $method) (not (IsMyMethod $method))) (eq $method "Delete")}}
+      {{- if or (and (IsGet $method) (not (IsMyMethod $method))) (eq $method "delete")}}
             type: object
             properties:
               id:
@@ -155,7 +155,7 @@ paths:
     {{- end}}        
     {{- if or (IsList $method) (IsGet $method) (and (IsEdit $method) $model.ReturnWhenEdit)}}
           schema:          
-          {{- if or (eq $method "List") (IsAdjustList $method)}}
+          {{- if IsList $method}}
             type: object
             properties:
             {{- if $model.DetailedPagination}}

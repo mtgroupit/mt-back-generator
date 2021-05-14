@@ -8,10 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/fatih/camelcase"
-	"github.com/go-openapi/strfmt"
-	"github.com/jinzhu/inflection"
-	"github.com/mtgroupit/mt-back-generator/models"
+	"github.com/mtgroupit/mt-back-generator/internal/models"
+	"github.com/mtgroupit/mt-back-generator/internal/utilities"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -144,7 +142,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			}
 
 			if options.IsCustom {
-				options.Type = LowerTitle(options.BusinessType)
+				options.Type = utilities.LowerTitle(options.BusinessType)
 			} else {
 				if options.Type == "int" {
 					options.Type = "int32"
@@ -200,7 +198,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			if strings.Contains(method, "{noSecure}") {
 				noSecure = true
 			}
-			if isCustomMethod(method) {
+			if !model.IsStandardMethod(method) {
 				cfg.HaveCustomMethod = true
 				model.HaveCustomMethod = true
 			}
@@ -208,21 +206,21 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			var prop models.MethodProps
 			if method == "delete" || method == "deleteMy" {
 				prop.HTTPMethod = "delete"
-			} else if method == "edit" || method == "editMy" || isAdjustEdit(method) {
+			} else if method == "edit" || method == "editMy" || models.IsAdjustEdit(method) {
 				prop.HTTPMethod = "put"
 			} else {
 				prop.HTTPMethod = "post"
 			}
 			prop.NoSecure = noSecure
 
-			if method == "list" || isAdjustList(method) {
+			if method == "list" || models.IsAdjustList(method) {
 				cfg.HaveListMethod = true
 				model.HaveListMethod = true
 			}
 
 			rules := []string{}
 			for ruleName, ruleMethods := range model.RulesSet {
-				if ContainsStr(ruleMethods, method) {
+				if utilities.ContainsStr(ruleMethods, method) {
 					rules = append(rules, ruleName)
 				}
 			}
@@ -291,7 +289,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			if options.IsStruct {
 				model.HaveLazyLoading = true
 
-				modelNameForBind := LowerTitle(options.BusinessType)
+				modelNameForBind := utilities.LowerTitle(options.BusinessType)
 
 				err = cfg.AddBind(modelNameForBind, models.Bind{
 					ModelName: name,
@@ -305,11 +303,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				if options.IsArray {
 					et := models.ExtraTable{}
 
-					et.Name = NameSQL(name) + "_" + NameSQL(column)
+					et.Name = utilities.NameSQL(name) + "_" + utilities.NameSQL(column)
 
 					et.RefTableOne = strings.Title(name)
 					et.RefIDOne = "id"
-					et.FieldIDOne = NameSQL(name) + "_id"
+					et.FieldIDOne = utilities.NameSQL(name) + "_id"
 					if cfg.Models[name].Columns["id"].Type == "uuid" {
 						et.TypeIDOne = "uuid"
 					} else {
@@ -318,8 +316,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 					et.RefTableTwo = options.BusinessType
 					et.RefIDTwo = "id"
-					et.FieldIDTwo = NameSQL(column) + "_id"
-					if cfg.Models[LowerTitle(options.BusinessType)].Columns["id"].Type == "uuid" {
+					et.FieldIDTwo = utilities.NameSQL(column) + "_id"
+					if cfg.Models[utilities.LowerTitle(options.BusinessType)].Columns["id"].Type == "uuid" {
 						et.TypeIDTwo = "uuid"
 					} else {
 						et.TypeIDTwo = "integer"
@@ -362,7 +360,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					options.TitleName = strings.Title(column)
 				}
 				if options.IsStruct || options.IsCustom {
-					options.Type = LowerTitle(options.BusinessType)
+					options.Type = utilities.LowerTitle(options.BusinessType)
 				} else {
 					if options.Type == "int" {
 						options.Type = "int32"
@@ -403,18 +401,18 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				pp.Type = options.BusinessType
 				pp.Name = options.TitleName
 				if pp.IsStruct {
-					pp.SQLName = NameSQL(column) + "_id"
+					pp.SQLName = utilities.NameSQL(column) + "_id"
 					pp.FK = "id"
-					if cfg.Models[LowerTitle(options.BusinessType)].Columns["id"].Type == "uuid" {
+					if cfg.Models[utilities.LowerTitle(options.BusinessType)].Columns["id"].Type == "uuid" {
 						pp.TypeSQL = "uuid"
 					} else {
 						pp.TypeSQL = "integer"
 					}
 				} else if pp.IsCustom || pp.IsArray {
-					pp.SQLName = NameSQL(column) + "_json"
+					pp.SQLName = utilities.NameSQL(column) + "_json"
 					pp.TypeSQL = "jsonb"
 				} else {
-					pp.SQLName = NameSQL(column)
+					pp.SQLName = utilities.NameSQL(column)
 					switch options.Type {
 					case "string":
 						if IsTimeFormat(options.Format) {
@@ -446,7 +444,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		for _, column := range columns {
 			options := model.Columns[column]
 			if !options.IsStruct {
-				sqlName := NameSQL(options.TitleName)
+				sqlName := utilities.NameSQL(options.TitleName)
 				titleName := options.TitleName
 				if options.IsArray || options.IsCustom {
 					sqlName += "_json"
@@ -456,7 +454,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 				SQLSelect = append(SQLSelect, sqlName)
 				if !options.IsArray && !options.IsCustom {
-					sqlColumn := NameSQL(column)
+					sqlColumn := utilities.NameSQL(column)
 					if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
 						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 					} else {
@@ -471,8 +469,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			} else {
 				if !options.IsArray {
-					sqlColumn := NameSQL(column)
-					sqlName := NameSQL(options.TitleName) + "_id"
+					sqlColumn := utilities.NameSQL(column)
+					sqlName := utilities.NameSQL(options.TitleName) + "_id"
 					SQLSelect = append(SQLSelect, sqlName)
 					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 					sqlAdd = append(sqlAdd, sqlName)
@@ -562,377 +560,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	return
 }
 
-// NameSQL converts name to "snake_case" format
-func NameSQL(name string) string {
-	return strings.ToLower(strings.Join(camelcase.Split(name), "_"))
-}
-
-// Pluralize - convert name to plural form
-func Pluralize(name string) string {
-	return inflection.Plural(name)
-}
-
-func validate(cfg *models.Config) error {
-	if cfg.Name == "" {
-		return errors.New("name is empty")
-	}
-	if cfg.Module == "" {
-		return errors.New("module is empty")
-	}
-	if cfg.AuthSrv == "" {
-		return errors.New("auth-srv is empty")
-	}
-	if err := validateAccessAttributes(cfg.AccessAttributes); err != nil {
-		return err
-	}
-	if err := validateRules(cfg); err != nil {
-		return err
-	}
-	if err := validateModels(cfg); err != nil {
-		return err
-	}
-	if err := validateCustomTypes(cfg.CustomTypes); err != nil {
-		return err
-	}
-	return nil
-}
-
-func validateAccessAttributes(attributes []string) error {
-	for _, attr := range attributes {
-		if !isCorrectName(attr) {
-			return errors.Errorf(`"%s" is invalid name for access attribute. %s`, attr, correctNameDescription)
-		}
-	}
-	return nil
-}
-
-func validateRules(cfg *models.Config) error {
-	for name, rule := range cfg.Rules {
-		if !isCorrectName(name) {
-			return errors.Errorf(`"%s" is invalid name for rule. %s`, name, correctNameDescription)
-		}
-		if len(rule.Attributes) == 0 {
-			return errors.Errorf(`Rule "%s" has no any access attributes`, name)
-		}
-		if len(rule.Roles) == 0 {
-			return errors.Errorf(`Rule "%s" has no any roles`, name)
-		}
-
-		for _, attr := range rule.Attributes {
-			if !ContainsStr(cfg.AccessAttributes, attr) {
-				return errors.Errorf(`Rule "%s" has access attribute "%s" that not exist`, name, attr)
-			}
-		}
-
-		for _, role := range rule.Roles {
-			if !ContainsStr(roles, role) {
-				return errors.Errorf(`Rule "%s" has role "%s" that not exist. Available roles: %s`, name, role, strings.Join(roles, ", "))
-			}
-		}
-	}
-
-	return nil
-}
-
-func validateModels(cfg *models.Config) error {
-	for name, model := range cfg.Models {
-		if model.BoundToIsolatedEntity && model.Shared {
-			return errors.Errorf(`Model: "%s". Id from isolated entity available only for not shared models`, name)
-		}
-		if !isCorrectName(name) {
-			return errors.Errorf(`"%s" is invalid name for model. %s`, name, correctNameDescription)
-		}
-		if len(model.Columns) == 0 {
-			return errors.Errorf(`Model "%s" has no any columns`, name)
-		}
-
-		for _, method := range model.Methods {
-			if strings.Contains(method, "{noSecure}") {
-				method = strings.Replace(method, "{noSecure}", "", -1)
-				if !model.Shared {
-					return errors.Errorf(`Model: "%s". Methods without authorization are allowed only for shared models`, name)
-				}
-				if IsMyMethod(method) {
-					return errors.Errorf(`Model: "%s". "%s" Methods "My" must be with authorization`, name, method)
-				}
-			}
-			if isCustomMethod(method) {
-				switch {
-				case strings.HasPrefix(method, "list") && strings.Contains(method, "("):
-					return errors.Errorf(`Model: "%s". "%s"  is invalid as a adjust list. A valid adjust list shouldn't contain spaces before brackets. Correct method pattern: "list(column1, column3*, model1*(column1, model1(column1, column2))), where * means the field can be sorted by"`, name, method)
-				case strings.HasPrefix(method, "get") && strings.Contains(method, "("):
-					return errors.Errorf(`Model: "%s". "%s"  is invalid as a adjust get. A valid adjust get shouldn't contain spaces before brackets. Correct method pattern: "get(column1, column2)"`, name, method)
-				case strings.HasPrefix(method, "edit") && strings.Contains(method, "("):
-					return errors.Errorf(`Model: "%s". "%s"  is invalid as a adjust edit. A valid adjust edit shouldn't contain spaces before brackets. Correct method pattern: "edit(column1, column2)"`, name, method)
-				default:
-					if !isCorrectName(method) {
-						return errors.Errorf(`Model: "%s". "%s"  is invalid name for method. %s`, name, method, correctNameDescription)
-					}
-				}
-			}
-			if model.BoundToIsolatedEntity && !IsMyMethod(method) {
-				return errors.Errorf(`Model: "%s". "%s"  is invalid method for model with id from isolated entity. For model with id from isolated entity available only methods with "My" postfix`, name, method)
-			}
-		}
-
-		haveDefaultSort := false
-		for column, options := range model.Columns {
-			if !isCorrectName(column) {
-				return errors.Errorf(`Model: "%s". "%s"  is invalid name for column. %s`, name, column, correctNameDescription)
-			}
-
-			if !IsStandardColumn(column) {
-				if column == "id" {
-					if !(options.Type == "uuid" || options.Type == "int64") {
-						return errors.Errorf(`Model: "%s". "%s"  is invalid type for id. Valid types is 'int64' or 'uuid'`, name, options.Type)
-					}
-				} else {
-					if strings.HasPrefix(options.Type, arrayTypePrefix) {
-						options.Type = options.Type[len(arrayTypePrefix):]
-					}
-					BusinessType := convertTypeToBusinessType(options.Type, options.Format)
-					lowerTitleBusinessType := LowerTitle(BusinessType)
-					if strings.HasPrefix(options.Type, structTypePrefix) {
-						if _, ok := cfg.Models[lowerTitleBusinessType]; !ok {
-							return errors.Errorf(`Model: "%s". Column "%s" refers to "%s" model which is not described anywhere`, name, column, lowerTitleBusinessType)
-						}
-					} else if strings.HasPrefix(options.Type, customTypePrefix) {
-						if _, ok := cfg.CustomTypes[lowerTitleBusinessType]; !ok {
-							return errors.Errorf(`Model: "%s". Column "%s" refers to "%s" custom type which is not described anywhere`, name, column, lowerTitleBusinessType)
-						}
-					} else {
-						if !IsStandardType(options.Type) {
-							_, ok := cfg.CustomTypes[options.Type]
-							if !ok {
-								return errors.Errorf(`Model: "%s". Column: "%s". "%s" is not correct type. You can use only one of standarad types %s, custom types or types refers to any other model`, name, column, BusinessType, strings.Join(standardTypes, ", "))
-							}
-						}
-					}
-				}
-			}
-
-			if len(options.Enum) > 0 {
-				if column == "id" {
-					return errors.Errorf(`Model: "%s". Column: "%s". Enum available only for not id columns`, name, column)
-				}
-			}
-
-			if options.IsStruct {
-				modelNameForBind := LowerTitle(options.BusinessType)
-				if modelForBind, ok := cfg.Models[modelNameForBind]; ok && !modelForBind.Shared && model.Shared {
-					return errors.Errorf(`Model: "%s". Column: "%s". "%s" is invalid type for column. Shared models can not use non-shared models as column type`, name, column, options.Type)
-				}
-			}
-
-			if options.SortDefault {
-				if options.IsStruct {
-					return errors.Errorf(`Model: "%s". Column: "%s". Structure can not be as default column for sorting`, name, column)
-				}
-				if options.IsArray {
-					return errors.Errorf(`Model: "%s". Column: "%s". Array can not be as default column for sorting`, name, column)
-				}
-				if !options.SortOn {
-					return errors.Errorf(`Model: "%s". Column "%s" can not be as default column for sorting because sorting is not enabled for this column`, name, column)
-				}
-				if haveDefaultSort {
-					return errors.Errorf(`Model "%s" has multiple columns as default for sorting, model should has one column as default for sorting`, name)
-				}
-				if options.SortOrderDefault != "" {
-					orderDefault := strings.ToTitle(options.SortOrderDefault)
-					if !(orderDefault == "ASC" || orderDefault == "DESC") {
-						return errors.Errorf(`Model: "%s". Column: "%s". "%s" can not be as default order for sorting. Order for sorting can be only "ASC" or "DESC"`, name, column, options.SortOrderDefault)
-					}
-				}
-				haveDefaultSort = true
-			} else {
-				if options.SortOrderDefault != "" {
-					return errors.Errorf(`Model: "%s". Column: "%s". Default order for sorting allow only for fields which set as default for sorting`, name, column)
-				}
-			}
-
-			if options.StrictFilter && options.Type != "string" {
-				return errors.Errorf(`Model: "%s". Column: "%s". "strict-sorting" option not available for non "string" columns`, name, column)
-			}
-
-			if err := validateOptions(options); err != nil {
-				return errors.Wrapf(err, `Model: "%s". Column: "%s"`, name, column)
-			}
-		}
-
-		if err := validateRulesSet(model.RulesSet, cfg.Rules, model.Methods); err != nil {
-			return errors.Wrapf(err, `Model: "%s"`, name)
-		}
-	}
-	return nil
-}
-
-func validateRulesSet(rulesSet map[string][]string, rules map[string]models.Rule, modelMethods []string) error {
-	for rule, methods := range rulesSet {
-		if _, ok := rules[rule]; !ok {
-			return errors.Errorf(`Rule "%s" has not exist`, rule)
-		}
-		for _, method := range methods {
-			if !ContainsStr(modelMethods, method) {
-				return errors.Errorf(`Method "%s" from rule "%s" has not exist`, method, rule)
-			}
-		}
-	}
-	return nil
-}
-
-func validateCustomTypes(customTypes map[string]models.CustomType) error {
-	for customTypeName, customType := range customTypes {
-		if !isCorrectName(customTypeName) {
-			return errors.Errorf(`"%s" is invalid name for custom type. %s`, customTypeName, correctNameDescription)
-		}
-		if len(customType.Fields) == 0 {
-			return errors.Errorf(`Custom type "%s" has no any fields`, customTypeName)
-		}
-		for fieldName, options := range customType.Fields {
-			if !isCorrectName(fieldName) {
-				return errors.Errorf(`Custom type: "%s". "%s" is invalid name for field. %s`, customTypeName, fieldName, correctNameDescription)
-			}
-			fieldType := options.Type
-			if strings.HasPrefix(fieldType, arrayTypePrefix) {
-				fieldType = fieldType[len(arrayTypePrefix):]
-			}
-			if strings.HasPrefix(fieldType, customTypePrefix) {
-				fieldType = fieldType[len(customTypePrefix):]
-			}
-			if !IsStandardType(fieldType) {
-				_, ok := customTypes[fieldType]
-				if !ok {
-					return errors.Errorf(`Custom type: "%s". Field: "%s". Custom type fields must have standard or other custom types. "%s" is not valid type`, customTypeName, fieldName, options.Type)
-				}
-			}
-
-			if err := validateOptions(options); err != nil {
-				return errors.Wrapf(err, `Custom type: "%s". Field: "%s"`, customTypeName, fieldName)
-			}
-		}
-	}
-	return nil
-}
-
-func validateOptions(options models.Options) error {
-	if err := validateFormats(options.Type, options.Format); err != nil {
-		return err
-	}
-	if err := validateEnum(options.Enum, options.Type); err != nil {
-		return err
-	}
-	if err := validateDefault(options); err != nil {
-		return err
-	}
-	return nil
-}
-
-func validateFormats(typeName, format string) error {
-	if format == "" {
-		return nil
-	}
-	if strings.HasPrefix(typeName, arrayTypePrefix) {
-		typeName = typeName[len(arrayTypePrefix):]
-	}
-
-	typeFormats, ok := formats[typeName]
-	if !ok {
-		return errors.Errorf(`Type "%s" do not support formats`, typeName)
-	}
-	validFormat := false
-	for i := range typeFormats {
-		if format == typeFormats[i] {
-			validFormat = true
-		}
-	}
-	if !validFormat {
-		return errors.Errorf(`Type "%s" do not support format: "%s"`, typeName, format)
-	}
-	return nil
-}
-
-func validateEnum(enum []string, columnType string) error {
-	if len(enum) == 0 {
-		return nil
-	}
-	if IsStandardType(columnType) {
-		if columnType == "string" {
-			return nil
-		}
-		return validateNumberEnum(enum, columnType)
-	}
-	return errors.Errorf(`Enum available only for standard types: %s`, strings.Join(standardTypes, ", "))
-}
-
-func validateNumberEnum(enum []string, columnType string) error {
-	switch {
-	case isIntNumbericType(columnType):
-		return intNumbericEnumValidate(enum)
-	case isFractionNumbericType(columnType):
-		return fractionNumbericEnumValidate(enum)
-	default:
-		return errors.Errorf(`Enum of numbers available only for standard numberic types: %s`, strings.Join(standardNumbericTypes, ", "))
-	}
-}
-
-func intNumbericEnumValidate(enum []string) error {
-	for _, e := range enum {
-		_, err := strconv.Atoi(e)
-		if err != nil {
-			return errors.Wrapf(err, `Incorrect enum. Enum for types %s must be in this format: [1, 2, 3]`, strings.Join(intNumbericTypes, ", "))
-		}
-	}
-	return nil
-}
-
-func fractionNumbericEnumValidate(enum []string) error {
-	for _, e := range enum {
-		_, err := strconv.ParseFloat(e, 64)
-		if err != nil {
-			return errors.Wrapf(err, `Incorrect enum. Enum for types %s must be in this format: [1.1, 2, 0.3, .44]`, strings.Join(fractionNumbericTypes, ", "))
-		}
-	}
-	return nil
-}
-
-func validateDefault(options models.Options) error {
-	if options.Default == "" {
-		return nil
-	}
-
-	if len(options.Enum) > 0 {
-		found := false
-		for _, e := range options.Enum {
-			if e == options.Default {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return errors.Errorf(`Default ("%s") should be one from enum: %s`, options.Default, strings.Join(options.Enum, ", "))
-		}
-	}
-
-	if options.Format != "" {
-		valid := false
-		switch options.Format {
-		case "date-time":
-			valid = strfmt.IsDateTime(options.Default)
-		case "date":
-			valid = strfmt.IsDate(options.Default)
-		case "email":
-			valid = strfmt.IsEmail(options.Default)
-		default:
-			valid = true
-		}
-		if !valid {
-			return errors.Errorf(`Default ("%s") should match the %s format`, options.Default, options.Format)
-		}
-	}
-
-	return nil
-}
-
 func formatName(name string) string {
 	splitedName := regexp.MustCompile("[^a-zA-Z0-9]+").Split(name, -1)
 	for i := range splitedName {
@@ -990,7 +617,7 @@ func countDeepNesting(model string, cfg *models.Config) (int, error) {
 func parseFieldType(options models.Options, customTypes map[string]models.CustomType) (bool, bool, string, error) {
 	fieldType := options.Type
 	BusinessType := convertTypeToBusinessType(fieldType, options.Format)
-	lowerTitleBusinessType := LowerTitle(BusinessType)
+	lowerTitleBusinessType := utilities.LowerTitle(BusinessType)
 	switch {
 	case strings.HasPrefix(fieldType, customTypePrefix):
 		if _, ok := customTypes[lowerTitleBusinessType]; !ok {
@@ -1016,7 +643,7 @@ func parseFieldType(options models.Options, customTypes map[string]models.Custom
 func parseColumnType(options models.Options, cfg *models.Config) (bool, bool, bool, string, error) {
 	columnType := options.Type
 	BusinessType := convertTypeToBusinessType(columnType, options.Format)
-	lowerTitleBusinessType := LowerTitle(BusinessType)
+	lowerTitleBusinessType := utilities.LowerTitle(BusinessType)
 	switch {
 	case strings.HasPrefix(columnType, structTypePrefix):
 		if _, ok := cfg.Models[lowerTitleBusinessType]; !ok {
@@ -1102,160 +729,16 @@ func SortColumns(columns map[string]models.Options) []string {
 	return keys
 }
 
-// isCustomMethod return true if method is custom
-func isCustomMethod(method string) bool {
-	if strings.Contains(method, "{noSecure}") {
-		method = strings.Replace(method, "{noSecure}", "", -1)
-	}
-	method = strings.ToLower(method)
-	fmt.Println(method, isAdjustGet(method))
-	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isAdjustList(method) || isAdjustGet(method) || isAdjustEdit(method) || IsMyMethod(method) {
-		return false
-	}
-	return true
-}
-
-// IsMyMethod return true if method is standard my method
-func IsMyMethod(method string) bool {
-	method = strings.ToLower(method)
-	if method == "getmy" || method == "addmy" || method == "deletemy" || method == "editmy" || method == "editoraddmy" || regexp.MustCompile(`^getmy.+`).Match([]byte(method)) || regexp.MustCompile(`^editmy.+`).Match([]byte(method)) {
-		return true
-	}
-	return false
-}
-
-func isAdjustGet(method string) bool {
-	return regexp.MustCompile(`^get(My|my)?\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
-}
-
-func isAdjustEdit(method string) bool {
-	return regexp.MustCompile(`^edit(My|my)?\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
-}
-
-func isAdjustList(method string) bool {
-	return regexp.MustCompile(`^list\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
-}
-
-// LowerTitle cancels strings.Title
-func LowerTitle(in string) string {
-	switch len(in) {
-	case 0:
-		return ""
-	case 1:
-		return strings.ToLower(string(in))
-	default:
-		return strings.ToLower(string(in[0])) + string(in[1:])
-	}
-}
-
 func titleize(cfg *models.Config) {
 	titleModels := make(map[string]models.Model)
 	for modelName, model := range cfg.Models {
-		for i, method := range cfg.Models[modelName].Methods {
-			if strings.Contains(method, "{noSecure}") {
-				method = strings.Replace(method, "{noSecure}", "", -1)
-			}
-			model.Methods[i] = strings.Title(method)
-		}
 		titleModels[strings.Title(modelName)] = model
 	}
 	cfg.Models = titleModels
 }
 
-func expandStrNestedFields(method string) string {
-	pattern := regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\((?P<value>.+)\)(\[[a-zA-Z0-9]+\])?$`)
-	result := []byte{}
-	template := "$value"
-	result = pattern.ExpandString(result, template, method, pattern.FindSubmatchIndex([]byte(method)))
-
-	return string(result)
-}
-
-func expandName(method string) string {
-	return strings.TrimSuffix(regexp.MustCompile("[^a-zA-Z0-9*]").Split(method, 2)[0], "*")
-}
-
-func expandNamePostfixForAdjustMethods(method string) string {
-	pattern := regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\(.+\)(\[(?P<value>[a-zA-Z0-9]+)\])?$`)
-	result := []byte{}
-	template := "$value"
-	result = pattern.ExpandString(result, template, method, pattern.FindSubmatchIndex([]byte(method)))
-
-	return string(result)
-}
-
-func getNameForAdjustMethods(method string) (result string) {
-	methodName := expandName(method)
-	methodNamePostfix := expandNamePostfixForAdjustMethods(method)
-
-	if methodNamePostfix == "" {
-		fieldsStr := expandStrNestedFields(method)
-		fieldsFull := splitFields(fieldsStr)
-		fields := trimFieldsSuffix(fieldsFull)
-		for i := range fields {
-			fields[i] = strings.TrimSuffix(fields[i], "*")
-			if strings.ToLower(fields[i]) == "id" {
-				fields[i] = strings.ToUpper(fields[i])
-			} else {
-				fields[i] = strings.Title(fields[i])
-			}
-		}
-		result = methodName + strings.Join(fields, "")
-	} else {
-		result = methodName + strings.Title(methodNamePostfix)
-	}
-
-	return
-}
-
-func splitFields(fields string) []string {
-	var result []string
-	for {
-		fields = strings.Trim(fields, ", ")
-		if strings.Index(fields, ",") >= 0 {
-			if strings.Index(fields, ",") < strings.Index(fields, "(") || strings.Index(fields, "(") == -1 {
-				substrs := regexp.MustCompile("[^a-zA-Z0-9*]+").Split(fields, 2)
-				result = append(result, substrs[0])
-				fields = substrs[1]
-			} else {
-				counter := 0
-				var endBracket int
-				for i, symb := range []rune(fields) {
-					switch symb {
-					case []rune("(")[0]:
-						counter++
-					case []rune(")")[0]:
-						counter--
-						if counter == 0 {
-							endBracket = i
-						}
-					}
-					if counter == 0 && i > strings.Index(fields, "(") {
-						break
-					}
-				}
-				result = append(result, fields[:endBracket+1])
-				fields = fields[endBracket+1:]
-			}
-		} else {
-			if fields != "" {
-				result = append(result, fields)
-			}
-			break
-		}
-	}
-	return result
-}
-
-func trimFieldsSuffix(fields []string) (out []string) {
-	for i := range fields {
-		out = append(out, regexp.MustCompile("[^a-zA-Z0-9*]").Split(fields[i], 2)[0])
-	}
-	return
-}
-
-func isStruct(method string) bool {
-	return regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\(.+\)$`).Match([]byte(method))
+func fieldIsStruct(field string) bool {
+	return regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\(.+\)$`).Match([]byte(field))
 }
 
 func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting, parent string, isArray bool) ([]models.NestedObjProps, error) {
@@ -1264,10 +747,10 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 
 	obj.Shared = modelsIn[modelName].Shared
 
-	field := expandName(elem)
-	fieldsStr := expandStrNestedFields(elem)
-	fieldsFull := splitFields(fieldsStr)
-	fields := trimFieldsSuffix(fieldsFull)
+	field := models.ExtractName(elem)
+	fieldsStr := models.ExtractStrNestedFields(elem)
+	fieldsFull := models.SplitFields(fieldsStr)
+	fields := models.TrimFieldsSuffix(fieldsFull)
 	SQLSelect := []string{}
 	haveID := false
 	for i := range fields {
@@ -1275,7 +758,7 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 		var structModel string
 		for column, options := range modelsIn[modelName].Columns {
 			if column == fields[i] {
-				structModel = LowerTitle(options.BusinessType)
+				structModel = utilities.LowerTitle(options.BusinessType)
 				obj.Type = strings.Title(modelName)
 				haveFieldInColumns = true
 				break
@@ -1292,10 +775,10 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 		for column, options := range modelsIn[modelName].Columns {
 			if fields[i] == column {
 				if !options.IsStruct {
-					SQLSelect = append(SQLSelect, NameSQL(column))
+					SQLSelect = append(SQLSelect, utilities.NameSQL(column))
 				} else {
 					if !options.IsArray {
-						SQLSelect = append(SQLSelect, NameSQL(fields[i])+"_id")
+						SQLSelect = append(SQLSelect, utilities.NameSQL(fields[i])+"_id")
 					} else {
 						structIsArr = true
 					}
@@ -1304,7 +787,7 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 			}
 		}
 
-		if isStruct(fieldsFull[i]) {
+		if fieldIsStruct(fieldsFull[i]) {
 			objsForAdd, err := handleNestedObjs(modelsIn, structModel, fieldsFull[i], nesting+strings.Title(field), strings.Title(modelName), structIsArr)
 			if err != nil {
 				return nil, err
@@ -1352,7 +835,7 @@ func handleSorts(modelsMap map[string]models.Model, model *models.Model, modelNa
 					if field == "id" {
 						return errors.Errorf(`Model: "%s". Column: "%s". Sort-by: "%s". Sorting by id is not avaliable`, modelName, column, sort)
 					}
-					subModel := modelsMap[LowerTitle(subModelName)]
+					subModel := modelsMap[utilities.LowerTitle(subModelName)]
 					var ok bool
 					var typeSortByColumn string
 					for subColumn, subOptions := range subModel.Columns {
@@ -1392,11 +875,11 @@ func handleSorts(modelsMap map[string]models.Model, model *models.Model, modelNa
 func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
 	result := *model
 	for i, method := range result.Methods {
-		if isAdjustList(method) {
+		if models.IsAdjustList(method) {
 			var SQLSelect, sqlWhereParams, filtredFields []string
-			fieldsStr := expandStrNestedFields(method)
-			fieldsFull := splitFields(fieldsStr)
-			fields := trimFieldsSuffix(fieldsFull)
+			fieldsStr := models.ExtractStrNestedFields(method)
+			fieldsFull := models.SplitFields(fieldsStr)
+			fields := models.TrimFieldsSuffix(fieldsFull)
 			haveID := false
 			result.MethodsProps[i].JSONColumns = map[string]bool{}
 			for j := range fields {
@@ -1429,14 +912,14 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 				for column, options := range result.Columns {
 					if fields[j] == options.TitleName {
 						if !options.IsStruct {
-							sqlName := NameSQL(options.TitleName)
+							sqlName := utilities.NameSQL(options.TitleName)
 							if options.IsArray || options.IsCustom {
 								result.MethodsProps[i].HaveJSON = true
 								sqlName += "_json"
 							}
 							SQLSelect = append(SQLSelect, sqlName)
 							if needFilter && !options.IsArray {
-								sqlColumn := NameSQL(column)
+								sqlColumn := utilities.NameSQL(column)
 								if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
 									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 								} else {
@@ -1445,8 +928,8 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 							}
 						} else {
 							if !options.IsArray {
-								sqlColumn := NameSQL(column)
-								sqlName := NameSQL(options.TitleName) + "_id"
+								sqlColumn := utilities.NameSQL(column)
+								sqlName := utilities.NameSQL(options.TitleName) + "_id"
 								SQLSelect = append(SQLSelect, sqlName)
 								if needFilter {
 									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
@@ -1459,7 +942,7 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 					}
 				}
 
-				if isStruct(fieldsFull[j]) {
+				if fieldIsStruct(fieldsFull[j]) {
 					result.MethodsProps[i].NeedLazyLoading = true
 
 					objsForAdd, err := handleNestedObjs(modelsMap, structModel, fieldsFull[j], "", strings.Title(modelName), structIsArr)
@@ -1470,7 +953,6 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 				}
 			}
 
-			result.Methods[i] = getNameForAdjustMethods(method)
 			if !haveID {
 				SQLSelect = append(SQLSelect, "id")
 			}
@@ -1508,12 +990,12 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 func handleAdjustGets(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
 	result := *model
 	for i, method := range result.Methods {
-		if isAdjustGet(method) {
+		if models.IsAdjustGet(method) {
 			var SQLSelect, adjustGetJSONColumns []string
 			haveID := false
 
-			fieldsStr := expandStrNestedFields(method)
-			fields := splitFields(fieldsStr)
+			fieldsStr := models.ExtractStrNestedFields(method)
+			fields := models.SplitFields(fieldsStr)
 			for j := range fields {
 				var haveFieldInColumns bool
 				for column := range result.Columns {
@@ -1534,20 +1016,20 @@ func handleAdjustGets(modelsMap map[string]models.Model, model *models.Model, mo
 				for column, options := range result.Columns {
 					if fields[j] == column {
 						if !options.IsStruct {
-							sqlName := NameSQL(options.TitleName)
+							sqlName := utilities.NameSQL(options.TitleName)
 							if options.IsArray || options.IsCustom {
 								sqlName += "_json"
 							}
 							SQLSelect = append(SQLSelect, sqlName)
 						} else {
 							if !options.IsArray {
-								SQLSelect = append(SQLSelect, NameSQL(options.TitleName)+"_id")
+								SQLSelect = append(SQLSelect, utilities.NameSQL(options.TitleName)+"_id")
 							}
 						}
 					}
 				}
 			}
-			result.Methods[i] = getNameForAdjustMethods(method)
+
 			if !haveID {
 				SQLSelect = append(SQLSelect, "id")
 			}
@@ -1562,14 +1044,14 @@ func handleAdjustGets(modelsMap map[string]models.Model, model *models.Model, mo
 func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, modelName string) error {
 	result := *model
 	for i, method := range result.Methods {
-		if isAdjustEdit(method) {
+		if models.IsAdjustEdit(method) {
 			var sqlEdit, editableFields []string
 			count := 1
 			if !model.Shared {
 				count++
 			}
-			fieldsStr := expandStrNestedFields(method)
-			fields := splitFields(fieldsStr)
+			fieldsStr := models.ExtractStrNestedFields(method)
+			fields := models.SplitFields(fieldsStr)
 			for j := range fields {
 				if IsStandardColumn(fields[j]) {
 					return errors.Errorf(`Model "%s". Method: "%s". "%s" can not be used in adjust edit method, it edits automatically`, modelName, method, fields[j])
@@ -1591,7 +1073,7 @@ func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, m
 
 				for _, options := range result.Columns {
 					if fields[j] == options.TitleName {
-						sqlName := NameSQL(options.TitleName)
+						sqlName := utilities.NameSQL(options.TitleName)
 						if !options.IsStruct {
 							if options.IsArray || options.IsCustom {
 								sqlName += "_json"
@@ -1606,7 +1088,6 @@ func handleAdjustEdits(modelsMap map[string]models.Model, model *models.Model, m
 					}
 				}
 			}
-			result.Methods[i] = getNameForAdjustMethods(method)
 			result.MethodsProps[i].CustomSQLEditStr = strings.Join(sqlEdit, ",\n\t\t")
 			result.MethodsProps[i].EditableFields = editableFields
 		}
@@ -1633,15 +1114,6 @@ func isCreatedStandardColumn(column string) bool {
 func isModifiedStandardColumn(column string) bool {
 	if column == "modifiedAt" || column == "modifiedBy" {
 		return true
-	}
-	return false
-}
-
-func ContainsStr(slice []string, str string) bool {
-	for i := range slice {
-		if slice[i] == str {
-			return true
-		}
 	}
 	return false
 }
