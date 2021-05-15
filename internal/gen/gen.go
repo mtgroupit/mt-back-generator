@@ -21,9 +21,8 @@ import (
 
 var goTmplFuncs = template.FuncMap{
 	"Iterate": func(count int) []int {
-		var i int
 		var items []int
-		for i = 0; i <= count; i++ {
+		for i := 0; i <= count; i++ {
 			items = append(items, i)
 		}
 		return items
@@ -36,9 +35,7 @@ var goTmplFuncs = template.FuncMap{
 		}
 		return strings.Join(keys, ", ")
 	},
-	"ToLower": func(in string) string {
-		return strings.ToLower(in)
-	},
+	"ToLower":    strings.ToLower,
 	"LowerTitle": utilities.LowerTitle,
 	"Title":      nameToTitle,
 
@@ -412,7 +409,6 @@ func Srv(dir string, cfg *models.Config) error {
 	if err := ensureDir(dir, ""); err != nil {
 		return err
 	}
-	fmt.Println(cfg.Name)
 
 	if err := buildTreeDirs(dir, cfg.Name); err != nil {
 		return err
@@ -429,18 +425,24 @@ func Srv(dir string, cfg *models.Config) error {
 	return nil
 }
 
-func createFile(name, dirTMPL, dirTarget string, cfg models.Config, tmp *template.Template) error {
-	f, err := os.Create(path.Clean(path.Join(dirTarget, name)))
+// gen recursively browses folder with templates and run exec function for them
+func gen(dirTMPL, dirTarget string, cfg models.Config) error {
+	files, err := ioutil.ReadDir(dirTMPL)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
-	if err = tmp.Execute(f, cfg); err != nil {
-		return err
+	for _, info := range files {
+		if info.IsDir() {
+			if err := gen(path.Join(dirTMPL, info.Name()), path.Join(dirTarget, info.Name()), cfg); err != nil {
+				return err
+			}
+		} else {
+			if err := exec(info.Name(), dirTMPL, dirTarget, cfg); err != nil {
+				return err
+			}
+		}
 	}
-
-	log.Printf("%s created", path.Clean(path.Join(dirTarget, name)))
 	return nil
 }
 
@@ -575,24 +577,18 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 	return nil
 }
 
-// gen recursively browses folder with templates and run exec function for them
-func gen(dirTMPL, dirTarget string, cfg models.Config) error {
-	files, err := ioutil.ReadDir(dirTMPL)
+func createFile(name, dirTMPL, dirTarget string, cfg models.Config, tmp *template.Template) error {
+	f, err := os.Create(path.Clean(path.Join(dirTarget, name)))
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
-	for _, info := range files {
-		if info.IsDir() {
-			if err := gen(path.Join(dirTMPL, info.Name()), path.Join(dirTarget, info.Name()), cfg); err != nil {
-				return err
-			}
-		} else {
-			if err := exec(info.Name(), dirTMPL, dirTarget, cfg); err != nil {
-				return err
-			}
-		}
+	if err = tmp.Execute(f, cfg); err != nil {
+		return err
 	}
+
+	log.Printf("%s created", path.Clean(path.Join(dirTarget, name)))
 	return nil
 }
 
