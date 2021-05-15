@@ -47,11 +47,11 @@ var goTmplFuncs = template.FuncMap{
 
 	"IsTypesAdditionalType": parser.IsTypesAdditionalType,
 
-	"ToBusinessMethodName": models.ToBusinessMethodName,
-	"IsAdjustList":         models.IsAdjustList,
-	"IsAdjustEdit":         models.IsAdjustEdit,
-	"IsAdjustGet":          models.IsAdjustGet,
-	"IsTimeFormat":         parser.IsTimeFormat,
+	"ToAppMethodName": models.ToAppMethodName,
+	"IsAdjustList":    models.IsAdjustList,
+	"IsAdjustEdit":    models.IsAdjustEdit,
+	"IsAdjustGet":     models.IsAdjustGet,
+	"IsTimeFormat":    parser.IsTimeFormat,
 	"HaveField": func(method, modelName string) bool {
 		return strings.Contains(method, modelName)
 	},
@@ -485,7 +485,7 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 						return err
 					}
 					for _, method := range model.Methods {
-						if !model.IsStandardMethod(method) && !regexp.MustCompile(`func \(.+\) `+models.ToBusinessMethodName(method)+modelName).Match(file) {
+						if !model.IsStandardMethod(method) && !regexp.MustCompile(`func \(.+\) `+models.ToAppMethodName(method)+modelName).Match(file) {
 							var pattern, tag string
 							switch {
 							case strings.HasSuffix(dirTMPL, "api"):
@@ -505,7 +505,7 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 								ModelName string
 								Tag       string
 							}{
-								models.ToBusinessMethodName(method),
+								models.ToAppMethodName(method),
 								modelName,
 								tag,
 							}); err != nil {
@@ -554,10 +554,10 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 			} else {
 				for modelName, model := range cfg.Models {
 					for _, method := range model.Methods {
-						if !model.IsStandardMethod(method) && !regexp.MustCompile(`\s`+models.ToBusinessMethodName(method)+modelName).Match(file) {
+						if !model.IsStandardMethod(method) && !regexp.MustCompile(`\s`+models.ToAppMethodName(method)+modelName).Match(file) {
 							parts := strings.SplitN(string(file), "\n}\n", 3)
-							file = []byte(parts[0] + "\n\t" + models.ToBusinessMethodName(method) + modelName + `(prof Profile, m *` + modelName + ") error\n}\n" +
-								parts[1] + "\n\t" + models.ToBusinessMethodName(method) + modelName + `(m *` + modelName + ") error\n}\n" +
+							file = []byte(parts[0] + "\n\t" + models.ToAppMethodName(method) + modelName + `(prof Profile, m *` + modelName + ") error\n}\n" +
+								parts[1] + "\n\t" + models.ToAppMethodName(method) + modelName + `(m *` + modelName + ") error\n}\n" +
 								parts[2])
 						}
 					}

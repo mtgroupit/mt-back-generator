@@ -45,7 +45,7 @@ const (
 
 	{{- range $i, $method := $model.Methods}}
 		{{- if IsAdjustGet $method}}
-			sql{{ToBusinessMethodName $method}}{{$modelName}} = `
+			sql{{ToAppMethodName $method}}{{$modelName}} = `
 	SELECT
 		{{(index $model.MethodsProps $i).AdjustSQLSelect}}
 	FROM
@@ -155,7 +155,7 @@ const (
 
 	{{- range $i, $method := $model.Methods}}
 		{{- if IsAdjustEdit $method}}
-			sql{{ToBusinessMethodName $method}}{{$modelName}} = `
+			sql{{ToAppMethodName $method}}{{$modelName}} = `
 	UPDATE
 		{{Pluralize (NameSQL $modelName)}}
 	SET
@@ -185,7 +185,7 @@ const (
 
 	{{- range $i, $method := $model.Methods}}
 		{{- if IsAdjustList $method}}
-			sql{{ToBusinessMethodName $method}}{{$modelName}} = `
+			sql{{ToAppMethodName $method}}{{$modelName}} = `
 	SELECT
 		{{(index $model.MethodsProps $i).AdjustSQLSelect}}
 	FROM
@@ -198,7 +198,7 @@ const (
 			{{if (index $model.MethodsProps $i).NeedLazyLoading}}
 				{{- range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
 					{{- $model2 := (index $.Models $nestedObj.Type)}}
-						sqlGet{{$nestedObj.Name}}For{{ToBusinessMethodName $method}} = `
+						sqlGet{{$nestedObj.Name}}For{{ToAppMethodName $method}} = `
 	SELECT
 		{{$nestedObj.SQLSelect}}
 	FROM
@@ -352,7 +352,7 @@ type (
 	}
 	{{- range $i, $method := $model.Methods}}
 		{{- if IsAdjustEdit $method}}
-			arg{{ToBusinessMethodName $method}}{{$modelName}} struct {
+			arg{{ToAppMethodName $method}}{{$modelName}} struct {
 				ID {{if $model.IDIsUUID}}string{{else}}int64{{end}} `db:"id"`
 				{{- range $_, $column := (SortColumns $model.Columns)}}
 					{{- $options := (index $model.Columns $column)}}

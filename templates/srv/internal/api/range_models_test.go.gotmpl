@@ -12,7 +12,7 @@ import (
 )
 
 {{range $i, $method := $model.Methods}}{{if $model.IsStandardMethod $method}}
-func Test{{ToBusinessMethodName $method}}{{$modelName}}(tt *testing.T) {
+func Test{{ToAppMethodName $method}}{{$modelName}}(tt *testing.T) {
 	t := check.T(tt)
 	// t.Parallel()
 	tsURL, shutdown, mockApp, {{if not (index $model.MethodsProps $i).NoSecure}}mockExtAuthSvc{{else}}_{{end}} := testNewServer(t)
@@ -25,27 +25,27 @@ func Test{{ToBusinessMethodName $method}}{{$modelName}}(tt *testing.T) {
 		mockExtAuthSvc.EXPECT().GetUserProfile(gomock.Any(), matchCookie(sess)).Return(profile, nil)
 	{{- end}}
 
-	params := {{LowerTitle $modelName}}.New{{ToBusinessMethodName $method}}{{$modelName}}Params()
+	params := {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Params()
 	{{- if IsGet $method}}
 		{{- if not (IsMyMethod $method)}}
 			params.Body.ID = test{{$modelName}}ID1
 		{{- end}}
-		mockApp.EXPECT().{{ToBusinessMethodName $method}}{{$modelName}}(gomock.Any(){{if not (IsMyMethod $method)}}, gomock.Any(){{end}}).Return(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}}), nil)
+		mockApp.EXPECT().{{ToAppMethodName $method}}{{$modelName}}(gomock.Any(){{if not (IsMyMethod $method)}}, gomock.Any(){{end}}).Return(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}}), nil)
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
-			geted, err := c.{{$model.TitleName}}.{{ToBusinessMethodName $method}}{{$modelName}}(params{{if not (index $model.MethodsProps $i).NoSecure}}, cl.APIKeyAuth("Cookie", "header", sess){{end}})
+			geted, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params{{if not (index $model.MethodsProps $i).NoSecure}}, cl.APIKeyAuth("Cookie", "header", sess){{end}})
 			t.Nil(err)
 			t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}})))
 		})
 	{{- end}}
 	{{- if IsAdd $method}}	
 		params.Body = testAdd{{$modelName}}1
-		mockApp.EXPECT().{{ToBusinessMethodName $method}}{{$modelName}}(gomock.Any(), gomock.Any()).Return(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}}), nil)
+		mockApp.EXPECT().{{ToAppMethodName $method}}{{$modelName}}(gomock.Any(), gomock.Any()).Return(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}}), nil)
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
-			geted, err := c.{{$model.TitleName}}.{{ToBusinessMethodName $method}}{{$modelName}}(params{{if not (index $model.MethodsProps $i).NoSecure}}, cl.APIKeyAuth("Cookie", "header", sess){{end}})
+			geted, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params{{if not (index $model.MethodsProps $i).NoSecure}}, cl.APIKeyAuth("Cookie", "header", sess){{end}})
 			t.Nil(err)
 			t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}})))
 		})
@@ -54,21 +54,21 @@ func Test{{ToBusinessMethodName $method}}{{$modelName}}(tt *testing.T) {
 		{{- if not (IsMyMethod $method)}}
 			params.Body.ID = test{{$modelName}}1.ID
 		{{- end}}
-		mockApp.EXPECT().{{ToBusinessMethodName $method}}{{$modelName}}(gomock.Any(){{if not (IsMyMethod $method)}}, gomock.Any(){{end}}).Return(nil)
+		mockApp.EXPECT().{{ToAppMethodName $method}}{{$modelName}}(gomock.Any(){{if not (IsMyMethod $method)}}, gomock.Any(){{end}}).Return(nil)
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
-			_, err := c.{{$model.TitleName}}.{{ToBusinessMethodName $method}}{{$modelName}}(params{{if not (index $model.MethodsProps $i).NoSecure}}, cl.APIKeyAuth("Cookie", "header", sess){{end}})
+			_, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params{{if not (index $model.MethodsProps $i).NoSecure}}, cl.APIKeyAuth("Cookie", "header", sess){{end}})
 			t.Nil(err)
 		})
 	{{- end}}
 	{{- if IsEdit $method}}
 		{{- if IsAdjustEdit $method}}
-			params.Body = {{LowerTitle $modelName}}.{{ToBusinessMethodName $method}}{{$model.TitleName}}Body{
+			params.Body = {{LowerTitle $modelName}}.{{ToAppMethodName $method}}{{$model.TitleName}}Body{
 				{{- if not (IsMyMethod $method)}}
 					ID: test{{$modelName}}1.ID,
 				{{- end}}
-				Data: &{{LowerTitle $modelName}}.{{ToBusinessMethodName $method}}{{$model.TitleName}}ParamsBodyData{
+				Data: &{{LowerTitle $modelName}}.{{ToAppMethodName $method}}{{$model.TitleName}}ParamsBodyData{
 					{{- range $name, $options := $model.Columns}}
 						{{- if ContainsStr (index $model.MethodsProps $i).EditableFields $name}}
 							{{$options.TitleName}}: test{{$modelName}}1.{{$options.TitleName}}{{if $options.IsStruct}}.ID{{end}},
@@ -90,10 +90,10 @@ func Test{{ToBusinessMethodName $method}}{{$modelName}}(tt *testing.T) {
 				params.Body.ID = test{{$modelName}}1.ID
 			{{- end}}
 		{{- end}}
-		mockApp.EXPECT().{{ToBusinessMethodName $method}}{{$modelName}}(gomock.Any(), {{if not (IsMyMethod $method)}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}app{{$modelName}}(test{{$modelName}}1{{if IsAdjustEdit $method}}Edited{{end}}{{if $model.HaveLazyLoading}}, true{{end}}), {{end}}nil)
+		mockApp.EXPECT().{{ToAppMethodName $method}}{{$modelName}}(gomock.Any(), {{if not (IsMyMethod $method)}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}app{{$modelName}}(test{{$modelName}}1{{if IsAdjustEdit $method}}Edited{{end}}{{if $model.HaveLazyLoading}}, true{{end}}), {{end}}nil)
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
-			{{if $model.ReturnWhenEdit}}geted{{else}}_{{end}}, err := c.{{$model.TitleName}}.{{ToBusinessMethodName $method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
+			{{if $model.ReturnWhenEdit}}geted{{else}}_{{end}}, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params, cl.APIKeyAuth("Cookie", "header", sess))
 			t.Nil(err)
 			{{- if $model.ReturnWhenEdit}}
 				t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if IsAdjustEdit $method}}Edited{{end}}{{if $model.HaveLazyLoading}}, true{{end}})))
@@ -102,11 +102,11 @@ func Test{{ToBusinessMethodName $method}}{{$modelName}}(tt *testing.T) {
 	{{- end}}
 	{{- if IsList $method}}
 		params.Body = testList
-		mockApp.EXPECT().{{ToBusinessMethodName $method}}{{$modelName}}(gomock.Any(), gomock.Any()).Return(app{{$modelName}}s(test{{$modelName}}s{{if $model.HaveLazyLoading}}, true{{end}}), {{if $model.DetailedPagination}}2, {{end}}[]string{}, nil)
+		mockApp.EXPECT().{{ToAppMethodName $method}}{{$modelName}}(gomock.Any(), gomock.Any()).Return(app{{$modelName}}s(test{{$modelName}}s{{if $model.HaveLazyLoading}}, true{{end}}), {{if $model.DetailedPagination}}2, {{end}}[]string{}, nil)
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
-			list, err := c.{{$model.TitleName}}.{{ToBusinessMethodName $method}}{{$modelName}}(params{{if not (index $model.MethodsProps $i).NoSecure}}, cl.APIKeyAuth("Cookie", "header", sess){{end}})
+			list, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params{{if not (index $model.MethodsProps $i).NoSecure}}, cl.APIKeyAuth("Cookie", "header", sess){{end}})
 			t.Nil(err)
 			t.DeepEqual(list.Payload.Items, api{{$modelName}}s(app{{$modelName}}s(test{{$modelName}}s{{if $model.HaveLazyLoading}}, true{{end}})))
 		})

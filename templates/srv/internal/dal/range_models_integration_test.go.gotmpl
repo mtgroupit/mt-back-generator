@@ -10,7 +10,7 @@ import (
 
 {{- range $i, $method := $model.Methods}}
 {{- if $model.IsStandardMethod $method}}
-func Test{{ToBusinessMethodName $method}}{{$modelName}}Smoke(tt *testing.T) {
+func Test{{ToAppMethodName $method}}{{$modelName}}Smoke(tt *testing.T) {
 	t := check.T(tt)
 
 	t.Nil(testRepo.AddTestData(profID1, isolatedEntityID))
@@ -19,22 +19,22 @@ func Test{{ToBusinessMethodName $method}}{{$modelName}}Smoke(tt *testing.T) {
 	{{- end}}
 
 	{{- if IsGet $method}}
-		getted, err := testRepo.{{ToBusinessMethodName $method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}{{if IsMyMethod $method}}profID1{{else}}test{{$modelName}}1.ID{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}})
+		getted, err := testRepo.{{ToAppMethodName $method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}{{if IsMyMethod $method}}profID1{{else}}test{{$modelName}}1.ID{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID{{end}})
 		t.Nil(err)
 		t.DeepEqual(getted, test{{$modelName}}1)
 	{{- end}}
 	{{- if IsDelete $method}}
-		t.Nil(testRepo.{{ToBusinessMethodName $method}}{{$modelName}}({{if not (IsMyMethod $method)}}test{{$modelName}}1.ID, {{end}}profID1{{if not $model.Shared}}, isolatedEntityID{{end}}))
+		t.Nil(testRepo.{{ToAppMethodName $method}}{{$modelName}}({{if not (IsMyMethod $method)}}test{{$modelName}}1.ID, {{end}}profID1{{if not $model.Shared}}, isolatedEntityID{{end}}))
 	{{- end}}
 	{{- if IsEdit $method}}
-		t.Nil(testRepo.{{ToBusinessMethodName $method}}{{$modelName}}({{if not (IsMyMethod $method)}}test{{$modelName}}1.ID, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profID1, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}{{if $model.BoundToIsolatedEntity}}1{{else}}2{{end}}))
+		t.Nil(testRepo.{{ToAppMethodName $method}}{{$modelName}}({{if not (IsMyMethod $method)}}test{{$modelName}}1.ID, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profID1, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}{{if $model.BoundToIsolatedEntity}}1{{else}}2{{end}}))
 	{{- end}}
 
 	{{- if IsList $method}}	
 		listParams.Filters[0].Value = test{{$modelName}}1.ID
 		listParams.Filters[1].Value = test{{$modelName}}2.ID
 
-		list, {{if $model.DetailedPagination}}_, {{end}}_,  err := testRepo.{{ToBusinessMethodName $method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}listParams)
+		list, {{if $model.DetailedPagination}}_, {{end}}_,  err := testRepo.{{ToAppMethodName $method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}listParams)
 		t.Nil(err)
 		t.DeepEqual(list, test{{$modelName}}s)
 	{{- end}}

@@ -34,10 +34,12 @@ func IsMyMethod(method string) bool {
 	return false
 }
 
+// IsAdjustMethod return true if method is adjusted get, edit or list
 func IsAdjustMethod(method string) bool {
 	return IsAdjustGet(method) || IsAdjustEdit(method) || IsAdjustList(method)
 }
 
+// IsAdjustGet return true if method is adjusted get
 func IsAdjustGet(method string) bool {
 	if strings.Contains(method, "{noSecure}") {
 		method = strings.Replace(method, "{noSecure}", "", -1)
@@ -45,6 +47,7 @@ func IsAdjustGet(method string) bool {
 	return regexp.MustCompile(`^get(My|my)?\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
 }
 
+// IsAdjustEdit return true if method is adjusted edit
 func IsAdjustEdit(method string) bool {
 	if strings.Contains(method, "{noSecure}") {
 		method = strings.Replace(method, "{noSecure}", "", -1)
@@ -52,6 +55,7 @@ func IsAdjustEdit(method string) bool {
 	return regexp.MustCompile(`^edit(My|my)?\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
 }
 
+// IsAdjustList return true if method is adjusted list
 func IsAdjustList(method string) bool {
 	if strings.Contains(method, "{noSecure}") {
 		method = strings.Replace(method, "{noSecure}", "", -1)
@@ -59,8 +63,8 @@ func IsAdjustList(method string) bool {
 	return regexp.MustCompile(`^list\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
 }
 
-// ToBusinessMethodName - converts method from config to business method name which using in generated service
-func ToBusinessMethodName(method string) string {
+// ToAppMethodName - converts method from config to method name which using in generated service
+func ToAppMethodName(method string) string {
 	if strings.Contains(method, "{noSecure}") {
 		method = strings.Replace(method, "{noSecure}", "", -1)
 	}

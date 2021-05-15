@@ -23,6 +23,7 @@ type Options struct {
 	Pk          string
 }
 
+// AppType - returns type which using in generated service
 func (o Options) AppType() string {
 	switch o.BusinessType {
 	case "date":

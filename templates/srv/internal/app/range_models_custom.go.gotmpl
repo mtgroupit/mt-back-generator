@@ -3,11 +3,11 @@ package app
 
 {{- range $i, $method := $model.Methods}}
 	{{if (not ($model.IsStandardMethod $method))}}
-		func (a *app) {{ToBusinessMethodName $method}}{{$modelName}}(prof Profile, {{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) error {
-			if !a.rulesSet.{{ToBusinessMethodName $method}}{{$modelName}}AccessManager(prof) {
+		func (a *app) {{ToAppMethodName $method}}{{$modelName}}(prof Profile, {{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) error {
+			if !a.rulesSet.{{ToAppMethodName $method}}{{$modelName}}AccessManager(prof) {
 				return ErrAccessDenied
 			}
-			return a.custRepo.{{ToBusinessMethodName $method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}m)
+			return a.custRepo.{{ToAppMethodName $method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}m)
 		}
 	{{end}}
 {{- end}}
