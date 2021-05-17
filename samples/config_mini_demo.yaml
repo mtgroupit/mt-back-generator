@@ -41,16 +41,20 @@ models:
         sort-on: true
         sort-default: true
         sort-order-default: "ASC"
+        required: true
       dateOfBirth:
         type: "string"
         format: "date"
+        required: true
       email:
         type: "string"
         format: "email"
         strict-filter: true
+        required: true
       defaultPhone:
         type: "string"
         format: "phone"
+        required: true
       phones:
         type: "[]string"
       links:
@@ -119,6 +123,7 @@ models:
       name:
         type: "string"
         sort-on: true
+        required: true
       occupation:
         type: "string"
       headOfficeLocation:
@@ -154,8 +159,10 @@ models:
         type: "uuid"
       owner:
         type: "model.employee"
+        required: true
       company:
         type: "model.company"
+        required: true
     methods:
       - getMy
       - addMy
@@ -180,6 +187,7 @@ models:
         type: "uuid"
       name:
         type: "string"
+        required: true
     methods:
       - get{noSecure}
       - add
@@ -201,9 +209,11 @@ models:
         type: "uuid"
       name:
         type: "string"
+        required: true
       link:
         type: "string"
         format: "url"
+        required: true
       createdAt:
       createdBy:
       modifiedAt:
@@ -237,6 +247,7 @@ custom-types:
     fields:
       departure:
         type: "string"
+        required: true
       phone:
         type: "string"
         format: "phone"

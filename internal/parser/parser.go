@@ -132,7 +132,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				} else {
 					cfg.HaveSwagInCustomTypes = true
 				}
-
+			}
+			if options.Required {
+				if !IsTimeFormat(options.Format) && options.Format != "email" {
+					cfg.HaveSwagInCustomTypes = true
+				}
 			}
 
 			if IsTimeFormat(options.Format) {
@@ -287,6 +291,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					cfg.HaveSwag = true
 				}
 			}
+			if options.Required {
+				if options.Format == "email" {
+					model.NeedConv = true
+				}
+			}
 
 			if options.IsStruct {
 				model.HaveLazyLoading = true
@@ -337,6 +346,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			pp.IsArray = options.IsArray
 			pp.IsCustom = options.IsCustom
 			pp.IsStruct = options.IsStruct
+			pp.NotNull = options.Required
 			if column == "id" {
 				switch options.Type {
 				case "uuid":
@@ -677,20 +687,31 @@ func validateModels(cfg *models.Config) error {
 
 		haveDefaultSort := false
 		for column, options := range model.Columns {
+			isStruct, _, isArray, BusinessType, err := parseColumnType(options, cfg)
+			if err != nil {
+				return errors.Wrapf(err, `Model: "%s". Column: "%s"`, name, column)
+			}
+
 			if !isCorrectName(column) {
 				return errors.Errorf(`Model: "%s". "%s"  is invalid name for column. %s`, name, column, correctNameDescription)
 			}
 
-			if !IsStandardColumn(column) {
+			if IsStandardColumn(column) {
+				if options.Required {
+					return errors.Errorf(`Model: "%s". Column: "%s". Required is not available for standard column`, name, column)
+				}
+			} else {
 				if column == "id" {
 					if !(options.Type == "uuid" || options.Type == "int64") {
 						return errors.Errorf(`Model: "%s". "%s"  is invalid type for id. Valid types is 'int64' or 'uuid'`, name, options.Type)
+					}
+					if options.Required {
+						return errors.Errorf(`Model: "%s". Required is not available for id column`, name)
 					}
 				} else {
 					if strings.HasPrefix(options.Type, arrayTypePrefix) {
 						options.Type = options.Type[len(arrayTypePrefix):]
 					}
-					BusinessType := convertTypeToBusinessType(options.Type, options.Format)
 					lowerTitleBusinessType := LowerTitle(BusinessType)
 					if strings.HasPrefix(options.Type, structTypePrefix) {
 						if _, ok := cfg.Models[lowerTitleBusinessType]; !ok {
@@ -717,18 +738,22 @@ func validateModels(cfg *models.Config) error {
 				}
 			}
 
-			if options.IsStruct {
-				modelNameForBind := LowerTitle(options.BusinessType)
+			if isStruct {
+				modelNameForBind := LowerTitle(BusinessType)
 				if modelForBind, ok := cfg.Models[modelNameForBind]; ok && !modelForBind.Shared && model.Shared {
 					return errors.Errorf(`Model: "%s". Column: "%s". "%s" is invalid type for column. Shared models can not use non-shared models as column type`, name, column, options.Type)
+				}
+
+				if isArray && options.Required {
+					return errors.Errorf(`Model: "%s". Column: "%s". Required is not available for columns which type is array of models`, name, column)
 				}
 			}
 
 			if options.SortDefault {
-				if options.IsStruct {
+				if isStruct {
 					return errors.Errorf(`Model: "%s". Column: "%s". Structure can not be as default column for sorting`, name, column)
 				}
-				if options.IsArray {
+				if isArray {
 					return errors.Errorf(`Model: "%s". Column: "%s". Array can not be as default column for sorting`, name, column)
 				}
 				if !options.SortOn {
@@ -1108,7 +1133,6 @@ func isCustomMethod(method string) bool {
 		method = strings.Replace(method, "{noSecure}", "", -1)
 	}
 	method = strings.ToLower(method)
-	fmt.Println(method, isAdjustGet(method))
 	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || isAdjustList(method) || isAdjustGet(method) || isAdjustEdit(method) || IsMyMethod(method) {
 		return false
 	}

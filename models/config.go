@@ -14,6 +14,7 @@ type Options struct {
 	Unique           bool
 	Length           int64
 	Default          string
+	Required         bool
 	SortOn           bool     `yaml:"sort-on"`
 	SortDefault      bool     `yaml:"sort-default"`
 	SortOrderDefault string   `yaml:"sort-order-default"`
@@ -48,6 +49,7 @@ type PsqlParams struct {
 	IsArray  bool
 	IsCustom bool
 	IsStruct bool
+	NotNull  bool
 	FK       string
 	Last     bool
 }
@@ -133,6 +135,17 @@ type Model struct {
 	RulesSet map[string][]string `yaml:"rules-set"`
 }
 
+// RequiredColumns -  returns slice of required columns
+func (m Model) RequiredColumns() []string {
+	var reqColumns []string
+	for column, options := range m.Columns {
+		if options.Required {
+			reqColumns = append(reqColumns, column)
+		}
+	}
+	return reqColumns
+}
+
 // Function contain input and output params
 type Function struct {
 	In  map[string]string
@@ -215,6 +228,17 @@ type CustomType struct {
 	Fields      map[string]Options
 
 	NeedTime bool
+}
+
+// RequiredFields -  returns slice of required fields
+func (ct CustomType) RequiredFields() []string {
+	var reqFields []string
+	for field, options := range ct.Fields {
+		if options.Required {
+			reqFields = append(reqFields, field)
+		}
+	}
+	return reqFields
 }
 
 // Rule - contains rule properties

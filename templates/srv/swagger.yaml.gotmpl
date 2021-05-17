@@ -90,6 +90,16 @@ paths:
               data:
             {{- if IsAdjustEdit $method}}
                 type: object
+              {{- $first := true}}
+              {{- range $_, $column := $model.RequiredColumns}}
+                {{- if ContainsStr (index $model.MethodsProps $i).EditableFields $column}}
+                  {{- if $first}}
+                required:
+                    {{- $first = false}}
+                  {{- end}}
+                  - {{$column}}
+                {{- end}}
+              {{- end}}
                 properties:
               {{- range $_, $name := (SortColumns $model.Columns)}}
                 {{- $options := (index $model.Columns $name)}}
@@ -276,6 +286,12 @@ definitions:
   {{LowerTitle $modelName}}:
     type: object
     description: "{{.Description}}"
+  {{- range $i, $column := $model.RequiredColumns}}
+    {{- if eq $i 0}}
+    required:
+    {{- end}}
+      - {{$column}}
+  {{- end}}
     properties:
 	{{- range $_, $name := (SortColumns $model.Columns)}}
 		{{- $options := (index $model.Columns $name)}}
@@ -334,6 +350,12 @@ definitions:
   {{LowerTitle $modelName}}Add:
     type: object
     description: "{{LowerTitle $modelName}} model for add and edit methods"
+  {{- range $i, $column := $model.RequiredColumns}}
+    {{- if eq $i 0}}
+    required:
+    {{- end}}
+      - {{$column}}
+  {{- end}}
     properties:
 	{{- range $_, $name := (SortColumns $model.Columns)}}
   {{- $options := (index $model.Columns $name)}}
@@ -407,6 +429,12 @@ definitions:
   {{$customTypeName}}:
     type: object
     description: "{{$customType.Description}}"
+  {{- range $i, $field := $customType.RequiredFields}}
+    {{- if eq $i 0}}
+    required:
+    {{- end}}
+      - {{$field}}
+  {{- end}}
     properties:      
   {{- range $fieldName, $options := $customType.Fields}}
     {{- if $options.IsCustom}}
