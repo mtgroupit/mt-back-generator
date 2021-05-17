@@ -116,7 +116,17 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	if err != nil {
 		return
 	}
-
+	for name, profileField := range cfg.AddProfileFields {
+		field := models.ProfileField{
+			Name: strings.Title(name),
+			Type: profileField.Type,
+		}
+		err = field.SetBusinessType()
+		if err != nil {
+			return
+		}
+		cfg.AddProfileFields[name] = field
+	}
 	for customTypeName, customType := range cfg.CustomTypes {
 		for field, options := range customType.Fields {
 			if options.IsCustom, options.IsArray, options.BusinessType, err = parseFieldType(options, cfg.CustomTypes); err != nil {
@@ -588,6 +598,9 @@ func validate(cfg *models.Config) error {
 	if err := validateRules(cfg); err != nil {
 		return err
 	}
+	if err := validateAddProfileFields(cfg); err != nil {
+		return err
+	}
 	if err := validateModels(cfg); err != nil {
 		return err
 	}
@@ -628,6 +641,16 @@ func validateRules(cfg *models.Config) error {
 			if !ContainsStr(roles, role) {
 				return errors.Errorf(`Rule "%s" has role "%s" that not exist. Available roles: %s`, name, role, strings.Join(roles, ", "))
 			}
+		}
+	}
+
+	return nil
+}
+
+func validateAddProfileFields(cfg *models.Config) error {
+	for name := range cfg.AddProfileFields {
+		if !isCorrectName(name) {
+			return errors.Errorf(`"%s" is invalid name for profile field. %s`, name, correctNameDescription)
 		}
 	}
 
