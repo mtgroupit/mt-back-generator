@@ -121,6 +121,9 @@ func toAppProfile(prof *extauthapi.Profile) app.Profile {
 			Admin:   prof.Authz.Admin,
 		},
 		IsolatedEntityID: prof.IsolatedEntityID.String(),
+		{{- range $.AddProfileFields}}
+			{{.Name}}: prof.{{.Name}},
+		{{- end}}
 	}
 }
 

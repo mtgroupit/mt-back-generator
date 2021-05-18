@@ -6,16 +6,16 @@ import (
 
 // Config - description service, models and functions from yaml file
 type Config struct {
-	Name        string
-	Module      string
-	AuthSrv     string `yaml:"auth-srv"`
-	Description string
-	Debug       bool
-	Models      map[string]Model
-	CustomTypes map[string]CustomType `yaml:"custom-types"`
-	Functions   map[string]Function
-
-	AccessAttributes []string `yaml:"access-attributes"`
+	Name             string
+	Module           string
+	AuthSrv          string `yaml:"auth-srv"`
+	Description      string
+	Debug            bool
+	Models           map[string]Model
+	CustomTypes      map[string]CustomType `yaml:"custom-types"`
+	Functions        map[string]Function
+	AddProfileFields map[string]ProfileField `yaml:"add-profile-fields"`
+	AccessAttributes []string                `yaml:"access-attributes"`
 	Rules            map[string]Rule
 
 	HaveListMethod         bool
@@ -71,6 +71,46 @@ type Function struct {
 	InStrFull   string
 	OutStrFull  string
 	HaveOut     bool
+}
+
+// ProfileField fields need to be added to user profile
+type ProfileField struct {
+	Name         string
+	Type         string
+	BusinessType string
+}
+
+// AppType returns the field type for app
+func (p ProfileField) AppType() string {
+	switch p.BusinessType {
+	case "string":
+		return "string"
+	case "int":
+		return "int"
+	case "date":
+		return "*time.Time"
+	case "date-time":
+		return "*time.Time"
+	default:
+		return p.BusinessType
+	}
+}
+
+// SetBusinessType sets the type of the business field
+func (p *ProfileField) SetBusinessType() error {
+	switch p.Type {
+	case "string":
+		p.BusinessType = "string"
+	case "int":
+		p.BusinessType = "int"
+	case "date":
+		p.BusinessType = "date"
+	case "date-time":
+		p.BusinessType = "date-time"
+	default:
+		return errors.Errorf(`unknown type "%s" field "%s"`, p.Type, p.Name)
+	}
+	return nil
 }
 
 // Rule - contains rule properties

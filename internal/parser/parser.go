@@ -53,7 +53,17 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 	if err != nil {
 		return
 	}
-
+	for name, profileField := range cfg.AddProfileFields {
+		field := models.ProfileField{
+			Name: strings.Title(name),
+			Type: profileField.Type,
+		}
+		err = field.SetBusinessType()
+		if err != nil {
+			return
+		}
+		cfg.AddProfileFields[name] = field
+	}
 	for customTypeName, customType := range cfg.CustomTypes {
 		for field, options := range customType.Fields {
 			if options.IsCustom, options.IsArray, options.BusinessType, err = parseFieldType(options, cfg.CustomTypes); err != nil {

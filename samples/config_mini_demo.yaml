@@ -4,6 +4,12 @@ description: "demo generated app"
 debug: true
 auth-srv: "github.com/mtgroupit/mt-mock-extauthapi"
 
+add-profile-fields:
+  departmentID:
+    type: int
+  departmentName:
+    type: string
+    
 access-attributes:
   - workTime
   - location

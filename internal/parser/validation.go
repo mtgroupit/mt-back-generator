@@ -26,6 +26,9 @@ func validate(cfg *models.Config) error {
 	if err := validateRules(cfg); err != nil {
 		return err
 	}
+	if err := validateAddProfileFields(cfg); err != nil {
+		return err
+	}
 	if err := validateModels(cfg); err != nil {
 		return err
 	}
@@ -69,6 +72,15 @@ func validateRules(cfg *models.Config) error {
 		}
 	}
 
+	return nil
+}
+
+func validateAddProfileFields(cfg *models.Config) error {
+	for name := range cfg.AddProfileFields {
+		if !isCorrectName(name) {
+			return errors.Errorf(`"%s" is invalid name for profile field. %s`, name, correctNameDescription)
+		}
+	}
 	return nil
 }
 

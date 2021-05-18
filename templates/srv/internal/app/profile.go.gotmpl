@@ -16,4 +16,7 @@ type Profile struct {
 	Authn            bool
 	Authz            Authz
 	IsolatedEntityID string
+	{{- range $name, $field := .AddProfileFields}}
+		{{$field.Name}} {{$field.AppType}}
+	{{- end}}
 }
