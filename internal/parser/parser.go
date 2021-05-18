@@ -925,6 +925,10 @@ func validateDefault(options models.Options) error {
 		return nil
 	}
 
+	if options.Required {
+		return errors.Errorf(`Default is not avaliable when "required": "true"`)
+	}
+
 	if len(options.Enum) > 0 {
 		found := false
 		for _, e := range options.Enum {
