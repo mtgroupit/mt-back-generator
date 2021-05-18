@@ -47,6 +47,17 @@ type CustomType struct {
 	NeedTime bool
 }
 
+// RequiredFields -  returns slice of required fields
+func (ct CustomType) RequiredFields() []string {
+	var reqFields []string
+	for field, options := range ct.Fields {
+		if options.Required {
+			reqFields = append(reqFields, field)
+		}
+	}
+	return reqFields
+}
+
 // Function contain input and output params
 type Function struct {
 	In  map[string]string

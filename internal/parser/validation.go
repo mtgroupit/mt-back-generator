@@ -115,20 +115,31 @@ func validateModels(cfg *models.Config) error {
 
 		haveDefaultSort := false
 		for column, options := range model.Columns {
+			isStruct, _, isArray, BusinessType, err := parseColumnType(options, cfg)
+			if err != nil {
+				return errors.Wrapf(err, `Model: "%s". Column: "%s"`, name, column)
+			}
+
 			if !isCorrectName(column) {
 				return errors.Errorf(`Model: "%s". "%s"  is invalid name for column. %s`, name, column, correctNameDescription)
 			}
 
-			if !IsStandardColumn(column) {
+			if IsStandardColumn(column) {
+				if options.Required {
+					return errors.Errorf(`Model: "%s". Column: "%s". Required is not available for standard column`, name, column)
+				}
+			} else {
 				if column == "id" {
 					if !(options.Type == "uuid" || options.Type == "int64") {
 						return errors.Errorf(`Model: "%s". "%s"  is invalid type for id. Valid types is 'int64' or 'uuid'`, name, options.Type)
+					}
+					if options.Required {
+						return errors.Errorf(`Model: "%s". Required is not available for id column`, name)
 					}
 				} else {
 					if strings.HasPrefix(options.Type, arrayTypePrefix) {
 						options.Type = options.Type[len(arrayTypePrefix):]
 					}
-					BusinessType := convertTypeToBusinessType(options.Type, options.Format)
 					lowerTitleBusinessType := utilities.LowerTitle(BusinessType)
 					if strings.HasPrefix(options.Type, structTypePrefix) {
 						if _, ok := cfg.Models[lowerTitleBusinessType]; !ok {
@@ -155,18 +166,22 @@ func validateModels(cfg *models.Config) error {
 				}
 			}
 
-			if options.IsStruct {
-				modelNameForBind := utilities.LowerTitle(options.BusinessType)
+			if isStruct {
+				modelNameForBind := utilities.LowerTitle(BusinessType)
 				if modelForBind, ok := cfg.Models[modelNameForBind]; ok && !modelForBind.Shared && model.Shared {
 					return errors.Errorf(`Model: "%s". Column: "%s". "%s" is invalid type for column. Shared models can not use non-shared models as column type`, name, column, options.Type)
+				}
+
+				if isArray && options.Required {
+					return errors.Errorf(`Model: "%s". Column: "%s". Required is not available for columns which type is array of models`, name, column)
 				}
 			}
 
 			if options.SortDefault {
-				if options.IsStruct {
+				if isStruct {
 					return errors.Errorf(`Model: "%s". Column: "%s". Structure can not be as default column for sorting`, name, column)
 				}
-				if options.IsArray {
+				if isArray {
 					return errors.Errorf(`Model: "%s". Column: "%s". Array can not be as default column for sorting`, name, column)
 				}
 				if !options.SortOn {
@@ -336,6 +351,10 @@ func fractionNumbericEnumValidate(enum []string) error {
 func validateDefault(options models.Options) error {
 	if options.Default == "" {
 		return nil
+	}
+
+	if options.Required {
+		return errors.Errorf(`Default is not avaliable when "required": "true"`)
 	}
 
 	if len(options.Enum) > 0 {

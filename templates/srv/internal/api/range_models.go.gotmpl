@@ -338,8 +338,8 @@ func app{{$modelName}}Add(a *models.{{$modelName}}Add) *app.{{$modelName}} {
 	{{- range $_, $name := (SortColumns $model.Columns)}}
 		{{- $options := (index $model.Columns $name)}}
 		{{- if and $options.IsStruct (not $options.IsArray)}}
-			if a.{{$options.TitleName}} != "" {
-				{{LowerTitle $modelName}}.{{$options.TitleName}} = &app.{{$options.BusinessType}}{ID: a.{{$options.TitleName}}}
+			if a.{{$options.TitleName}} != {{if ContainsStr $model.RequiredColumns $name}}nil{{else}}""{{end}} {
+				{{LowerTitle $modelName}}.{{$options.TitleName}} = &app.{{$options.BusinessType}}{ID: {{if ContainsStr $model.RequiredColumns $name}}*{{end}}a.{{$options.TitleName}}}
 			}
 		{{- end}}
 	{{- end}}

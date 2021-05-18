@@ -69,7 +69,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				} else {
 					cfg.HaveSwagInCustomTypes = true
 				}
-
+			}
+			if options.Required {
+				if !IsTimeFormat(options.Format) && options.Format != "email" {
+					cfg.HaveSwagInCustomTypes = true
+				}
 			}
 
 			if IsTimeFormat(options.Format) {
@@ -224,6 +228,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					cfg.HaveSwag = true
 				}
 			}
+			if options.Required {
+				if options.Format == "email" {
+					model.NeedConv = true
+				}
+			}
 
 			if options.IsStruct {
 				model.HaveLazyLoading = true
@@ -274,6 +283,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			pp.IsArray = options.IsArray
 			pp.IsCustom = options.IsCustom
 			pp.IsStruct = options.IsStruct
+			pp.NotNull = options.Required
 			if column == "id" {
 				switch options.Type {
 				case "uuid":

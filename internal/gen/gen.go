@@ -199,31 +199,25 @@ var goTmplFuncs = template.FuncMap{
 			if columnOptions.IsArray {
 				appValue = fmt.Sprintf("fromDateTimesArray(%s)", appValue)
 			} else {
-				if columnOptions.Default != "" {
-					appValue = fmt.Sprintf("conv.DateTimeValue(%s)", appValue)
-				}
 				appValue = fmt.Sprintf("(*time.Time)(%s)", appValue)
 			}
 		case "date":
 			if columnOptions.IsArray {
 				appValue = fmt.Sprintf("fromDatesArray(%s)", appValue)
 			} else {
-				if columnOptions.Default != "" {
-					appValue = fmt.Sprintf("conv.DateValue(%s)", appValue)
-				}
 				appValue = fmt.Sprintf("(*time.Time)(%s)", appValue)
 			}
 		case "email":
 			if columnOptions.IsArray {
 				appValue = fmt.Sprintf("fromEmailsArray(%s)", appValue)
 			} else {
-				if columnOptions.Default != "" {
+				if columnOptions.Default != "" || columnOptions.Required {
 					appValue = fmt.Sprintf("conv.EmailValue(%s)", appValue)
 				}
 				appValue = fmt.Sprintf("%s.String()", appValue)
 			}
 		default:
-			if columnOptions.Default != "" {
+			if (columnOptions.Default != "" || columnOptions.Required) && !columnOptions.IsArray {
 				switch columnOptions.BusinessType {
 				case "float64":
 					appValue = fmt.Sprintf("swag.Float32Value(%s)", appValue)
@@ -285,30 +279,24 @@ var goTmplFuncs = template.FuncMap{
 				apiValue = fmt.Sprintf("toDateTimesArray(%s)", apiValue)
 			} else {
 				apiValue = fmt.Sprintf("(*strfmt.DateTime)(%s)", apiValue)
-				if columnOptions.Default != "" {
-					apiValue = fmt.Sprintf("conv.DateTime(%s)", apiValue)
-				}
 			}
 		case "date":
 			if columnOptions.IsArray {
 				apiValue = fmt.Sprintf("[]toDatesArray(%s)", apiValue)
 			} else {
 				apiValue = fmt.Sprintf("(*strfmt.Date)(%s)", apiValue)
-				if columnOptions.Default != "" {
-					apiValue = fmt.Sprintf("conv.Date(%s)", apiValue)
-				}
 			}
 		case "email":
 			if columnOptions.IsArray {
 				apiValue = fmt.Sprintf("toEmailsArray(%s)", apiValue)
 			} else {
 				apiValue = fmt.Sprintf("strfmt.Email(%s)", apiValue)
-				if columnOptions.Default != "" {
+				if columnOptions.Default != "" || columnOptions.Required {
 					apiValue = fmt.Sprintf("conv.Email(%s)", apiValue)
 				}
 			}
 		default:
-			if columnOptions.Default != "" {
+			if (columnOptions.Default != "" || columnOptions.Required) && !columnOptions.IsArray {
 				switch columnOptions.BusinessType {
 				case "float64":
 					apiValue = fmt.Sprintf("swag.Float32(%s)", apiValue)

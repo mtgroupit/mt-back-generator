@@ -41,6 +41,17 @@ type Model struct {
 	RulesSet map[string][]string `yaml:"rules-set"`
 }
 
+// RequiredColumns -  returns slice of required columns
+func (m Model) RequiredColumns() []string {
+	var reqColumns []string
+	for column, options := range m.Columns {
+		if options.Required {
+			reqColumns = append(reqColumns, column)
+		}
+	}
+	return reqColumns
+}
+
 // PsqlParams - contain properties for postgres generate
 type PsqlParams struct {
 	Name     string
@@ -51,6 +62,7 @@ type PsqlParams struct {
 	IsArray  bool
 	IsCustom bool
 	IsStruct bool
+	NotNull  bool
 	FK       string
 	Last     bool
 }

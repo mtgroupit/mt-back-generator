@@ -3,7 +3,7 @@
 -- +goose Up
 CREATE TABLE {{Pluralize (NameSQL $modelName)}}
 ({{range $j, $psqlParams := $model.Psql}}{{if not (and $psqlParams.IsArray $psqlParams.IsStruct)}}
-    {{$psqlParams.SQLName}} {{$psqlParams.TypeSQL}}{{if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}{{if $psqlParams.Unique}} UNIQUE{{end}}{{if $psqlParams.IsStruct}}  REFERENCES {{Pluralize (NameSQL $psqlParams.Type)}}({{$psqlParams.FK}}){{end}},{{end}}{{end}}
+    {{$psqlParams.SQLName}} {{$psqlParams.TypeSQL}}{{if $psqlParams.NotNull}} NOT NULL{{end}}{{if eq $psqlParams.Name "ID"}} PRIMARY KEY{{end}}{{if $psqlParams.Unique}} UNIQUE{{end}}{{if $psqlParams.IsStruct}}  REFERENCES {{Pluralize (NameSQL $psqlParams.Type)}}({{$psqlParams.FK}}){{end}},{{end}}{{end}}
     {{- if not $model.HaveCreatedBy}}
     created_by uuid NOT NULL,
     {{- end}}

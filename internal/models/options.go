@@ -10,6 +10,7 @@ type Options struct {
 	Unique           bool
 	Length           int64
 	Default          string
+	Required         bool
 	SortOn           bool     `yaml:"sort-on"`
 	SortDefault      bool     `yaml:"sort-default"`
 	SortOrderDefault string   `yaml:"sort-order-default"`
