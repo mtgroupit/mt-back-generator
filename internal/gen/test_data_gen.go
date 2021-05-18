@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/go-openapi/strfmt"
+	"github.com/mtgroupit/mt-back-generator/internal/models"
 	"github.com/mtgroupit/mt-back-generator/internal/parser"
-	"github.com/mtgroupit/mt-back-generator/models"
 
 	"github.com/brianvoe/gofakeit"
 )

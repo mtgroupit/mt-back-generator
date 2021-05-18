@@ -6,7 +6,7 @@ package app
 type RulesSet interface {
 	{{range $modelName, $model := $.Models}}
 		{{- range $_, $method := $model.Methods}}
-			{{$method}}{{$modelName}}AccessManager(Profile) bool
+			{{ToAppMethodName $method}}{{$modelName}}AccessManager(Profile) bool
 		{{- end}}
     {{end}}
 }

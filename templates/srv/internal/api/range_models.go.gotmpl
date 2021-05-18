@@ -33,87 +33,87 @@ import (
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
 
 {{- range $i, $method := $model.Methods}}
-{{- if not (IsCustomMethod $method)}}
-func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}Params{{if not (index $model.MethodsProps $i).NoSecure}}, profile interface{}{{end}}) middleware.Responder {
+{{- if $model.IsStandardMethod $method}}
+func (svc *service) {{ToAppMethodName $method}}{{$modelName}}(params {{LowerTitle $modelName}}.{{ToAppMethodName $method}}{{$model.TitleName}}Params{{if not (index $model.MethodsProps $i).NoSecure}}, profile interface{}{{end}}) middleware.Responder {
 	prof := {{if (index $model.MethodsProps $i).NoSecure}}&extauthapi.Profile{Authn: false}{{else}}profile.(*extauthapi.Profile){{end}}
 	{{- if IsGet $method}}
-		c, err := svc.app.{{$method}}{{$modelName}}(toAppProfile(prof){{if not (IsMyMethod $method)}}, params.Body.ID{{end}})
+		c, err := svc.app.{{ToAppMethodName $method}}{{$modelName}}(toAppProfile(prof){{if not (IsMyMethod $method)}}, params.Body.ID{{end}})
 		switch {
 		default:
-			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
-			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+			log.PrintErr("{{ToAppMethodName $method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
 		case errors.Is(err, app.ErrAccessDenied):
-			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
-			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
+			log.Info("{{ToAppMethodName $method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeForbidden.extra),
 				Message: swag.String(err.Error()),
 			})
 		case errors.Is(err, app.ErrNotFound):
-			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
-			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
+			log.Info("{{ToAppMethodName $method}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeNotFound.extra),
 				Message: swag.String(err.Error()),
 			})
 		case err == nil:
-			log.Info("{{$method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}{{if $model.BoundToIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}})
-			return {{LowerTitle $modelName}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c))
+			log.Info("{{ToAppMethodName $method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}{{if $model.BoundToIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}})
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$model.TitleName}}OK().WithPayload(api{{$modelName}}(c))
 		}
 	{{- end}}
 	{{- if IsAdd $method}}
-		c, err := svc.app.{{$method}}{{$modelName}}(toAppProfile(prof), app{{$modelName}}Add(params.Body))
+		c, err := svc.app.{{ToAppMethodName $method}}{{$modelName}}(toAppProfile(prof), app{{$modelName}}Add(params.Body))
 		switch {
 		default:
-			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
-			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+			log.PrintErr("{{ToAppMethodName $method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
 		case errors.Is(err, app.ErrAccessDenied):
-			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
-			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
+			log.Info("{{ToAppMethodName $method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeForbidden.extra),
 				Message: swag.String(err.Error()),
 			})
 		{{- if IsMyMethod $method}}
 			case errors.Is(err, app.ErrDuplicateID):
-				log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeDuplicateID.status, "code", codeDuplicateID.extra, "err", err)
-				return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeDuplicateID.status).WithPayload(&models.Error{
+				log.Info("{{ToAppMethodName $method}}{{$modelName}} client error", def.LogHTTPStatus, codeDuplicateID.status, "code", codeDuplicateID.extra, "err", err)
+				return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Default(codeDuplicateID.status).WithPayload(&models.Error{
 					Code:    swag.Int32(codeDuplicateID.extra),
 					Message: swag.String(err.Error()),
 				})
 		{{- end}}
 		case err == nil:
-			log.Info("{{$method}}{{$modelName}} ok")
-			return {{LowerTitle $modelName}}.New{{$method}}{{$model.TitleName}}Created().WithPayload(api{{$modelName}}(c))
+			log.Info("{{ToAppMethodName $method}}{{$modelName}} ok")
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$model.TitleName}}Created().WithPayload(api{{$modelName}}(c))
 		}
 	{{- end}}
 	{{- if IsDelete $method}}
-		err := svc.app.{{$method}}{{$modelName}}(toAppProfile(prof){{if not (IsMyMethod $method)}}, params.Body.ID{{end}})
+		err := svc.app.{{ToAppMethodName $method}}{{$modelName}}(toAppProfile(prof){{if not (IsMyMethod $method)}}, params.Body.ID{{end}})
 		switch {
 		default:
-			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
-			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+			log.PrintErr("{{ToAppMethodName $method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
 		case errors.Is(err, app.ErrAccessDenied):
-			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
-			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
+			log.Info("{{ToAppMethodName $method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeForbidden.extra),
 				Message: swag.String(err.Error()),
 			})
 		case errors.Is(err, app.ErrNotFound):
-			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
-			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
+			log.Info("{{ToAppMethodName $method}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeNotFound.extra),
 				Message: swag.String(err.Error()),
 			})
 		case err == nil:
-			log.Info("{{$method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}{{if $model.BoundToIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}})
-			return {{LowerTitle $modelName}}.New{{$method}}{{$model.TitleName}}NoContent()
+			log.Info("{{ToAppMethodName $method}}{{$modelName}} ok", "id", {{if IsMyMethod $method}}{{if $model.BoundToIsolatedEntity}}prof.IsolatedEntityID.String(){{else}}prof.ID.String(){{end}}{{else}}params.Body.ID{{end}})
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$model.TitleName}}NoContent()
 		}
 	{{- end}}
 	{{- if IsEdit $method}}
@@ -149,49 +149,49 @@ func (svc *service) {{$method}}{{$modelName}}(params {{LowerTitle $modelName}}.{
 				{{- end}}
 			{{- end}}
 		{{- end}}
-		{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{$method}}{{$modelName}}(toAppProfile(prof), {{if not (IsMyMethod $method)}}params.Body.ID, {{end}}{{if IsAdjustEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
+		{{if $model.ReturnWhenEdit}}c, {{end}}err := svc.app.{{ToAppMethodName $method}}{{$modelName}}(toAppProfile(prof), {{if not (IsMyMethod $method)}}params.Body.ID, {{end}}{{if IsAdjustEdit $method}}in{{else}}app{{$modelName}}Add(params.Body.Data){{end}})
 		switch {
 		default:
-			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
-			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+			log.PrintErr("{{ToAppMethodName $method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
 		case errors.Is(err, app.ErrAccessDenied):
-			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
-			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
+			log.Info("{{ToAppMethodName $method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeForbidden.extra),
 				Message: swag.String(err.Error()),
 			})
 		case errors.Is(err, app.ErrNotFound):
-			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
-			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
+			log.Info("{{ToAppMethodName $method}}{{$modelName}} client error", def.LogHTTPStatus, codeNotFound.status, "code", codeNotFound.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Default(codeNotFound.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeNotFound.extra),
 				Message: swag.String(err.Error()),
 			})
 		case err == nil:
-			log.Info("{{$method}}{{$modelName}} ok")
-			return {{LowerTitle $modelName}}.New{{$method}}{{$model.TitleName}}OK(){{if $model.ReturnWhenEdit}}.WithPayload(api{{$modelName}}(c)){{end}}
+			log.Info("{{ToAppMethodName $method}}{{$modelName}} ok")
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$model.TitleName}}OK(){{if $model.ReturnWhenEdit}}.WithPayload(api{{$modelName}}(c)){{end}}
 		}
 	{{- end}}
 	{{- if  IsList $method}}
-		c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{$method}}{{$modelName}}(toAppProfile(prof), appListParams(params.Body))
+		c,{{if $model.DetailedPagination}} count,{{end}} warnings, err := svc.app.{{ToAppMethodName $method}}{{$modelName}}(toAppProfile(prof), appListParams(params.Body))
 		switch {
 		default:
-			log.PrintErr("{{$method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
-			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
+			log.PrintErr("{{ToAppMethodName $method}}{{$modelName}} server error", def.LogHTTPStatus, codeInternal.status, "code", codeInternal.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Default(codeInternal.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeInternal.extra),
 				Message: swag.String("internal error"),
 			})
 		case errors.Is(err, app.ErrAccessDenied):
-			log.Info("{{$method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
-			return {{LowerTitle $modelName}}.New{{$method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
+			log.Info("{{ToAppMethodName $method}}{{$modelName}} client error", def.LogHTTPStatus, codeForbidden.status, "code", codeForbidden.extra, "err", err)
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$modelName}}Default(codeForbidden.status).WithPayload(&models.Error{
 				Code:    swag.Int32(codeForbidden.extra),
 				Message: swag.String(err.Error()),
 			})
 		case err == nil:
-			log.Info("{{$method}}{{$modelName}} ok")
-			return {{LowerTitle $modelName}}.New{{$method}}{{$model.TitleName}}OK().WithPayload(&{{LowerTitle $modelName}}.{{$method}}{{$model.TitleName}}OKBody{
+			log.Info("{{ToAppMethodName $method}}{{$modelName}} ok")
+			return {{LowerTitle $modelName}}.New{{ToAppMethodName $method}}{{$model.TitleName}}OK().WithPayload(&{{LowerTitle $modelName}}.{{ToAppMethodName $method}}{{$model.TitleName}}OKBody{
 				Items: api{{$modelName}}s(c),
 				Warnings: warnings,{{if $model.DetailedPagination}}
 				Count: int32(count),{{end}}

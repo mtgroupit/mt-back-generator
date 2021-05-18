@@ -18,45 +18,45 @@ type {{$modelName}} struct {
 }
 
 {{- range $i, $method := $model.Methods}}
-{{- if not (IsCustomMethod $method)}}
+{{- if $model.IsStandardMethod $method}}
 	{{- if IsGet $method}}
-		func (a *app) {{$method}}{{$modelName}}(prof Profile{{if not (IsMyMethod $method)}}, id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}) (*{{$modelName}}, error) {
-			if !a.rulesSet.{{$method}}{{$modelName}}AccessManager(prof) {
+		func (a *app) {{ToAppMethodName $method}}{{$modelName}}(prof Profile{{if not (IsMyMethod $method)}}, id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}) (*{{$modelName}}, error) {
+			if !a.rulesSet.{{ToAppMethodName $method}}{{$modelName}}AccessManager(prof) {
 				return nil, ErrAccessDenied
 			}
-			return a.repo.{{$method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}{{if not (IsMyMethod $method)}}id{{else}}prof.ID{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}prof.IsolatedEntityID{{end}})
+			return a.repo.{{ToAppMethodName $method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}{{if not (IsMyMethod $method)}}id{{else}}prof.ID{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}prof.IsolatedEntityID{{end}})
 		}
 	{{- end}}
 	{{- if IsAdd $method}}
-		func (a *app) {{$method}}{{$modelName}}(prof Profile, m *{{$modelName}}) (*{{$modelName}}, error) {
-			if !a.rulesSet.{{$method}}{{$modelName}}AccessManager(prof) {
+		func (a *app) {{ToAppMethodName $method}}{{$modelName}}(prof Profile, m *{{$modelName}}) (*{{$modelName}}, error) {
+			if !a.rulesSet.{{ToAppMethodName $method}}{{$modelName}}AccessManager(prof) {
 				return nil, ErrAccessDenied
 			}
-			return a.repo.{{$method}}{{$modelName}}(prof.ID, {{if not $model.Shared}}prof.IsolatedEntityID, {{end}}m)
+			return a.repo.{{ToAppMethodName $method}}{{$modelName}}(prof.ID, {{if not $model.Shared}}prof.IsolatedEntityID, {{end}}m)
 		}
 	{{- end}}
 	{{- if IsDelete $method}}
-		func (a *app) {{$method}}{{$modelName}}(prof Profile{{if not (IsMyMethod $method)}}, id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}) error {
-			if !a.rulesSet.{{$method}}{{$modelName}}AccessManager(prof) {
+		func (a *app) {{ToAppMethodName $method}}{{$modelName}}(prof Profile{{if not (IsMyMethod $method)}}, id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}) error {
+			if !a.rulesSet.{{ToAppMethodName $method}}{{$modelName}}AccessManager(prof) {
 				return ErrAccessDenied
 			}
-			return a.repo.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id, {{end}}prof.ID{{if not $model.Shared}}, prof.IsolatedEntityID{{end}})
+			return a.repo.{{ToAppMethodName $method}}{{$modelName}}({{if not (IsMyMethod $method)}}id, {{end}}prof.ID{{if not $model.Shared}}, prof.IsolatedEntityID{{end}})
 		}
 	{{- end}}
 	{{- if IsEdit $method}}
-		func (a *app) {{$method}}{{$modelName}}(prof Profile, {{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}} {
-			if !a.rulesSet.{{$method}}{{$modelName}}AccessManager(prof) {
+		func (a *app) {{ToAppMethodName $method}}{{$modelName}}(prof Profile, {{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}m *{{$modelName}}) {{if $model.ReturnWhenEdit}}(*{{$modelName}}, error){{else}}error{{end}} {
+			if !a.rulesSet.{{ToAppMethodName $method}}{{$modelName}}AccessManager(prof) {
 				return {{if $model.ReturnWhenEdit}}nil, {{end}}ErrAccessDenied
 			}
-			return a.repo.{{$method}}{{$modelName}}({{if not (IsMyMethod $method)}}id, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}prof.ID, {{end}}{{if not $model.Shared}}prof.IsolatedEntityID, {{end}}m)
+			return a.repo.{{ToAppMethodName $method}}{{$modelName}}({{if not (IsMyMethod $method)}}id, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}prof.ID, {{end}}{{if not $model.Shared}}prof.IsolatedEntityID, {{end}}m)
 		}
 	{{- end}}
 	{{- if IsList $method}}
-		func (a *app) {{$method}}{{$modelName}}(prof Profile, params *ListParams) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error) {
-			if !a.rulesSet.{{$method}}{{$modelName}}AccessManager(prof) {
+		func (a *app) {{ToAppMethodName $method}}{{$modelName}}(prof Profile, params *ListParams) ([]*{{$modelName}}, {{if $model.DetailedPagination}}int, {{end}}[]string, error) {
+			if !a.rulesSet.{{ToAppMethodName $method}}{{$modelName}}AccessManager(prof) {
 				return nil, {{if $model.DetailedPagination}}0, {{end}}nil, ErrAccessDenied
 			}
-			return a.repo.{{$method}}{{$modelName}}({{if not $model.Shared}}prof.IsolatedEntityID, {{end}}params)
+			return a.repo.{{ToAppMethodName $method}}{{$modelName}}({{if not $model.Shared}}prof.IsolatedEntityID, {{end}}params)
 		}
 	{{- end}}
 {{- end}}
