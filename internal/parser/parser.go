@@ -81,7 +81,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			}
 			if options.Required {
-				if !IsTimeFormat(options.Format) && options.Format != "email" {
+				if IsTimeFormat(options.Format) && options.Format != "email" {
+					cfg.HaveConvInCustomTypes = true
+				} else {
 					cfg.HaveSwagInCustomTypes = true
 				}
 			}
@@ -240,7 +242,10 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			}
 			if options.Required {
 				if options.Format == "email" {
+					cfg.HaveConv = true
 					model.NeedConv = true
+				} else {
+					cfg.HaveSwag = true
 				}
 			}
 

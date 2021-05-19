@@ -26,10 +26,10 @@ import (
 			{{- end}}
 		{{- end}}
 	{{- end}}
-	{{- if .HaveConv}}
+	{{- if or .HaveConv .HaveConvInCustomTypes}}
 		"github.com/go-openapi/strfmt/conv"
 	{{- end}}
-	{{- if .HaveSwag}}
+	{{- if or .HaveSwag .HaveSwagInCustomTypes}}
 		"github.com/go-openapi/swag"
 	{{- end}}
 	"github.com/golang/mock/gomock"
@@ -69,7 +69,7 @@ var (
 	testAdd{{$modelName}}1 = &models.{{$modelName}}Add{  
 		{{- range $column, $options := $model.Columns}}
 		{{- if and (ne $column "id") (not (IsStandardColumn $column))}}
-		{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}[]{{if eq $idType "uuid"}}string{{else}}int64{{end}}{test{{$options.BusinessType}}ID1, test{{$options.BusinessType}}ID2}{{else}}test{{$options.BusinessType}}1.ID{{end}}{{else}}{{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.BusinessType}}s{{else}}test{{$options.BusinessType}}1{{end}}{{else}}{{GenApiTestValue $options}}{{end}}{{end}},
+		{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}[]{{if eq $idType "uuid"}}string{{else}}int64{{end}}{test{{$options.BusinessType}}ID1, test{{$options.BusinessType}}ID2}{{else}}{{if $options.Required}}swag.{{if eq $idType "uuid"}}String{{else}}Int64{{end}}({{end}}test{{$options.BusinessType}}1.ID{{if $options.Required}}){{end}}{{end}}{{else}}{{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.BusinessType}}s{{else}}test{{$options.BusinessType}}1{{end}}{{else}}{{GenApiTestValue $options}}{{end}}{{end}},
 		{{- end}}
 		{{- end}}
 	}
@@ -77,7 +77,7 @@ var (
 	testAdd{{$modelName}}2 = &models.{{$modelName}}Add{  
 		{{- range $column, $options := $model.Columns}}
 		{{- if and (ne $column "id") (not (IsStandardColumn $column))}}
-		{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}[]{{if eq $idType "uuid"}}string{{else}}int64{{end}}{test{{$options.BusinessType}}ID1, test{{$options.BusinessType}}ID2}{{else}}test{{$options.BusinessType}}2.ID{{end}}{{else}}{{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.BusinessType}}s{{else}}test{{$options.BusinessType}}2{{end}}{{else}}{{GenApiTestValue $options}}{{end}}{{end}},
+		{{$options.TitleName}}: {{if $options.IsStruct}}{{if $options.IsArray}}[]{{if eq $idType "uuid"}}string{{else}}int64{{end}}{test{{$options.BusinessType}}ID1, test{{$options.BusinessType}}ID2}{{else}}{{if $options.Required}}swag.{{if eq $idType "uuid"}}String{{else}}Int64{{end}}({{end}}test{{$options.BusinessType}}2.ID{{if $options.Required}}){{end}}{{end}}{{else}}{{if $options.IsCustom}}{{if $options.IsArray}}test{{$options.BusinessType}}s{{else}}test{{$options.BusinessType}}2{{end}}{{else}}{{GenApiTestValue $options}}{{end}}{{end}},
 		{{- end}}
 		{{- end}}
 	}

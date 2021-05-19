@@ -60,21 +60,15 @@ func genApiTestValueWithFormat(columnOptions models.Options) string {
 	switch columnOptions.Format {
 	case "date-time":
 		testValue = fmt.Sprintf("toDateTime(%s)", testValue)
-		if columnOptions.Default != "" {
-			testValue = fmt.Sprintf("conv.DateTime(%s)", testValue)
-		}
 	case "date":
 		testValue = fmt.Sprintf("toDate(%s)", testValue)
-		if columnOptions.Default != "" {
-			testValue = fmt.Sprintf("conv.Date(%s)", testValue)
-		}
 	case "email":
 		testValue = fmt.Sprintf("strfmt.Email(%s)", testValue)
-		if columnOptions.Default != "" {
+		if columnOptions.Default != "" || columnOptions.Required {
 			testValue = fmt.Sprintf("conv.Email(%s)", testValue)
 		}
 	default:
-		if columnOptions.Default != "" {
+		if columnOptions.Default != "" || columnOptions.Required {
 			switch columnOptions.Format {
 			case "float":
 				testValue = fmt.Sprintf("swag.Float32(%s)", testValue)
