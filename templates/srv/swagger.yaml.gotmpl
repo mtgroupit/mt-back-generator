@@ -127,6 +127,9 @@ paths:
                       {{- if $options.Format}}
                       format: {{$options.Format}}
                       {{- end}}
+                      {{- if $options.Pattern}}
+                      pattern: {{$options.Pattern}}
+                      {{- end}}
                       {{- if $options.Length}}
                       maxLength: {{$options.Length}}
                       {{- end}}
@@ -317,6 +320,9 @@ definitions:
           x-nullable: true
           {{- end}}
         {{- end}}
+        {{- if $options.Pattern}}
+        pattern: {{$options.Pattern}}
+        {{- end}}
         {{- if $options.Length}}
           maxLength: {{$options.Length}}
         {{- end}}
@@ -334,6 +340,9 @@ definitions:
         {{- if (IsTimeFormat $options.Format)}}
         x-nullable: true
         {{- end}}
+        {{- end}}
+        {{- if $options.Pattern}}
+        pattern: {{$options.Pattern}}
         {{- end}}
         {{- if $options.Length}}
         maxLength: {{$options.Length}}
@@ -393,6 +402,9 @@ definitions:
           x-nullable: true
           {{- end}}
         {{- end}}
+        {{- if $options.Pattern}}
+          pattern: {{$options.Pattern}}
+        {{- end}}
         {{- if $options.Length}}
           maxLength: {{$options.Length}}
         {{- end}}
@@ -409,6 +421,9 @@ definitions:
         {{- if (IsTimeFormat $options.Format)}}
         x-nullable: true
         {{- end}}
+        {{- end}}
+        {{- if $options.Pattern}}
+        pattern: {{$options.Pattern}}
         {{- end}}
         {{- if $options.Length}}
         maxLength: {{$options.Length}}
@@ -459,6 +474,9 @@ definitions:
           x-nullable: true
           {{- end}}
         {{- end}}
+        {{- if $options.Pattern}}
+          pattern: {{$options.Pattern}}
+        {{- end}}
         {{- if $options.Length}}
           maxLength: {{$options.Length}}
         {{- end}}
@@ -476,6 +494,9 @@ definitions:
         {{- if (IsTimeFormat $options.Format)}}
         x-nullable: true
         {{- end}}
+        {{- end}}
+        {{- if $options.Pattern}}
+        pattern: {{$options.Pattern}}
         {{- end}}
         {{- if $options.Length}}
         maxLength: {{$options.Length}}
