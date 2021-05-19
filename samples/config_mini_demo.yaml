@@ -48,6 +48,7 @@ models:
         sort-default: true
         sort-order-default: "ASC"
         required: true
+        pattern: "^[A-Za-z ,.'-]+$"
       dateOfBirth:
         type: "string"
         format: "date"
@@ -67,6 +68,8 @@ models:
         type: "custom.webContact"
       department:
         type: "string"
+        default: "qwe"
+        pattern: "^[A-Za-z ,.'-]+$"
       age:
         type: "int"
       salary:
@@ -254,6 +257,7 @@ custom-types:
       departure:
         type: "string"
         required: true
+        pattern: "^[0-9A-Za-z ,.-]+$"
       phone:
         type: "string"
         format: "phone"

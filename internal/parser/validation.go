@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -280,10 +281,20 @@ func validateCustomTypes(customTypes map[string]models.CustomType) error {
 }
 
 func validateOptions(options models.Options) error {
+	if options.Format != "" && options.Pattern != "" {
+		return errors.Errorf(`Format and pattern not available together`)
+	}
+	if options.Required && options.Default != "" {
+		return errors.Errorf(`Default is not avaliable when "required": "true"`)
+	}
+
 	if err := validateFormats(options.Type, options.Format); err != nil {
 		return err
 	}
-	if err := validateEnum(options.Enum, options.Type); err != nil {
+	if err := validatePattern(options.Pattern, options.Type); err != nil {
+		return err
+	}
+	if err := validateEnum(options); err != nil {
 		return err
 	}
 	if err := validateDefault(options); err != nil {
@@ -316,15 +327,36 @@ func validateFormats(typeName, format string) error {
 	return nil
 }
 
-func validateEnum(enum []string, columnType string) error {
-	if len(enum) == 0 {
+func validatePattern(pattern, columnType string) error {
+	if pattern == "" {
 		return nil
 	}
-	if IsStandardType(columnType) {
-		if columnType == "string" {
+
+	if columnType != "string" {
+		return errors.Errorf(`Pattern available only for "string" type`)
+	}
+	if _, err := regexp.Compile(pattern); err != nil {
+		return errors.Wrapf(err, `Can not compile pattern`)
+	}
+	return nil
+}
+
+func validateEnum(options models.Options) error {
+	if len(options.Enum) == 0 {
+		return nil
+	}
+	if IsStandardType(options.Type) {
+		if options.Type == "string" {
+			if options.Pattern != "" {
+				for _, value := range options.Enum {
+					if !regexp.MustCompile(options.Pattern).MatchString(value) {
+						return errors.Errorf(`Enum item "%s" not match with pattern: "%s"`, value, options.Pattern)
+					}
+				}
+			}
 			return nil
 		}
-		return validateNumberEnum(enum, columnType)
+		return validateNumberEnum(options.Enum, options.Type)
 	}
 	return errors.Errorf(`Enum available only for standard types: %s`, strings.Join(standardTypes, ", "))
 }
@@ -365,8 +397,10 @@ func validateDefault(options models.Options) error {
 		return nil
 	}
 
-	if options.Required {
-		return errors.Errorf(`Default is not avaliable when "required": "true"`)
+	if options.Pattern != "" {
+		if !regexp.MustCompile(options.Pattern).MatchString(options.Default) {
+			return errors.Errorf(`Default value "%s" not match with pattern`, options.Default)
+		}
 	}
 
 	if len(options.Enum) > 0 {

@@ -11,6 +11,7 @@ type Options struct {
 	Length           int64
 	Default          string
 	Required         bool
+	Pattern          string
 	SortOn           bool     `yaml:"sort-on"`
 	SortDefault      bool     `yaml:"sort-default"`
 	SortOrderDefault string   `yaml:"sort-order-default"`
