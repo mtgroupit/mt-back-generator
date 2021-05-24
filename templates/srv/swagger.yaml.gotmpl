@@ -522,29 +522,40 @@ definitions:
       offset:
         type: integer
         minimum: 0
-      filters:
+      filterGroups:
         type: array
         items:
-          $ref: "#/definitions/filterParams"    
-      logicFilter:
-        description: "Comparing option: true == 'AND', false == 'OR'"
-        type: boolean
+          $ref: "#/definitions/filterGroup" 
       sortBy:
         type: string
       orderBy:
         type: string
         enum: [ASC, DESC]
 
-  filterParams:
+  filterGroup:
     type: object
-    description: params for filter list
+    description: params for grouping filters
     properties:
-      include:
-        type: boolean
       key:
         type: string
+      logicFilter:
+        description: "Comparing option: true == 'AND', false == 'OR'"
+        type: boolean
+      filters:
+        type: array
+        items:
+          $ref: "#/definitions/filter" 
+      
+  filter:
+    type: object
+    properties:
       value:
         type: string
+      operator:
+        description: "enum ==, !=, <, >, <=, >=, in, !in"
+        type: string
+      ignoreCase:
+        type: boolean
 {{end}}
 {{- range $funcName, $func := $.Functions}}  
   {{$funcName}}Params:

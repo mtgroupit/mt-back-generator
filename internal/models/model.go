@@ -28,11 +28,10 @@ type Model struct {
 	HaveModifiedAt bool
 	HaveModifiedBy bool
 
-	Psql           []PsqlParams
-	SQLSelectStr   string
-	SQLWhereParams string
-	SQLAddStr      string
-	SQLEditStr     string
+	Psql         []PsqlParams
+	SQLSelectStr string
+	SQLAddStr    string
+	SQLEditStr   string
 
 	Binds        []Bind
 	Methods      []string
@@ -69,19 +68,19 @@ type PsqlParams struct {
 
 // MethodProps contains all additional information for method
 type MethodProps struct {
-	HTTPMethod              string
-	IsAdjustList            bool
-	NeedLazyLoading         bool
-	HaveJSON                bool
-	NoSecure                bool
-	JSONColumns             map[string]bool
-	AdjustSQLSelect         string
-	AdjustGetJSONColumns    []string
-	AdjustListSQLWhereProps string
-	CustomSQLEditStr        string
-	FilteredFields          []string
-	EditableFields          []string
-	NestedObjs              []NestedObjProps
+	HTTPMethod           string
+	IsAdjustList         bool
+	NeedLazyLoading      bool
+	AvailableFilterKeys  map[string]bool
+	HaveJSON             bool
+	NoSecure             bool
+	JSONColumns          map[string]bool
+	AdjustSQLSelect      string
+	AdjustGetJSONColumns []string
+	CustomSQLEditStr     string
+	FilteredFields       []string
+	EditableFields       []string
+	NestedObjs           []NestedObjProps
 
 	Rules []string
 }
@@ -94,6 +93,7 @@ type NestedObjProps struct {
 	Path                  string
 	ParentStruct          string
 	NeedLazyLoading       bool
+	AvailableFilterKeys   map[string]bool
 	IsArray               bool
 	IsFirstForLazyLoading bool
 	IsLastForLazyLoading  bool
