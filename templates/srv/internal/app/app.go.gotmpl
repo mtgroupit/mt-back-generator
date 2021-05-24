@@ -41,13 +41,13 @@ type App interface {
 type Repo interface {
 {{- range $modelName, $model := $.Models}}
     {{- range $i, $method := $model.Methods}}
-	    {{- if IsGet $method}}
+        {{- if IsGet $method}}
             {{ToAppMethodName $method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}{{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}isolatedEntityID string{{end}}) (*{{$modelName}}, error)
         {{- end}}
         {{- if IsAdd $method}}
             {{ToAppMethodName $method}}{{$modelName}}(profileID string, {{if not $model.Shared}}isolatedEntityID string, {{end}}m *{{$modelName}}) (*{{$modelName}}, error)
         {{- end}}
-	    {{- if IsDelete $method}}
+        {{- if IsDelete $method}}
             {{ToAppMethodName $method}}{{$modelName}}({{if not (IsMyMethod $method)}}id {{if $model.IDIsUUID}}string{{else}}int64{{end}}, {{end}}profileID string{{if not $model.Shared}}, isolatedEntityID string{{end}}) error
         {{- end}}
         {{- if IsEdit $method}}
@@ -71,18 +71,23 @@ type Repo interface {
 
 {{if .HaveListMethod}}
     type ListParams struct {
-        Offset      int64
-        Limit       int64
-        Filters     []*Filter
+        Offset       int64
+        Limit        int64
+        FilterGroups []*FilterGroup
+        SortBy       string
+        OrderBy      string
+    }
+
+    type FilterGroup struct {
+        Key         string
         LogicFilter bool
-        SortBy      string
-        OrderBy     string
+        Filters     []*Filter
     }
 
     type Filter struct {
-        Key     string
-        Include bool
-        Value   string
+        Value      string
+        Operator   string
+        IgnoreCase bool
     }
 {{end}}
 

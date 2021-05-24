@@ -70,6 +70,17 @@ type {{$modelName}} struct {
 {{- end}}
 }
 
+var {{$modelName}}Props = map[string]columnProps{
+{{- range $column, $options := $model.Columns}}
+	{{- if and (not $options.IsArray) (not $options.IsCustom)}}
+		"{{$column}}": {
+			sqlName:  "{{$options.SQLName $column}}",
+			typeName: "{{$options.FilterType}}",
+		},
+	{{- end}}
+{{- end}}
+}
+
 {{- range $i, $method := $model.Methods}}
 {{- if $model.IsStandardMethod $method}}
 	{{- if IsGet $method}}
@@ -296,72 +307,23 @@ type {{$modelName}} struct {
 			}
 		}
 
-		mapQuery := map[string]interface{}{ 
-			{{- if IsAdjustList $method}}
-				{{- range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
-					{{- if not (index (index $model.MethodsProps $i).JSONColumns $column)}}
-						"{{NameSQL $column}}": nil,
-						"not_{{NameSQL $column}}": nil,
-					{{- end}}
+		bf := newBuilderFilter(params.FilterGroups, {{$modelName}}Props)
+		{{- if (IsAdjustList $method)}}
+			warnings = append(warnings, bf.validateAvailableFilters(map[string]bool{
+				{{- range $_, $key := (AvailableKeys (index $model.MethodsProps $i))}}
+					"{{$key}}": true,
 				{{- end}}
-			{{- else}}
-				{{- range $_, $column := (SortColumns $model.Columns)}}
-					{{- $options := (index $model.Columns $column)}}
-					{{- if and (not $options.IsArray) (not $options.IsCustom)}}
-						"{{NameSQL $column}}": nil,
-						"not_{{NameSQL $column}}": nil,
-					{{- end}}
-				{{- end}}
-			{{- end}}
-			{{- if not $model.Shared}}
-				"isolated_entity_id": isolatedEntityID,
-			{{- end}}
-		}
-
-		{{- if NeedCustomFilter $model $method}}
-			customFilters := []*app.Filter{}
+			})...)
 		{{- end}}
 
-		{{- if or (index $model.MethodsProps $i).FilteredFields (not (IsAdjustList $method))}}
-			if params.LogicFilter {
-				for _, filter := range params.Filters {
-					switch filter.Key { 
-				{{- if IsAdjustList $method}}
-					{{- range $_, $column := (index $model.MethodsProps $i).FilteredFields}}
-						{{- if not (index (index $model.MethodsProps $i).JSONColumns $column)}}
-						case "{{$column}}":
-							if filter.Include {
-								mapQuery["{{NameSQL $column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-							} else {
-								mapQuery["not_{{NameSQL $column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-							}
-						{{- end}}
-					{{- end}}
-				{{- else}}
-					{{- range $_, $column := (SortColumns $model.Columns)}}
-						{{- $options := (index $model.Columns $column)}}
-						{{- if  and (not $options.IsArray) (not $options.IsCustom)}}
-						case "{{$column}}":
-							if filter.Include {
-								mapQuery["{{NameSQL $column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-							} else {
-								mapQuery["not_{{NameSQL $column}}"] = {{if IsNotStrictFilter $model $column}}"%%" + {{end}}filter.Value{{if IsNotStrictFilter $model $column}} + "%%"{{end}}
-							}
-						{{- end}}
-					{{- end}}
-				{{- end}}
-					default:
-						customFilters = append(customFilters, filter)
-					}
-				}
-			} else {
-				for _, filter := range params.Filters {
-					customFilters = append(customFilters, filter)
-				}
-			}
-		{{- end}}
+		sqlFilters, namedVars, warningsFromPrepared := bf.preparedSQLFilters()
+		warnings = append(warnings, warningsFromPrepared...)
+
+		{{if not $model.Shared}}
+			namedVars["isolated_entity_id"] = isolatedEntityID
+		{{end}}
 		
-		err := a.db.NamedSelect(&ms, sql{{if IsAdjustList $method}}{{ToAppMethodName $method}}{{else}}List{{end}}{{$modelName}} + orderQuery, mapQuery)
+		err := a.db.NamedSelect(&ms, sql{{if IsAdjustList $method}}{{ToAppMethodName $method}}{{else}}List{{end}}{{$modelName}} +sqlFilters+ orderQuery, namedVars)
 		if err != nil {
 			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 		}
@@ -378,37 +340,33 @@ type {{$modelName}} struct {
 			}
 		{{- end}}
 		
-		result := []{{$modelName}}{}
+		result := {{if $model.HaveLazyLoading}}[]{{$modelName}}{}{{else}}ms{{end}}
 		{{- if $model.HaveLazyLoading}}
 			{{- if (IsAdjustList $method)}}
 				{{- if or ((index $model.MethodsProps $i).NeedLazyLoading) ((index $model.MethodsProps $i).HaveJSON)}}
+					filterGroups := bf.nestedFilterGroups()
 					for i := range ms {
-					{{- if (index $model.MethodsProps $i).NeedLazyLoading}}
 						if err := ms[i].LazyLoading{{ToAppMethodName $method}}({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
 							return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 						}
-					{{- end}}
-						ok := true
-						for j := 0; j < len(customFilters); j++ {
-							var validFilter bool
-							filterKey := customFilters[j].Key
-						{{- if (index $model.MethodsProps $i).NeedLazyLoading}}
-							if !params.LogicFilter && !strings.Contains(customFilters[j].Key, ".") {
-								ok, validFilter = ms[i].Filter(customFilters[j])
-							} else {
-								ok, validFilter = ms[i].NestedFilter(customFilters[j])
-							}
-						{{- else}}
-							ok, validFilter = ms[i].Filter(customFilters[j])
-						{{- end}}
-							customFilters[j].Key = filterKey
-							if !validFilter {
-								warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
-								customFilters = append(customFilters[:j], customFilters[j+1:]...)
-								j--
-							}
-							if (!ok && params.LogicFilter) || (ok && !params.LogicFilter) {
-								break
+
+						ok := true 
+						for j, filterGroup := range filterGroups {
+							for _, filter := range filterGroup.Filters {
+								var validFilter error
+								{{- if $model.HaveLazyLoading}}
+									ok, validFilter = ms[i].NestedFilter(filterGroup.Key, filter)
+								{{- else}}
+									ok, validFilter = ms[i].Filter(filterGroup.Key, filter)
+								{{- end}}
+								if validFilter != nil {
+									warnings = append(warnings, fmt.Sprintf("Filter key: '%s'. Error: %s", filterGroup.Key, validFilter.Error()))
+									filterGroups = append(filterGroups[:j], filterGroups[j+1:]...)
+									j--
+								}
+								if (!ok && filterGroup.LogicFilter) || (ok && !filterGroup.LogicFilter) {
+									break
+								}
 							}
 						}
 						if ok {
@@ -419,31 +377,29 @@ type {{$modelName}} struct {
 					result = ms
 				{{- end}}
 			{{- else}}
+				filterGroups := bf.nestedFilterGroups()
 				for i := range ms {
 					if err := ms[i].LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
 						return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 					}
-					ok := true
-					for j := 0; j < len(customFilters); j++ {
-						var validFilter bool
-						filterKey := customFilters[j].Key
-					{{- if $model.HaveLazyLoading}}
-						if !params.LogicFilter && !strings.Contains(customFilters[j].Key, ".") {
-							ok, validFilter = ms[i].Filter(customFilters[j])
-						} else {
-							ok, validFilter = ms[i].NestedFilter(customFilters[j])
-						}
-					{{- else}}
-						ok, validFilter = ms[i].Filter(customFilters[j])
-					{{- end}}
-						customFilters[j].Key = filterKey
-						if !validFilter {
-							warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
-							customFilters = append(customFilters[:j], customFilters[j+1:]...)
-							j--
-						}
-						if (!ok && params.LogicFilter) || (ok && !params.LogicFilter) {
-							break
+
+					ok := true 
+					for j, filterGroup := range filterGroups {
+						for _, filter := range filterGroup.Filters {
+							var validFilter error
+							{{- if $model.HaveLazyLoading}}
+								ok, validFilter = ms[i].NestedFilter(filterGroup.Key, filter)
+							{{- else}}
+								ok, validFilter = ms[i].Filter(filterGroup.Key, filter)
+							{{- end}}
+							if validFilter != nil {
+								warnings = append(warnings, fmt.Sprintf("Filter key: '%s'. Error: %s", filterGroup.Key, validFilter.Error()))
+								filterGroups = append(filterGroups[:j], filterGroups[j+1:]...)
+								j--
+							}
+							if (!ok && filterGroup.LogicFilter) || (ok && !filterGroup.LogicFilter) {
+								break
+							}
 						}
 					}
 					if ok {
@@ -451,25 +407,6 @@ type {{$modelName}} struct {
 					}
 				}
 			{{- end}}
-		{{- else}}
-			for i := range ms {
-				ok := true
-				for j := 0; j < len(customFilters); j++ {
-					var validFilter bool
-					ok, validFilter = ms[i].Filter(customFilters[j])
-					if !validFilter {
-						warnings = append(warnings, fmt.Sprintf("filter key '%s' is not valid", customFilters[j].Key))
-						customFilters = append(customFilters[:j], customFilters[j+1:]...)
-						j--
-					}
-					if (!ok && params.LogicFilter) || (ok && !params.LogicFilter) {
-						break
-					}
-				}
-				if ok {   
-					result = append(result, ms[i])
-				}
-			}
 		{{- end}}
 		{{- if $haveNestedSorts}}
 			if nestedSort {
@@ -486,9 +423,9 @@ type {{$modelName}} struct {
 				{{- range $j, $sort := $options.SortBy}}
 				case "{{$column}}.{{$sort}}":
 					if orderByASC {
-						sort.Slice({{if $model.HaveLazyLoading}}result{{else}}ms{{end}}, func(i, j int) bool { return {{if $model.HaveLazyLoading}}result{{else}}ms{{end}}[i]{{index $options.NestedSorts $j}} < {{if $model.HaveLazyLoading}}result{{else}}ms{{end}}[j]{{index $options.NestedSorts $j}} })
+						sort.Slice({{if $model.HaveLazyLoading}}result{{else}}result{{end}}, func(i, j int) bool { return {{if $model.HaveLazyLoading}}result{{else}}result{{end}}[i]{{index $options.NestedSorts $j}} < {{if $model.HaveLazyLoading}}result{{else}}result{{end}}[j]{{index $options.NestedSorts $j}} })
 					} else {
-						sort.Slice({{if $model.HaveLazyLoading}}result{{else}}ms{{end}}, func(i, j int) bool { return {{if $model.HaveLazyLoading}}result{{else}}ms{{end}}[i]{{index $options.NestedSorts $j}} >= {{if $model.HaveLazyLoading}}result{{else}}ms{{end}}[j]{{index $options.NestedSorts $j}} })
+						sort.Slice({{if $model.HaveLazyLoading}}result{{else}}result{{end}}, func(i, j int) bool { return {{if $model.HaveLazyLoading}}result{{else}}result{{end}}[i]{{index $options.NestedSorts $j}} >= {{if $model.HaveLazyLoading}}result{{else}}result{{end}}[j]{{index $options.NestedSorts $j}} })
 					}
 				{{- end}}
 			{{- end}}
@@ -952,53 +889,76 @@ func (a *Repo) {{$functionName}}{{$modelName}}({{$function.InStrFull}}) ({{$func
 {{- end}}
 
 {{- if $model.HaveLazyLoading}}
-func (m *{{$modelName}}) NestedFilter(filter *app.Filter) (ok, filterIsValid bool) {
-	if strings.Contains(filter.Key, ".") {
-		splitedFilter := strings.SplitN(filter.Key, ".", 2)
-		filter.Key = splitedFilter[1]
+func (m *{{$modelName}}) NestedFilter(key string, filter *app.Filter) (ok bool, err error) {
+	if strings.Contains(key, ".") {
+		splitedFilter := strings.SplitN(key, ".", 2)
+		key = splitedFilter[1]
 		switch splitedFilter[0] {
 		{{- range $_, $column := (SortColumns $model.Columns)}}
 			{{- $options := (index $model.Columns $column)}}
 			{{- if and $options.IsStruct (not $options.IsArray)}}
 			case "{{$column}}":
-				ok, filterIsValid = m.{{$options.TitleName}}.{{if (index $models $options.BusinessType).HaveLazyLoading}}Nested{{end}}Filter(filter)
+				ok, err = m.{{$options.TitleName}}.{{if (index $models $options.BusinessType).HaveLazyLoading}}Nested{{end}}Filter(key, filter)
 			{{- end}}
 		{{- end}}
 		default:
-			ok, filterIsValid = true, false
+			ok, err = true, errNotExistFilterKey
 		}
 	} else {
-		ok, filterIsValid = m.Filter(filter)
+		ok, err = m.Filter(key, filter)
 	}
 	return
 }
 {{- end}}
 
-func (m *{{$modelName}}) Filter(filter *app.Filter) (ok, filterIsValid bool) {
-	switch filter.Key {
+func (m *{{$modelName}}) Filter(key string, filter *app.Filter) (ok bool, err error) {
+	columnType := {{$modelName}}Props[key].typeName
+	if err = validateOperator(filter.Operator, columnType); err != nil {
+		return true, err
+	}
+	if err = vaidateIgnoreCase(filter.IgnoreCase, columnType); err != nil {
+		return true, err
+	}
+	if err := validateValue(filter.Value, columnType); err != nil {
+		return true, err
+	}
+	switch key {
 	{{- range $_, $column := (SortColumns $model.Columns)}}
 		{{- $options := (index $model.Columns $column)}}
-		{{- if and (not $options.IsStruct) (not $options.IsCustom)}}
-		case "{{$column}}":
-			{{- if $options.IsArray}}
-			for _, elem := range m.{{$options.TitleName}} {
-			{{- end}}
-				{{- if (IsTimeFormat $options.Format)}}
-				value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}{{end}}
-				{{- else}}value := toString({{if $options.IsArray}}elem{{else}}m.{{$options.TitleName}}.{{if eq $options.BusinessType "types.Decimal"}}Decimal.String(){{else}}{{Title $options.BusinessType}}{{if and (eq $options.TitleName "ID") $model.IDIsUUID}}(){{end}}{{end}}{{end}}{{end}})
-				equal := {{if or (ne $options.Type "string") $options.StrictFilter}}value == filter.Value{{else}}contains(value, filter.Value){{end}}
-				if (equal && filter.Include) || (!equal && !filter.Include) {
-					ok, filterIsValid = true, true
-				} else {
-					ok, filterIsValid = false, true
-				}
-			{{- if $options.IsArray}}
-			}
-			{{- end}}
+		{{- if and (not $options.IsStruct) (not $options.IsArray) (not $options.IsCustom)}}
+			{{- $filterType := $options.FilterType}}
+			case "{{$column}}":
+				{{- if eq $filterType "uuid"}}
+					ok = compareUUID(filter.Operator, m.{{$options.TitleName}}, filter.Value)
+				{{- end}}
+				{{- if eq $filterType "string"}}
+					ok = compareString(filter.Operator, filter.IgnoreCase, m.{{$options.TitleName}}.String, filter.Value)
+				{{- end}}
+				{{- if eq $filterType "date-time"}}
+					ok = compareTime(filter.Operator, *m.{{$options.TitleName}}, filter.Value)
+				{{- end}}
+				{{- if eq $filterType "date"}}
+					ok = compareDate(filter.Operator, *m.{{$options.TitleName}}, filter.Value)
+				{{- end}}
+				{{- if eq $filterType "int32"}}
+					ok = compareInt64(filter.Operator, int64(m.{{$options.TitleName}}.Int32), filter.Value)
+				{{- end}}
+				{{- if eq $filterType "int64"}}
+					ok = compareInt64(filter.Operator, m.{{$options.TitleName}}.Int64, filter.Value)
+				{{- end}}
+				{{- if eq $filterType "float"}}
+					ok = compareFloat64(filter.Operator, m.{{$options.TitleName}}.Float64, filter.Value)
+				{{- end}}
+				{{- if eq $filterType "decimal"}}
+					ok = compareDecimal(filter.Operator,  m.{{$options.TitleName}}.Decimal, filter.Value)
+				{{- end}}
+				{{- if eq $filterType "bool"}}
+					ok = compareBool(filter.Operator,  m.{{$options.TitleName}}.Bool, filter.Value)
+				{{- end}}
 		{{- end}}
 	{{- end}}
 	default:
-		ok, filterIsValid = true, false
+		ok, err = true, errNotExistFilterKey
 	}
 	return
 }

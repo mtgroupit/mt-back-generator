@@ -166,7 +166,7 @@ func SplitFields(fields string) []string {
 // SplitFields - returns trimed fields from round brackets in the adjusted method
 func TrimFieldsSuffix(fields []string) (out []string) {
 	for i := range fields {
-		out = append(out, regexp.MustCompile("[^a-zA-Z0-9*]").Split(fields[i], 2)[0])
+		out = append(out, regexp.MustCompile("[^a-zA-Z0-9]").Split(fields[i], 2)[0])
 	}
 	return
 }

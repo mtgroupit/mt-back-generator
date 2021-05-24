@@ -9,6 +9,7 @@ import (
 	"path"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -143,8 +144,6 @@ var goTmplFuncs = template.FuncMap{
 					} else {
 						return true
 					}
-				} else {
-					return true
 				}
 			}
 		}
@@ -336,7 +335,7 @@ var goTmplFuncs = template.FuncMap{
 		case columnOptions.TitleName == "ID" && columnOptions.Type == "uuid":
 			appValue = fmt.Sprintf("%s.String()", appValue)
 		case parser.IsTypesAdditionalType(columnOptions.BusinessType):
-			appValue = fmt.Sprintf("%s(%s.Decimal)", columnOptions.BusinessType, appValue)
+			appValue = fmt.Sprintf("%s.Decimal", appValue)
 		case parser.IsTimeFormat(columnOptions.Format):
 			appValue = fmt.Sprintf("%s", appValue)
 		default:
@@ -385,6 +384,39 @@ var goTmplFuncs = template.FuncMap{
 		return strings.Join(ruleMethods, " && ")
 	},
 	"SortColumns": parser.SortColumns,
+	"AvailableKeys": func(props models.MethodProps) (result []string) {
+		var availableKeys []string
+		for key := range props.AvailableFilterKeys {
+			availableKeys = append(availableKeys, key)
+		}
+		for _, nestProps := range props.NestedObjs {
+			for key := range nestProps.AvailableFilterKeys {
+				availableKeys = append(availableKeys, key)
+			}
+		}
+
+		sort.Slice(availableKeys, func(i, j int) bool {
+			return strings.Count(availableKeys[i], ".") < strings.Count(availableKeys[j], ".")
+		})
+		for i, key := range availableKeys {
+			if strings.Contains(key, ".") {
+				haveKeyPath := false
+				keyArr := strings.Split(key, ".")
+				for _, key2 := range availableKeys[:i] {
+					if strings.TrimSuffix(key, "."+keyArr[len(keyArr)-1]) == key2 {
+						haveKeyPath = true
+						break
+					}
+				}
+				if haveKeyPath {
+					result = append(result, key)
+				}
+			} else {
+				result = append(result, key)
+			}
+		}
+		return
+	},
 }
 
 // Srv - generate dir with service
