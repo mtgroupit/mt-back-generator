@@ -102,25 +102,10 @@ var (
 {{if .HaveListMethod}}
 	offset int64 = 0
 	limit  int64 = 5
-
-	testFilters = []*models.FilterParams{
-		&models.FilterParams{
-			Key:     "ID",
-			Include: true,
-			Value:   "1",
-		},
-		&models.FilterParams{
-			Key:     "ID",
-			Include: false,
-			Value:   "2",
-		},
-	}
+	
 	testList = &models.ListParams{
 		Offset: &offset,
 		Limit:  limit,
-		Filters: testFilters,
-		LogicFilter: false,
-		SortBy: "ASC",
 	}
 {{end}}
 )
