@@ -322,8 +322,45 @@ var {{$modelName}}Props = map[string]columnProps{
 		{{if not $model.Shared}}
 			namedVars["isolated_entity_id"] = isolatedEntityID
 		{{end}}
+
+		var offset, limit string
+		{{- if $model.DetailedPagination}}
+			var count int
+		{{- end}}
+		var err error
+		{{if and $model.HaveLazyLoading (or (not (IsAdjustList $method)) (and (IsAdjustList $method) ((index $model.MethodsProps $i).NeedLazyLoading)))}}
+			nestedFilterGroups := bf.nestedFilterGroups()
+			
+			externalPagination := false
+			if len(nestedFilterGroups) != 0 {{if $haveNestedSorts}}|| nestedSort{{end}} {
+				externalPagination = true
+			}
+			if !externalPagination {
+				{{- if $model.DetailedPagination}}
+					err = a.db.NamedGet(&count, sqlList{{$modelName}}Count+sqlFilters, namedVars)
+					if err != nil {
+						return nil, -1, nil, err
+					}
+				{{- end}}
+				offset = " OFFSET :offset"
+				namedVars["offset"] = params.Offset
+				limit = " LIMIT :limit"
+				namedVars["limit"] = params.Limit
+			}
+		{{else}}
+			{{- if $model.DetailedPagination}}
+				err = a.db.NamedGet(&count, sqlList{{$modelName}}Count+sqlFilters, namedVars)
+				if err != nil {
+					return nil, -1, nil, err
+				}
+			{{- end}}
+			offset = " OFFSET :offset"
+			namedVars["offset"] = params.Offset
+			limit = " LIMIT :limit"
+			namedVars["limit"] = params.Limit
+		{{end}}
 		
-		err := a.db.NamedSelect(&ms, sql{{if IsAdjustList $method}}{{ToAppMethodName $method}}{{else}}List{{end}}{{$modelName}} +sqlFilters+ orderQuery, namedVars)
+		err = a.db.NamedSelect(&ms, sql{{if IsAdjustList $method}}{{ToAppMethodName $method}}{{else}}List{{end}}{{$modelName}}+sqlFilters+orderQuery+offset+limit, namedVars)
 		if err != nil {
 			return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 		}
@@ -344,14 +381,13 @@ var {{$modelName}}Props = map[string]columnProps{
 		{{- if $model.HaveLazyLoading}}
 			{{- if (IsAdjustList $method)}}
 				{{- if or ((index $model.MethodsProps $i).NeedLazyLoading) ((index $model.MethodsProps $i).HaveJSON)}}
-					filterGroups := bf.nestedFilterGroups()
 					for i := range ms {
 						if err := ms[i].LazyLoading{{ToAppMethodName $method}}({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
 							return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 						}
 
 						ok := true 
-						for j, filterGroup := range filterGroups {
+						for j, filterGroup := range nestedFilterGroups {
 							for _, filter := range filterGroup.Filters {
 								var validFilter error
 								{{- if $model.HaveLazyLoading}}
@@ -361,7 +397,7 @@ var {{$modelName}}Props = map[string]columnProps{
 								{{- end}}
 								if validFilter != nil {
 									warnings = append(warnings, fmt.Sprintf("Filter key: '%s'. Error: %s", filterGroup.Key, validFilter.Error()))
-									filterGroups = append(filterGroups[:j], filterGroups[j+1:]...)
+									nestedFilterGroups = append(nestedFilterGroups[:j], nestedFilterGroups[j+1:]...)
 									j--
 								}
 								if (!ok && filterGroup.LogicFilter) || (ok && !filterGroup.LogicFilter) {
@@ -377,14 +413,13 @@ var {{$modelName}}Props = map[string]columnProps{
 					result = ms
 				{{- end}}
 			{{- else}}
-				filterGroups := bf.nestedFilterGroups()
 				for i := range ms {
 					if err := ms[i].LazyLoading({{if not $model.Shared}}isolatedEntityID, {{end}}a); err != nil {
 						return nil,{{if $model.DetailedPagination}} -1,{{end}} nil, err
 					}
 
 					ok := true 
-					for j, filterGroup := range filterGroups {
+					for j, filterGroup := range nestedFilterGroups {
 						for _, filter := range filterGroup.Filters {
 							var validFilter error
 							{{- if $model.HaveLazyLoading}}
@@ -394,7 +429,7 @@ var {{$modelName}}Props = map[string]columnProps{
 							{{- end}}
 							if validFilter != nil {
 								warnings = append(warnings, fmt.Sprintf("Filter key: '%s'. Error: %s", filterGroup.Key, validFilter.Error()))
-								filterGroups = append(filterGroups[:j], filterGroups[j+1:]...)
+								nestedFilterGroups = append(nestedFilterGroups[:j], nestedFilterGroups[j+1:]...)
 								j--
 							}
 							if (!ok && filterGroup.LogicFilter) || (ok && !filterGroup.LogicFilter) {
@@ -435,9 +470,17 @@ var {{$modelName}}Props = map[string]columnProps{
 			}
 		{{- end}}
 
-		start, end := pagination(int(params.Offset), int(params.Limit), len(result))
+		{{if and $model.HaveLazyLoading (or (not (IsAdjustList $method)) (and (IsAdjustList $method) ((index $model.MethodsProps $i).NeedLazyLoading)))}}
+			if externalPagination {
+				{{- if $model.DetailedPagination}}
+					count = len(result)
+				{{- end}}
+				start, end := pagination(int(params.Offset), int(params.Limit), len(result))
+				result = result[start:end]
+			}
+		{{end}}
 
-		return app{{$modelName}}s(result[start:end]),{{if $model.DetailedPagination}} len(result),{{end}} warnings, nil
+		return app{{$modelName}}s(result),{{if $model.DetailedPagination}} count,{{end}} warnings, nil
 	}
 	{{- end}}
 

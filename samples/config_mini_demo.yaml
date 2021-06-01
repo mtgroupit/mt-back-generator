@@ -39,6 +39,7 @@ models:
 
   employee:
     description: "employee object"
+    detailed-pagination: true
     columns:
       id:
         type: "uuid"
