@@ -74,23 +74,6 @@ var (
 	listParams = &ListParams{
 		Offset: 0,
 		Limit: 5,
-		Filters: filters,
-		LogicFilter: false,
-		SortBy: "",
-		OrderBy:"ASC",
-	}
-	
-	filters = []*Filter{
-		{
-			Key: "ID",
-			Include: true,
-			Value: "1",
-		},
-		{
-			Key: "ID",
-			Include: false,
-			Value: "2",
-		},
 	}
 {{- end}}
 )
