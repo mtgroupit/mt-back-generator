@@ -5,6 +5,8 @@ if ! [ -x "$(command -v go)" ]; then
   exit 1
 fi
 
+go mod tidy
+
 rm -rf ./bin
 mkdir ./bin
 go build -o ./bin ./cmd/mt-gen
