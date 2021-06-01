@@ -181,6 +181,17 @@ const (
 		{{- end}}
 		NOT deleted
 	`
+	sqlList{{$modelName}}Count = `
+	SELECT
+		COUNT(*)
+	FROM
+		{{Pluralize (NameSQL $modelName)}}
+	WHERE
+		{{- if not $model.Shared}}
+		isolated_entity_id=:isolated_entity_id AND
+		{{- end}}
+		NOT deleted
+	`
 
 	{{- range $i, $method := $model.Methods}}
 		{{- if IsAdjustList $method}}
