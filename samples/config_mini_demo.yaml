@@ -53,9 +53,6 @@ models:
         type: "string"
         format: "date"
         required: true
-      dateOfBirth2:
-        type: "string"
-        format: "date-time"
       email:
         type: "string"
         format: "email"
@@ -92,8 +89,6 @@ models:
           - headOfficeLocation.name
       contract:
         type: "model.document"
-      isBlocked:
-        type: "bool"
     methods:
       - get
       - getMy
