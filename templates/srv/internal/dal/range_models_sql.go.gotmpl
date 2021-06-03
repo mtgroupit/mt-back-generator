@@ -176,7 +176,17 @@ const (
 	FROM
 		{{Pluralize (NameSQL $modelName)}}
 	WHERE
-		{{$model.SQLWhereParams}}{{if $model.SQLWhereParams}} AND{{end}}
+		{{- if not $model.Shared}}
+		isolated_entity_id=:isolated_entity_id AND
+		{{- end}}
+		NOT deleted
+	`
+	sqlList{{$modelName}}Count = `
+	SELECT
+		COUNT(*)
+	FROM
+		{{Pluralize (NameSQL $modelName)}}
+	WHERE
 		{{- if not $model.Shared}}
 		isolated_entity_id=:isolated_entity_id AND
 		{{- end}}
@@ -190,9 +200,10 @@ const (
 		{{(index $model.MethodsProps $i).AdjustSQLSelect}}
 	FROM
 		{{Pluralize (NameSQL $modelName)}}
-	{{if (index $model.MethodsProps $i).FilteredFields}}WHERE
-		{{end}}{{(index $model.MethodsProps $i).AdjustListSQLWhereProps}} {{if not $model.Shared}}{{if (index $model.MethodsProps $i).FilteredFields}}AND{{else}}WHERE{{end}}
-		isolated_entity_id=:isolated_entity_id{{end}} AND
+	WHERE
+		{{if not $model.Shared}}
+		isolated_entity_id=:isolated_entity_id AND
+		{{end}}
 		NOT deleted
 	`
 			{{if (index $model.MethodsProps $i).NeedLazyLoading}}

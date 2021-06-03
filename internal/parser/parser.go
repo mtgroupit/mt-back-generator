@@ -399,7 +399,7 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 		psql[indexLastNotArrOfStruct].Last = true
 		model.Psql = psql
 
-		var SQLSelect, sqlWhereParams, sqlAdd, sqlEdit []string
+		var SQLSelect, sqlAdd, sqlEdit []string
 		for _, column := range columns {
 			options := model.Columns[column]
 			if !options.IsStruct {
@@ -412,14 +412,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					titleName = "m." + titleName
 				}
 				SQLSelect = append(SQLSelect, sqlName)
-				if !options.IsArray && !options.IsCustom {
-					sqlColumn := utilities.NameSQL(column)
-					if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
-						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
-					} else {
-						sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND\n\t\t(CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
-					}
-				}
 				if options.TitleName != "ID" {
 					sqlAdd = append(sqlAdd, sqlName)
 					if !isCreatedStandardColumn(column) {
@@ -428,17 +420,14 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 				}
 			} else {
 				if !options.IsArray {
-					sqlColumn := utilities.NameSQL(column)
 					sqlName := utilities.NameSQL(options.TitleName) + "_id"
 					SQLSelect = append(SQLSelect, sqlName)
-					sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
 					sqlAdd = append(sqlAdd, sqlName)
 					sqlEdit = append(sqlEdit, fmt.Sprintf("%s=:%s", sqlName, sqlName))
 				}
 			}
 		}
 		model.SQLSelectStr = strings.Join(SQLSelect, ",\n\t\t")
-		model.SQLWhereParams = strings.Join(sqlWhereParams, " AND\n\t\t")
 		if model.IDIsUUID {
 			sqlAdd = append(sqlAdd, "id")
 		}
@@ -602,12 +591,13 @@ func titleize(cfg *models.Config) {
 }
 
 func fieldIsStruct(field string) bool {
-	return regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\(.+\)$`).Match([]byte(field))
+	return regexp.MustCompile(`^[a-zA-Z0-9]+\(.+\)$`).Match([]byte(field))
 }
 
-func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting, parent string, isArray bool) ([]models.NestedObjProps, error) {
+func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, parent string, nesting []string, isArray bool) ([]models.NestedObjProps, error) {
 	objs := []models.NestedObjProps{}
 	obj := models.NestedObjProps{}
+	obj.AvailableFilterKeys = map[string]bool{}
 
 	obj.Shared = modelsIn[modelName].Shared
 
@@ -625,6 +615,9 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 				structModel = utilities.LowerTitle(options.BusinessType)
 				obj.Type = strings.Title(modelName)
 				haveFieldInColumns = true
+				if !options.IsArray && !isArray && !options.IsCustom {
+					obj.AvailableFilterKeys[strings.Join(append(nesting, field, fields[i]), ".")] = true
+				}
 				break
 			}
 		}
@@ -652,7 +645,7 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 		}
 
 		if fieldIsStruct(fieldsFull[i]) {
-			objsForAdd, err := handleNestedObjs(modelsIn, structModel, fieldsFull[i], nesting+strings.Title(field), strings.Title(modelName), structIsArr)
+			objsForAdd, err := handleNestedObjs(modelsIn, structModel, fieldsFull[i], strings.Title(modelName), append(nesting, field), structIsArr)
 			if err != nil {
 				return nil, err
 			}
@@ -664,7 +657,11 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, nesting
 		SQLSelect = append(SQLSelect, "id")
 	}
 	obj.SQLSelect = strings.Join(SQLSelect, ",\n\t\t")
-	obj.Path = nesting
+	var path string
+	for _, nestLevel := range nesting {
+		path += strings.Title(nestLevel)
+	}
+	obj.Path = path
 	obj.ParentStruct = parent
 	obj.IsArray = isArray
 	obj.Name = strings.Title(field)
@@ -740,25 +737,24 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 	result := *model
 	for i, method := range result.Methods {
 		if models.IsAdjustList(method) {
-			var SQLSelect, sqlWhereParams, filtredFields []string
+			var SQLSelect, filtredFields []string
 			fieldsStr := models.ExtractStrNestedFields(method)
 			fieldsFull := models.SplitFields(fieldsStr)
 			fields := models.TrimFieldsSuffix(fieldsFull)
 			haveID := false
 			result.MethodsProps[i].JSONColumns = map[string]bool{}
+			result.MethodsProps[i].AvailableFilterKeys = map[string]bool{}
 			for j := range fields {
-				var needFilter bool
-				if strings.HasSuffix(fields[j], "*") {
-					needFilter = true
-					fields[j] = strings.TrimSuffix(fields[j], "*")
-					filtredFields = append(filtredFields, fields[j])
-				}
 				var haveFieldInColumns bool
 				var structModel string
 				for column, options := range result.Columns {
 					if column == fields[j] {
 						structModel = options.Type
 						haveFieldInColumns = true
+						if !options.IsArray && !options.IsCustom {
+							result.MethodsProps[i].AvailableFilterKeys[fields[j]] = true
+						}
+						break
 					}
 				}
 				if !haveFieldInColumns {
@@ -782,22 +778,10 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 								sqlName += "_json"
 							}
 							SQLSelect = append(SQLSelect, sqlName)
-							if needFilter && !options.IsArray {
-								sqlColumn := utilities.NameSQL(column)
-								if options.Type != "string" || IsTimeFormat(options.Format) || options.StrictFilter {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
-								} else {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR LOWER(%s) LIKE LOWER(:%s)) AND\n\t\t(CAST(:%s as text) IS NULL OR LOWER(%s) NOT LIKE LOWER(:%s))", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
-								}
-							}
 						} else {
 							if !options.IsArray {
-								sqlColumn := utilities.NameSQL(column)
 								sqlName := utilities.NameSQL(options.TitleName) + "_id"
 								SQLSelect = append(SQLSelect, sqlName)
-								if needFilter {
-									sqlWhereParams = append(sqlWhereParams, fmt.Sprintf("(CAST(:%s as text) IS NULL OR %s=:%s) AND\n\t\t(CAST(:%s as text) IS NULL OR %s<>:%s)", sqlColumn, sqlName, sqlColumn, "not_"+sqlColumn, sqlName, "not_"+sqlColumn))
-								}
 							} else {
 								structIsArr = true
 							}
@@ -809,7 +793,7 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 				if fieldIsStruct(fieldsFull[j]) {
 					result.MethodsProps[i].NeedLazyLoading = true
 
-					objsForAdd, err := handleNestedObjs(modelsMap, structModel, fieldsFull[j], "", strings.Title(modelName), structIsArr)
+					objsForAdd, err := handleNestedObjs(modelsMap, structModel, fieldsFull[j], modelName, []string{}, structIsArr)
 					if err != nil {
 						return err
 					}
@@ -821,7 +805,6 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 				SQLSelect = append(SQLSelect, "id")
 			}
 			result.MethodsProps[i].AdjustSQLSelect = strings.Join(SQLSelect, ",\n\t\t")
-			result.MethodsProps[i].AdjustListSQLWhereProps = strings.Join(sqlWhereParams, " AND\n\t\t")
 			result.MethodsProps[i].FilteredFields = filtredFields
 			result.MethodsProps[i].IsAdjustList = true
 

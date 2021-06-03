@@ -26,22 +26,33 @@ import (
             offset = *apiLP.Offset
         }
         return &app.ListParams{
-            Offset:      offset,
-            Limit:       apiLP.Limit,
-            Filters:     appFilters(apiLP.Filters),
-            LogicFilter: apiLP.LogicFilter,
-            SortBy:      apiLP.SortBy,
-            OrderBy:     apiLP.OrderBy,
+            Offset:       offset,
+            Limit:        apiLP.Limit,
+            FilterGroups: appFilterGroups(apiLP.FilterGroups),
+            SortBy:       apiLP.SortBy,
+            OrderBy:      apiLP.OrderBy,
         }
     }
 
-	func appFilters(apiFP []*models.FilterParams) []*app.Filter {
+	func appFilterGroups(apiFG []*models.FilterGroup) []*app.FilterGroup {
+		appFG := []*app.FilterGroup{}
+		for _, fg := range apiFG {
+			appFG = append(appFG, &app.FilterGroup{
+				Key:         fg.Key,
+				LogicFilter: fg.LogicFilter,
+				Filters:     appFilters(fg.Filters),
+			})
+		}
+		return appFG
+	}
+
+	func appFilters(apiFP []*models.Filter) []*app.Filter {
 		appF := []*app.Filter{}
 		for _, fp := range apiFP {
 			appF = append(appF, &app.Filter{
-				Include: fp.Include,
-				Key:     fp.Key,
-				Value:   fp.Value,
+				Value:      fp.Value,
+				Operator:   fp.Operator,
+				IgnoreCase: fp.IgnoreCase,
 			})
 		}
 		return appF

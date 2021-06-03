@@ -30,10 +30,7 @@ func Test{{ToAppMethodName $method}}{{$modelName}}Smoke(tt *testing.T) {
 		t.Nil(testRepo.{{ToAppMethodName $method}}{{$modelName}}({{if not (IsMyMethod $method)}}test{{$modelName}}1.ID, {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}profID1, {{end}}{{if not $model.Shared}}isolatedEntityID, {{end}}test{{$modelName}}{{if $model.BoundToIsolatedEntity}}1{{else}}2{{end}}))
 	{{- end}}
 
-	{{- if IsList $method}}	
-		listParams.Filters[0].Value = test{{$modelName}}1.ID
-		listParams.Filters[1].Value = test{{$modelName}}2.ID
-
+	{{- if IsList $method}}
 		list, {{if $model.DetailedPagination}}_, {{end}}_,  err := testRepo.{{ToAppMethodName $method}}{{$modelName}}({{if not $model.Shared}}isolatedEntityID, {{end}}listParams)
 		t.Nil(err)
 		t.DeepEqual(list, test{{$modelName}}s)
