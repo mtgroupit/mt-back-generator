@@ -63,7 +63,7 @@ type {{$modelName}} struct {
 				{{$psqlParams.Name}} {{if eq  $psqlParams.TypeSQL "uuid"}}uuid.UUID{{else}}{{DalType $psqlParams.Type}}{{end}} `db:"{{$psqlParams.SQLName}}"` 
 			{{- else}}
 				{{$psqlParams.Name}}JSON []byte `db:"{{$psqlParams.SQLName}}"`
-				{{$psqlParams.Name}} []{{$psqlParams.Type}} 
+				{{$psqlParams.Name}} []{{$psqlParams.Type}}
 			{{- end}}
 		{{- end}}
 	{{- end}}
@@ -72,10 +72,13 @@ type {{$modelName}} struct {
 
 var {{$modelName}}Props = map[string]columnProps{
 {{- range $column, $options := $model.Columns}}
-	{{- if and (not $options.IsArray) (not $options.IsCustom)}}
+	{{- if not $options.IsCustom}}
 		"{{$column}}": {
 			sqlName:  "{{$options.SQLName $column}}",
 			typeName: "{{$options.FilterType}}",
+			{{- if $options.IsArray}}
+				isArray: true,
+			{{- end}}
 		},
 	{{- end}}
 {{- end}}
@@ -939,9 +942,18 @@ func (m *{{$modelName}}) NestedFilter(key string, filter *app.Filter) (ok bool, 
 		switch splitedFilter[0] {
 		{{- range $_, $column := (SortColumns $model.Columns)}}
 			{{- $options := (index $model.Columns $column)}}
-			{{- if and $options.IsStruct (not $options.IsArray)}}
+			{{- if $options.IsStruct}}
 			case "{{$column}}":
-				ok, err = m.{{$options.TitleName}}.{{if (index $models $options.BusinessType).HaveLazyLoading}}Nested{{end}}Filter(key, filter)
+				{{- if $options.IsArray}}
+					for _, elem := range m.{{$options.TitleName}} {
+						ok, err = elem.{{if (index $models $options.BusinessType).HaveLazyLoading}}Nested{{end}}Filter(key, filter)
+						if ok || err != nil {
+							break
+						}
+					}
+				{{- else}}
+					ok, err = m.{{$options.TitleName}}.{{if (index $models $options.BusinessType).HaveLazyLoading}}Nested{{end}}Filter(key, filter)
+				{{- end}}
 			{{- end}}
 		{{- end}}
 		default:
@@ -968,35 +980,116 @@ func (m *{{$modelName}}) Filter(key string, filter *app.Filter) (ok bool, err er
 	switch key {
 	{{- range $_, $column := (SortColumns $model.Columns)}}
 		{{- $options := (index $model.Columns $column)}}
-		{{- if and (not $options.IsStruct) (not $options.IsArray) (not $options.IsCustom)}}
+		{{- if and (not $options.IsStruct) (not (and $options.IsStruct $options.IsArray)) (not $options.IsCustom)}}
 			{{- $filterType := $options.FilterType}}
 			case "{{$column}}":
 				{{- if eq $filterType "uuid"}}
-					ok = compareUUID(filter.Operator, m.{{$options.TitleName}}, filter.Value)
+					{{- if $options.IsArray}}
+						for _, elem := range m.{{$options.TitleName}} {
+						ok = compareUUID(filter.Operator, elem, filter.Value)
+							if ok {
+								break
+							}
+						}
+					{{- else}}
+						ok = compareUUID(filter.Operator, m.{{$options.TitleName}}, filter.Value)
+					{{- end}}
 				{{- end}}
 				{{- if eq $filterType "string"}}
-					ok = compareString(filter.Operator, filter.IgnoreCase, m.{{$options.TitleName}}.String, filter.Value)
+					{{- if $options.IsArray}}
+						for _, elem := range m.{{$options.TitleName}} {
+						ok = compareString(filter.Operator, filter.IgnoreCase, elem, filter.Value)
+							if ok {
+								break
+							}
+						}
+					{{- else}}
+						ok = compareString(filter.Operator, filter.IgnoreCase, m.{{$options.TitleName}}.String, filter.Value)
+					{{- end}}
 				{{- end}}
 				{{- if eq $filterType "date-time"}}
-					ok = compareTime(filter.Operator, *m.{{$options.TitleName}}, filter.Value)
+					{{- if $options.IsArray}}
+						for _, elem := range m.{{$options.TitleName}} {
+						ok = compareTime(filter.Operator, *elem, filter.Value)
+							if ok {
+								break
+							}
+						}
+					{{- else}}
+						ok = compareTime(filter.Operator, *m.{{$options.TitleName}}, filter.Value)
+					{{- end}}
 				{{- end}}
 				{{- if eq $filterType "date"}}
-					ok = compareDate(filter.Operator, *m.{{$options.TitleName}}, filter.Value)
+					{{- if $options.IsArray}}
+						for _, elem := range m.{{$options.TitleName}} {
+						ok = compareDate(filter.Operator, *elem, filter.Value)
+							if ok {
+								break
+							}
+						}
+					{{- else}}
+						ok = compareDate(filter.Operator, *m.{{$options.TitleName}}, filter.Value)
+					{{- end}}
 				{{- end}}
 				{{- if eq $filterType "int32"}}
-					ok = compareInt64(filter.Operator, int64(m.{{$options.TitleName}}.Int32), filter.Value)
+					{{- if $options.IsArray}}
+						for _, elem := range m.{{$options.TitleName}} {
+						ok = compareInt64(filter.Operator, int64(elem), filter.Value)
+							if ok {
+								break
+							}
+						}
+					{{- else}}
+						ok = compareInt64(filter.Operator, int64(m.{{$options.TitleName}}.Int32), filter.Value)
+					{{- end}}
 				{{- end}}
 				{{- if eq $filterType "int64"}}
-					ok = compareInt64(filter.Operator, m.{{$options.TitleName}}.Int64, filter.Value)
+					{{- if $options.IsArray}}
+						for _, elem := range m.{{$options.TitleName}} {
+						ok = compareInt64(filter.Operator, elem, filter.Value)
+							if ok {
+								break
+							}
+						}
+					{{- else}}
+						ok = compareInt64(filter.Operator, m.{{$options.TitleName}}.Int64, filter.Value)
+					{{- end}}
 				{{- end}}
 				{{- if eq $filterType "float"}}
-					ok = compareFloat64(filter.Operator, m.{{$options.TitleName}}.Float64, filter.Value)
+					{{- if $options.IsArray}}
+						for _, elem := range m.{{$options.TitleName}} {
+						ok = compareFloat64(filter.Operator, elem, filter.Value)
+							if ok {
+								break
+							}
+						}
+					{{- else}}
+						ok = compareFloat64(filter.Operator, m.{{$options.TitleName}}.Float64, filter.Value)
+					{{- end}}
 				{{- end}}
 				{{- if eq $filterType "decimal"}}
-					ok = compareDecimal(filter.Operator,  m.{{$options.TitleName}}.Decimal, filter.Value)
+					{{- if $options.IsArray}}
+						for _, elem := range m.{{$options.TitleName}} {
+						ok = compareDecimal(filter.Operator,  elem, filter.Value)
+							if ok {
+								break
+							}
+						}
+					{{- else}}
+						ok = compareDecimal(filter.Operator,  m.{{$options.TitleName}}.Decimal, filter.Value)
+					{{- end}}
 				{{- end}}
 				{{- if eq $filterType "bool"}}
-					ok = compareBool(filter.Operator,  m.{{$options.TitleName}}.Bool, filter.Value)
+					{{- if $options.IsArray}}
+						for _, elem := range m.{{$options.TitleName}} {
+						ok = compareBool(filter.Operator,  elem, filter.Value)
+							if ok {
+								break
+							}
+						}
+					{{- else}}
+						ok = compareBool(filter.Operator,  m.{{$options.TitleName}}.Bool, filter.Value)
+					{{- end}}
 				{{- end}}
 		{{- end}}
 	{{- end}}

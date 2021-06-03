@@ -85,7 +85,7 @@ func genAppTestArray(columnOptions models.Options) string {
 	for i := gofakeit.Number(minLenthArray, maxLenthArray); i <= maxLenthArray; i++ {
 		arr = append(arr, genAppTestValueWithFormat(columnOptions))
 	}
-	return fmt.Sprintf("[]%s{%s}", columnOptions.BusinessType, strings.Join(arr, ", "))
+	return fmt.Sprintf("[]%s{%s}", columnOptions.AppType(), strings.Join(arr, ", "))
 }
 
 func genAppTestValueWithFormat(columnOptions models.Options) string {

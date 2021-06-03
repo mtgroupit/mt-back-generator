@@ -39,7 +39,6 @@ models:
 
   employee:
     description: "employee object"
-    detailed-pagination: true
     columns:
       id:
         type: "uuid"
@@ -102,7 +101,7 @@ models:
       - editMy(links)
       - deleteMy
       - list
-      - list(id, name, company(name, locations(id, name)))[withCompanyLocations]
+      - list(id, name*, company*(name, locations(id, name)))[withCompanyLocations]
       - custom
     rules-set:
       checkUserLocation:
@@ -120,7 +119,7 @@ models:
         - get
         - get(id, name, email, defaultPhone, phones)[contact]
         - list
-        - list(id, name, company(name, locations(id, name)))[withCompanyLocations]
+        - list(id, name*, company*(name, locations(id, name)))[withCompanyLocations]
         - custom
 
   company:
@@ -149,7 +148,7 @@ models:
       - delete
       - edit(headOfficeLocation)
       - list
-      - list(name, headOfficeLocation(id, name), locations(id, name))
+      - list(name, headOfficeLocation*(id, name), locations(id, name))
     rules-set:
       checkUserLocation:
         - delete
@@ -159,7 +158,7 @@ models:
         - delete
         - edit(headOfficeLocation)
         - list
-        - list(name, headOfficeLocation(id, name), locations(id, name))
+        - list(name, headOfficeLocation*(id, name), locations(id, name))
 
   ourCompany:
     description: "ourCompany object"
@@ -230,23 +229,23 @@ models:
       modifiedBy:
     methods:
       - get
-      - add
+      - add{validate}
       - edit
       - delete
       - list
     rules-set:
       checkUserLocation:
-        - add
+        - add{validate}
         - edit
         - delete
       checkAccessHappensInWorkingTimeAndAllowedPlace:
         - get
-        - add
+        - add{validate}
         - edit
         - delete
         - list
       checkAdminUsingAllowedDevices:
-        - add
+        - add{validate}
         - edit
         - delete
     

@@ -281,7 +281,7 @@ var goTmplFuncs = template.FuncMap{
 			}
 		case "date":
 			if columnOptions.IsArray {
-				apiValue = fmt.Sprintf("[]toDatesArray(%s)", apiValue)
+				apiValue = fmt.Sprintf("toDatesArray(%s)", apiValue)
 			} else {
 				apiValue = fmt.Sprintf("(*strfmt.Date)(%s)", apiValue)
 			}
@@ -348,9 +348,7 @@ var goTmplFuncs = template.FuncMap{
 		switch psqlType {
 		case parser.TypesPrefix + "Decimal":
 			return fmt.Sprintf("%sNullDecimal", parser.TypesPrefix)
-		case "date":
-			return "*time.Time"
-		case "date-time":
+		case "date", "date-time", "*time.Time":
 			return "*time.Time"
 		default:
 			return fmt.Sprintf("sql.Null%s", strings.Title(psqlType))
