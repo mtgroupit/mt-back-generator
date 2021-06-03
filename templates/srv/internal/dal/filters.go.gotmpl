@@ -27,6 +27,7 @@ type builderFilter struct {
 type columnProps struct {
 	sqlName  string
 	typeName string
+	isArray  bool
 }
 
 func newBuilderFilter(filterGroups []*app.FilterGroup, columnsProps map[string]columnProps) *builderFilter {
@@ -59,7 +60,7 @@ func (bf *builderFilter) preparedSQLFilters() (sql string, vars map[string]inter
 func (bf *builderFilter) modelFilterGroups() []*app.FilterGroup {
 	var result []*app.FilterGroup
 	for _, group := range bf.filterGroups {
-		if !strings.Contains(group.Key, ".") {
+		if !strings.Contains(group.Key, ".") && !bf.columnsProps[group.Key].isArray {
 			result = append(result, group)
 		}
 	}
@@ -69,7 +70,7 @@ func (bf *builderFilter) modelFilterGroups() []*app.FilterGroup {
 func (bf *builderFilter) nestedFilterGroups() []*app.FilterGroup {
 	var result []*app.FilterGroup
 	for _, group := range bf.filterGroups {
-		if strings.Contains(group.Key, ".") {
+		if strings.Contains(group.Key, ".") || bf.columnsProps[group.Key].isArray {
 			result = append(result, group)
 		}
 	}

@@ -225,7 +225,9 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 			if IsTimeFormat(options.Format) {
 				cfg.HaveTime = true
-				model.NeedTime = true
+				if !options.IsArray {
+					model.NeedTime = true
+				}
 			}
 			if options.Format == "email" {
 				cfg.HaveEmail = true
@@ -362,7 +364,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 					}
 				}
 
-				pp.Type = options.BusinessType
+				if IsTimeFormat(options.Format) {
+					pp.Type = "*time.Time"
+				} else {
+					pp.Type = options.BusinessType
+				}
 				pp.Name = options.TitleName
 				if pp.IsStruct {
 					pp.SQLName = utilities.NameSQL(column) + "_id"
