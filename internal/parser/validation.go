@@ -98,8 +98,8 @@ func validateModels(cfg *models.Config) error {
 		}
 
 		for _, method := range model.Methods {
-			if strings.Contains(method, "{noSecure}") {
-				method = strings.Replace(method, "{noSecure}", "", -1)
+			if models.IsNoSecureMethod(method) {
+				method = models.CleanMethodsOptions(method)
 				if !model.Shared {
 					return errors.Errorf(`Model: "%s". Methods without authorization are allowed only for shared models`, name)
 				}

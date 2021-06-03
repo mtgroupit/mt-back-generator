@@ -149,10 +149,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 
 		var props []models.MethodProps
 		for _, method := range model.Methods {
-			noSecure := false
-			if strings.Contains(method, "{noSecure}") {
-				noSecure = true
-			}
 			if !model.IsStandardMethod(method) {
 				cfg.HaveCustomMethod = true
 				model.HaveCustomMethod = true
@@ -166,7 +162,6 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			} else {
 				prop.HTTPMethod = "post"
 			}
-			prop.NoSecure = noSecure
 
 			if method == "list" || models.IsAdjustList(method) {
 				cfg.HaveListMethod = true

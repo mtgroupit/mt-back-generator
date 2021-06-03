@@ -101,9 +101,7 @@ var goTmplFuncs = template.FuncMap{
 		return false
 	},
 	"IsGet": func(method string) bool {
-		if strings.Contains(method, "{noSecure}") {
-			method = strings.Replace(method, "{noSecure}", "", -1)
-		}
+		method = models.CleanMethodsOptions(method)
 		method = strings.ToLower(method)
 		if method == "get" || method == "getmy" || models.IsAdjustGet(method) {
 			return true
@@ -112,9 +110,7 @@ var goTmplFuncs = template.FuncMap{
 	},
 	"IsAdd": isAdd,
 	"IsDelete": func(method string) bool {
-		if strings.Contains(method, "{noSecure}") {
-			method = strings.Replace(method, "{noSecure}", "", -1)
-		}
+		method = models.CleanMethodsOptions(method)
 		method = strings.ToLower(method)
 		if method == "delete" || method == "deletemy" {
 			return true
@@ -122,16 +118,16 @@ var goTmplFuncs = template.FuncMap{
 		return false
 	},
 	"IsEdit": func(method string) bool {
-		if strings.Contains(method, "{noSecure}") {
-			method = strings.Replace(method, "{noSecure}", "", -1)
-		}
+		method = models.CleanMethodsOptions(method)
 		method = strings.ToLower(method)
 		if method == "edit" || method == "editmy" || method == "editoraddmy" || models.IsAdjustEdit(method) {
 			return true
 		}
 		return false
 	},
-	"IsList": isList,
+	"IsList":           isList,
+	"IsNoSecureMethod": models.IsNoSecureMethod,
+	"IsValidateMethod": models.IsValidateMethod,
 	"HaveListWithWarn": func(model models.Model) bool {
 		for i, method := range model.Methods {
 			if isList(method) {
@@ -644,9 +640,7 @@ func formatName(name string) string {
 }
 
 func isAdd(method string) bool {
-	if strings.Contains(method, "{noSecure}") {
-		method = strings.Replace(method, "{noSecure}", "", -1)
-	}
+	method = models.CleanMethodsOptions(method)
 	method = strings.ToLower(method)
 	if method == "add" || method == "addmy" {
 		return true
@@ -655,9 +649,7 @@ func isAdd(method string) bool {
 }
 
 func isList(method string) bool {
-	if strings.Contains(method, "{noSecure}") {
-		method = strings.Replace(method, "{noSecure}", "", -1)
-	}
+	method = models.CleanMethodsOptions(method)
 	method = strings.ToLower(method)
 	return method == "list" || models.IsAdjustList(method)
 }

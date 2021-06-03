@@ -62,16 +62,25 @@ paths:
       {{- range $_, $tag := $model.Tags}}
         - {{$tag}}
       {{- end}}
-    {{- if (index $model.MethodsProps $i).NoSecure}}
+    {{- if IsNoSecureMethod $method}}
       security: []
     {{- end}}
       operationId: {{LowerTitle (ToAppMethodName $method)}}{{$model.TitleName}}
-    {{- if not (or (and (IsGet $method) (IsMyMethod $method)) (eq $method "deleteMy"))}}
+    {{- if or (IsValidateMethod $method) (not (or (and (IsGet $method) (IsMyMethod $method)) (and (IsDelete $method) (IsMyMethod $method))))}}
       parameters:
+    {{- end}}
+      {{- if IsValidateMethod $method}}
+        - name: Validate
+          in: header
+          description: validation token
+          required: true
+          type: string
+      {{- end}}
+    {{- if not (or (and (IsGet $method) (IsMyMethod $method)) (and (IsDelete $method) (IsMyMethod $method)))}}
         - name: body
           in: body
           schema: 
-      {{- if or (and (IsGet $method) (not (IsMyMethod $method))) (eq $method "delete")}}
+      {{- if or (and (IsGet $method) (not (IsMyMethod $method))) (and (IsDelete $method) (not (IsMyMethod $method)))}}
             type: object
             properties:
               id:

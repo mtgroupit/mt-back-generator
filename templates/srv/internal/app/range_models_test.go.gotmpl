@@ -29,24 +29,24 @@ func Test{{ToAppMethodName $method}}{{$modelName}}(tt *testing.T) {
 
 	{{- if IsGet $method}} 
 		mockRepo.EXPECT().{{ToAppMethodName $method}}{{$modelName}}({{if not $model.BoundToIsolatedEntity}}gomock.Any(){{end}}{{if not $model.Shared}}{{if not $model.BoundToIsolatedEntity}}, {{end}}gomock.Any(){{end}}).Return(test{{$modelName}}1, nil)
-		b, err := a.{{ToAppMethodName $method}}{{$modelName}}(profile{{if (index $model.MethodsProps $i).NoSecure}}UnAuth{{end}}{{if not (IsMyMethod $method)}}, test{{$modelName}}1.ID{{end}})
+		b, err := a.{{ToAppMethodName $method}}{{$modelName}}(profile{{if (IsNoSecureMethod $method)}}UnAuth{{end}}{{if not (IsMyMethod $method)}}, test{{$modelName}}1.ID{{end}})
 		t.Nil(err)
 		t.DeepEqual(test{{$modelName}}1, b)
 	{{- end}}
 	{{- if IsAdd $method}}
 		mockRepo.EXPECT().{{ToAppMethodName $method}}{{$modelName}}(gomock.Any(), {{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return(test{{$modelName}}1, nil)
-		b, err := a.{{ToAppMethodName $method}}{{$modelName}}(profile{{if (index $model.MethodsProps $i).NoSecure}}UnAuth{{end}}, test{{$modelName}}1)
+		b, err := a.{{ToAppMethodName $method}}{{$modelName}}(profile{{if (IsNoSecureMethod $method)}}UnAuth{{end}}, test{{$modelName}}1)
 		t.Nil(err)
 		t.DeepEqual(test{{$modelName}}1, b)
 	{{- end}}
 	{{- if IsDelete $method}}
 		mockRepo.EXPECT().{{ToAppMethodName $method}}{{$modelName}}({{if not (IsMyMethod $method)}}gomock.Any(), {{end}}gomock.Any(){{if not $model.Shared}}, gomock.Any(){{end}}).Return(nil)
-		err := a.{{ToAppMethodName $method}}{{$modelName}}(profile{{if (index $model.MethodsProps $i).NoSecure}}UnAuth{{end}}{{if not (IsMyMethod $method)}}, test{{$modelName}}1.ID{{end}})
+		err := a.{{ToAppMethodName $method}}{{$modelName}}(profile{{if (IsNoSecureMethod $method)}}UnAuth{{end}}{{if not (IsMyMethod $method)}}, test{{$modelName}}1.ID{{end}})
 		t.Nil(err)
 	{{- end}}
 	{{- if IsEdit $method}}
 		mockRepo.EXPECT().{{ToAppMethodName $method}}{{$modelName}}({{if not (IsMyMethod $method)}}gomock.Any(), {{end}}{{if or (and (IsMyMethod $method) (not $model.BoundToIsolatedEntity)) $model.HaveModifiedBy}}gomock.Any(), {{end}}{{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}test{{$modelName}}2, {{end}}nil)
-		{{if $model.ReturnWhenEdit}}b, {{end}}err := a.{{ToAppMethodName $method}}{{$modelName}}(profile{{if (index $model.MethodsProps $i).NoSecure}}UnAuth{{end}}, {{if not (IsMyMethod $method)}}test{{$modelName}}1.ID, {{end}}test{{$modelName}}1)
+		{{if $model.ReturnWhenEdit}}b, {{end}}err := a.{{ToAppMethodName $method}}{{$modelName}}(profile{{if (IsNoSecureMethod $method)}}UnAuth{{end}}, {{if not (IsMyMethod $method)}}test{{$modelName}}1.ID, {{end}}test{{$modelName}}1)
 		t.Nil(err)
 		{{- if $model.ReturnWhenEdit}}
 			t.DeepEqual(test{{$modelName}}2, b)
@@ -54,7 +54,7 @@ func Test{{ToAppMethodName $method}}{{$modelName}}(tt *testing.T) {
 	{{- end}}
 	{{- if IsList $method}}
 		mockRepo.EXPECT().{{ToAppMethodName $method}}{{$modelName}}({{if not $model.Shared}}gomock.Any(), {{end}}gomock.Any()).Return(test{{$modelName}}s, {{if $model.DetailedPagination}}2, {{end}}[]string{}, nil)
-		b, {{if $model.DetailedPagination}}count, {{end}}_, err := a.{{ToAppMethodName $method}}{{$modelName}}(profile{{if (index $model.MethodsProps $i).NoSecure}}UnAuth{{end}}, listParams)
+		b, {{if $model.DetailedPagination}}count, {{end}}_, err := a.{{ToAppMethodName $method}}{{$modelName}}(profile{{if (IsNoSecureMethod $method)}}UnAuth{{end}}, listParams)
 		t.Nil(err)
 		{{- if $model.DetailedPagination}}
 		t.Equal(2, count)
