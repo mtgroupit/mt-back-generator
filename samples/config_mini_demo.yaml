@@ -229,23 +229,23 @@ models:
       modifiedBy:
     methods:
       - get
-      - add{validate}
+      - add
       - edit
       - delete
       - list
     rules-set:
       checkUserLocation:
-        - add{validate}
+        - add
         - edit
         - delete
       checkAccessHappensInWorkingTimeAndAllowedPlace:
         - get
-        - add{validate}
+        - add
         - edit
         - delete
         - list
       checkAdminUsingAllowedDevices:
-        - add{validate}
+        - add
         - edit
         - delete
     
