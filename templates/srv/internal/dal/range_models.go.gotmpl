@@ -347,8 +347,10 @@ var {{$modelName}}Props = map[string]columnProps{
 				{{- end}}
 				offset = " OFFSET :offset"
 				namedVars["offset"] = params.Offset
-				limit = " LIMIT :limit"
-				namedVars["limit"] = params.Limit
+				if params.Limit != 0 {
+					limit = " LIMIT :limit"
+					namedVars["limit"] = params.Limit
+				}
 			}
 		{{else}}
 			{{- if $model.DetailedPagination}}

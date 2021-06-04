@@ -223,7 +223,7 @@ models:
         type: "string"
         format: "url"
         required: true
-      createdAt:
+      chttps://github.com/Lisss13/banks-backend/pull/24reatedAt:
       createdBy:
       modifiedAt:
       modifiedBy:
