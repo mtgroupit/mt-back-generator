@@ -17,6 +17,7 @@ var log = structlog.New()
 // AuthSvc is an interface for authentication service.
 type AuthSvc interface {
 	GetUserProfile(ctx Ctx, cookie string) (*extauthapi.Profile, error)
+	Validate(ctx Ctx, token, remoteIP string) error
 }
 
 func (svc *service) checkerAuth(rawCookies string) (interface{}, error) {
@@ -32,6 +33,17 @@ func (svc *service) checkerAuth(rawCookies string) (interface{}, error) {
 	default:
 		return profile, nil
 	}
+}
+
+func (svc *service) checkerValidate(token, remoteIP string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), authTimeout)
+	defer cancel()
+
+	err := svc.extAuth.Validate(ctx, token, remoteIP)
+	if err != nil {
+		return log.Err("failed to Validate", "err", err)
+	}
+	return nil
 }
 
 // Should always return same error as cookieKeyAuth.

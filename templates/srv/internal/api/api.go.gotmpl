@@ -119,13 +119,23 @@ func NewServer(appl app.App,{{if .HaveCustomMethod}}cust app.Customs,{{end}} ext
 	// The middleware executes after serving /swagger.json and routing,
 	// but before authentication, binding and validation.
 	middlewares := func(handler http.Handler) http.Handler {
-		safePath := map[string]bool{
-			cfg.BasePath + "/consultation/list": true,
-			cfg.BasePath + "/demand/list":       true,
-		}
+		safePath := map[string]bool{}
 		isSafe := func(r *http.Request) bool { return safePath[r.URL.Path] }
 		forbidCSRF := makeForbidCSRF(isSafe)
-		return forbidCSRF(handler)
+
+		withValidatePath := map[string]bool{
+			{{- range $modelName, $model := $.Models}}
+				{{- range $i, $method := $model.Methods}}
+					{{- if IsValidateMethod $method}}
+						path.Join(cfg.BasePath + "/{{LowerTitle $modelName}}/{{LowerTitle (ToAppMethodName $method)}}"): true,
+					{{- end}}
+				{{- end}}
+			{{- end}}
+		}
+		needValidate := func(r *http.Request) bool { return withValidatePath[r.URL.Path] }
+		validateToken := svc.makeValidateToken(needValidate)
+
+		return validateToken(forbidCSRF(handler))
 	}
 
 	newCORS := cors.New(cors.Options{

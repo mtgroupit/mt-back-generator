@@ -7,9 +7,7 @@ import (
 
 // IsStandardMethod return true if method is custom
 func (model Model) IsStandardMethod(method string) bool {
-	if strings.HasSuffix(method, "{noSecure}") {
-		method = strings.TrimSuffix(method, "{noSecure}")
-	}
+	method = CleanMethodsOptions(method)
 	if method == "get" || method == "add" || method == "delete" || method == "edit" || method == "list" || IsAdjustMethod(method) || IsMyMethod(method) {
 		return true
 	}
@@ -27,6 +25,7 @@ func (model Model) IsStandardMethod(method string) bool {
 
 // IsMyMethod return true if method is standard my method
 func IsMyMethod(method string) bool {
+	method = CleanMethodsOptions(method)
 	method = strings.ToLower(method)
 	if method == "getmy" || method == "addmy" || method == "deletemy" || method == "editmy" || method == "editoraddmy" || regexp.MustCompile(`^getmy.+`).Match([]byte(method)) || regexp.MustCompile(`^editmy.+`).Match([]byte(method)) {
 		return true
@@ -41,33 +40,25 @@ func IsAdjustMethod(method string) bool {
 
 // IsAdjustGet return true if method is adjusted get
 func IsAdjustGet(method string) bool {
-	if strings.Contains(method, "{noSecure}") {
-		method = strings.Replace(method, "{noSecure}", "", -1)
-	}
+	method = CleanMethodsOptions(method)
 	return regexp.MustCompile(`^get(My|my)?\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
 }
 
 // IsAdjustEdit return true if method is adjusted edit
 func IsAdjustEdit(method string) bool {
-	if strings.Contains(method, "{noSecure}") {
-		method = strings.Replace(method, "{noSecure}", "", -1)
-	}
+	method = CleanMethodsOptions(method)
 	return regexp.MustCompile(`^edit(My|my)?\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
 }
 
 // IsAdjustList return true if method is adjusted list
 func IsAdjustList(method string) bool {
-	if strings.Contains(method, "{noSecure}") {
-		method = strings.Replace(method, "{noSecure}", "", -1)
-	}
+	method = CleanMethodsOptions(method)
 	return regexp.MustCompile(`^list\(.+\)(\[[a-zA-Z0-9]+\])?$`).Match([]byte(method))
 }
 
 // ToAppMethodName - converts method from config to method name which using in generated service
 func ToAppMethodName(method string) string {
-	if strings.Contains(method, "{noSecure}") {
-		method = strings.Replace(method, "{noSecure}", "", -1)
-	}
+	method = CleanMethodsOptions(method)
 	if IsAdjustMethod(method) {
 		method = getNameForAdjustMethods(method)
 	}
@@ -97,6 +88,27 @@ func getNameForAdjustMethods(method string) (result string) {
 	}
 
 	return
+}
+
+// CleanMethodsOptions returns method without options ("{noSecure}", "{validate}").
+func CleanMethodsOptions(method string) string {
+	if strings.Contains(method, "{noSecure}") {
+		method = strings.Replace(method, "{noSecure}", "", -1)
+	}
+	if strings.Contains(method, "{validate}") {
+		method = strings.Replace(method, "{validate}", "", -1)
+	}
+	return method
+}
+
+// IsNoSecureMethod returns true if method is no secure (has "{noSecure}" suffix).
+func IsNoSecureMethod(method string) bool {
+	return strings.Contains(method, "{noSecure}")
+}
+
+// IsValidateMethod returns true if method need the validation token (has "{validate}" suffix).
+func IsValidateMethod(method string) bool {
+	return strings.Contains(method, "{validate}")
 }
 
 // ExtractName - returns only method of adjusted method

@@ -73,7 +73,6 @@ type MethodProps struct {
 	NeedLazyLoading      bool
 	AvailableFilterKeys  map[string]bool
 	HaveJSON             bool
-	NoSecure             bool
 	JSONColumns          map[string]bool
 	AdjustSQLSelect      string
 	AdjustGetJSONColumns []string

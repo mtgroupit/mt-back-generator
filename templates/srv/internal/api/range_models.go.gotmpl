@@ -34,8 +34,8 @@ import (
 
 {{- range $i, $method := $model.Methods}}
 {{- if $model.IsStandardMethod $method}}
-func (svc *service) {{ToAppMethodName $method}}{{$modelName}}(params {{LowerTitle $modelName}}.{{ToAppMethodName $method}}{{$model.TitleName}}Params{{if not (index $model.MethodsProps $i).NoSecure}}, profile interface{}{{end}}) middleware.Responder {
-	prof := {{if (index $model.MethodsProps $i).NoSecure}}&extauthapi.Profile{Authn: false}{{else}}profile.(*extauthapi.Profile){{end}}
+func (svc *service) {{ToAppMethodName $method}}{{$modelName}}(params {{LowerTitle $modelName}}.{{ToAppMethodName $method}}{{$model.TitleName}}Params{{if not (IsNoSecureMethod $method)}}, profile interface{}{{end}}) middleware.Responder {
+	prof := {{if (IsNoSecureMethod $method)}}&extauthapi.Profile{Authn: false}{{else}}profile.(*extauthapi.Profile){{end}}
 	{{- if IsGet $method}}
 		c, err := svc.app.{{ToAppMethodName $method}}{{$modelName}}(toAppProfile(prof){{if not (IsMyMethod $method)}}, params.Body.ID{{end}})
 		switch {
