@@ -19,7 +19,7 @@ import (
 {{- if or $model.HaveCreatedAt $model.HaveModifiedAt (ContainsStr $model.Methods "delete") (ContainsStr $model.Methods "deleteMy")}}
 	"time"
 {{- end}}
-{{- if HaveListWithWarn $model}}
+{{- if $model.HaveListMethod}}
 	"fmt"
 {{- end}}
 {{- if or $model.HaveJSON (HaveColumnWithModelThatIsStructAndIsArray $model.Columns $.Models false true) (NeedJSONInsideColumns $model.Columns $.Models)}}
@@ -275,30 +275,28 @@ var {{$modelName}}Props = map[string]columnProps{
 						orderQuery = "ORDER BY {{NameSQL $column}}"
 				{{- end}}
 			{{- end}}
-			default:
-				{{- $completeIfStmt := false }}
+			{{- if $haveNestedSorts}}
+				{{- range $_, $column := (SortColumns $model.Columns)}}
+					{{- $options := (index $model.Columns $column)}}
+					{{- range $j, $sort := $options.SortBy}}
+					case "{{$column}}.{{$sort}}":
+						nestedSort = true
+					{{- end}}
+				{{- end}}
+			{{- end}}
+			case "":
 				{{- range $column, $options := $model.Columns}}
 					{{- if $options.SortDefault }}
-						{{- $completeIfStmt = true }}
-						if params.SortBy == "" { 
-							orderQuery = "ORDER BY {{NameSQL $column}}"
+						orderQuery = "ORDER BY {{NameSQL $column}}"
 						{{- if $options.SortOrderDefault}}
-								if params.OrderBy == "" {
-									params.OrderBy = "{{$options.SortOrderDefault}}"
-								}
+							if params.OrderBy == "" {
+								params.OrderBy = "{{$options.SortOrderDefault}}"
+							}
 						{{- end }}
 					{{- end }}
 				{{- end }}
-				{{- if and $haveNestedSorts $completeIfStmt}}
-							} else {
-								nestedSort = true
-				{{- end}}
-				{{- if and $haveNestedSorts (not $completeIfStmt)}}
-								nestedSort = true
-				{{- end}}
-				{{- if $completeIfStmt}}
-							}
-				{{- end}}
+			default:
+				warnings = append(warnings, fmt.Sprintf("Sorting by '%s' is not avaliable or '%s' is not a valid sort key", params.SortBy, params.SortBy))
 		}
 
 		if orderQuery != "" {
@@ -469,8 +467,6 @@ var {{$modelName}}Props = map[string]columnProps{
 					}
 				{{- end}}
 			{{- end}}
-				default:
-					warnings = append(warnings, fmt.Sprintf("sorting by '%s' is not avaliable or '%s' is not a valid sort key", params.SortBy, params.SortBy))
 				}
 			}
 		{{- end}}

@@ -129,22 +129,6 @@ var goTmplFuncs = template.FuncMap{
 	"IsList":           isList,
 	"IsNoSecureMethod": models.IsNoSecureMethod,
 	"IsValidateMethod": models.IsValidateMethod,
-	"HaveListWithWarn": func(model models.Model) bool {
-		for i, method := range model.Methods {
-			if isList(method) {
-				if model.HaveLazyLoading {
-					if models.IsAdjustList(method) {
-						if model.MethodsProps[i].NeedLazyLoading {
-							return true
-						}
-					} else {
-						return true
-					}
-				}
-			}
-		}
-		return false
-	},
 	"NeedCustomFilter": func(model models.Model, method string) bool {
 		if isList(method) {
 			for i, method2 := range model.Methods {
