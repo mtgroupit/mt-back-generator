@@ -14,44 +14,37 @@ For using this app install:
     GO111MODULE=on go get github.com/golang/mock/mockgen
     ```
 
+4. [Connecting to GitHub with SSH](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh)
+
 ## Installation
 
 ```bash
-git clone https://github.com/mtgroupit/mt-back-generator.git
+git clone git@github.com:mtgroupit/mt-back-generator.git
 cd mt-back-generator
 bash install
 ```
 
 ## Using
 
-Example:
-```bash
-mt-gen -dir=./generated/ -config=./config.yaml
-```
+1. Write the configuration
+    - [Documentation](https://www.notion.so/mtgroupit/4a109d202c0443e6b222d33dff3a2e4e)
+    - [Examples](./samples)
 
-## Features
+2. Generate the project from configuration
 
-### For models
+    ```bash
+    mt-gen -config=./samples/config_mini_demo.yaml
+    ```
 
-    detailed-pagination: true - добавляет count в response метода list
+    Options (flags)
+    - config - the path to the configuration (Default: "./config.yaml")
+    - dir - the target dir for the generated project (Default: "./generated/")
 
-    id-from-profile: true - позволяет совершать методы для текущего пользователя
 
-    return-when-edit: true - добавляет модель в response метода edit
+3. Go to the folder with the generated project and run the build script
 
-    tags:
-    - Tag - добавит тег Tag  во все эндпоинты модели
+    ```bash
+    bash build
+    ```
 
-### For columns
-
-    sort-on: true - позволяет делать сортировку по данной колонке в методе list
-
-    sort-by: этот параметр доступен только для колонок, которые являются структурам и позволяет устанавливать пути по которым должна быть возможность производить фильтрацию
-
-### For methods
-
-    edit(column2, column3) - в таком виде метод edit будет изменять только column2 и column3, а также находится в эндпоинте /model/editColumn2Column3
-
-    list(column1, column3*, model1*(column1, model1(column1, column2))) - в таком виде метод list будет возвращать только column2, column3 и model1..., то есть только рекурсивно указанные поля и фильтрация может производиться по column3 и по id model1, а также находится в эндпоинте /model/editColumn2Column3Model1
-
-    с методом list могут использоваться фильтры по вложенным объектам для этого в поле filter.Key нужно передать имя колонки и далее через "." колонку вложенного объекта, также таким образом можно углубляться до элемента любой глубины вложенности (пример filter.Key: "columnModel1.columnModel2.column")
+That's it, the project is ready to launch and use!
