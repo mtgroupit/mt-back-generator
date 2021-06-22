@@ -9,6 +9,7 @@ type Config struct {
 	Name             string
 	Module           string
 	AuthSrv          string `yaml:"auth-srv"`
+	Notifier         string
 	Description      string
 	Debug            bool
 	Models           map[string]Model

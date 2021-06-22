@@ -94,12 +94,15 @@ type Repo interface {
 type app struct {
 	repo     Repo
     {{- if .HaveCustomMethod}}
-        custRepo CustomsRepo
+    custRepo CustomsRepo
     {{- end}}
 	rulesSet RulesSet
+    {{- if .Notifier}}
+	mailer   Mailer
+    {{- end}}
 }
 
-func New(r Repo{{if .HaveCustomMethod}}, cr CustomsRepo{{end}}, rs RulesSet) (App{{if .HaveCustomMethod}}, Customs{{end}}) {
+func New(r Repo{{if .HaveCustomMethod}}, cr CustomsRepo{{end}}, rs RulesSet{{if .Notifier}}, mailer Mailer{{end}}) (App{{if .HaveCustomMethod}}, Customs{{end}}) {
 	return &app{
 		repo: r,
         rulesSet: rs,
@@ -107,6 +110,9 @@ func New(r Repo{{if .HaveCustomMethod}}, cr CustomsRepo{{end}}, rs RulesSet) (Ap
 		repo: r,
         rulesSet: rs,
         custRepo: cr,
+        {{- if .Notifier}}
+        mailer:   mailer,
+        {{- end}}
 	}{{end}}
 }
 

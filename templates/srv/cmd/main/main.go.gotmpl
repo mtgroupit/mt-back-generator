@@ -13,6 +13,9 @@ import (
 	"{{.Module}}/internal/authorization"
 	"{{.Module}}/internal/dal"
 	"{{.Module}}/internal/def"
+	{{- if .Notifier}}
+		"{{.Module}}/internal/mailer"
+	{{- end}}
 
 	extauthapi "{{.AuthSrv}}"
 	"github.com/powerman/pqx"
@@ -33,12 +36,17 @@ var (
 
 	log = structlog.New()
 	cfg struct {
-		logLevel string
-		gooseDir string
-		db       pqx.Config
-		api      api.Config
-		extauthEndpoint string{{if .Debug}}
-		resetDB   bool{{end}}
+		logLevel        string
+		gooseDir        string
+		db              pqx.Config
+		api             api.Config
+		{{- if .Notifier}}
+		mailer          mailer.Config
+		{{- end}}
+		extauthEndpoint string
+		{{- if .Debug}}
+		resetDB         bool
+		{{- end}}
 	}
 )
 
@@ -53,21 +61,28 @@ func init() {
 		cfg.db.SSLMode = pqx.SSLDisable
 	}
 	flag.StringVar(&cfg.logLevel, "log.level", "debug", "log `level` (debug|info|warn|err)")
+
 	flag.StringVar(&cfg.gooseDir, "goose.dir", def.GooseDir, "goose migrations `dir`")
 	flag.StringVar(&cfg.db.Host, "db.host", def.DBHost, "PostgreSQL `host`")
 	flag.IntVar(&cfg.db.Port, "db.port", def.DBPort, "PostgreSQL `port`")
 	flag.StringVar(&cfg.db.User, "db.user", def.DBUser, "PostgreSQL `user`")
 	flag.StringVar(&cfg.db.Pass, "db.pass", def.DBPass, "PostgreSQL `pass`")
 	flag.StringVar(&cfg.db.DBName, "db.name", def.DBName, "PostgreSQL `dbname`")
+	{{- if .Debug}}
+		flag.BoolVar(&cfg.resetDB, "db.reset", def.ResetDB, "reset database if true")
+	{{end}}
 
 	flag.StringVar(&cfg.api.Host, "api.host", def.APIHost, "serve API on `host`")
 	flag.IntVar(&cfg.api.Port, "api.port", def.APIPort, "serve API on `port` (>0)")
 	flag.StringVar(&cfg.api.BasePath, "api.basepath", def.APIBasePath, "serve API on `path`")
 	flag.StringVar(&cfg.api.AllowedOrigins, "api.allow-origins", def.CORSAllowedOrigins, "frontend url")
 
-	flag.StringVar(&cfg.extauthEndpoint, ExtauthEndpointFlag, def.ExtauthEndpoint, "extauth service `endpoint`"){{if .Debug}}
-
-	flag.BoolVar(&cfg.resetDB, "db.reset", def.ResetDB, "reset database if true"){{end}}
+	flag.StringVar(&cfg.extauthEndpoint, ExtauthEndpointFlag, def.ExtauthEndpoint, "extauth service `endpoint`")
+	{{if .Notifier}}
+		flag.StringVar(&cfg.mailer.From, "mailer.from", def.MailerFrom, "email from")
+		flag.StringVar(&cfg.mailer.NameFrom, "mailer.from-name", def.MailerFromName, "email from name")
+		flag.StringVar(&cfg.mailer.Pass, "mailer.pass", def.MailerPass, "email sender apikey")
+	{{end}}
 }
 
 func main() {
@@ -98,8 +113,10 @@ func connect() (app.App,{{if .HaveCustomMethod}} app.Customs,{{end}} *extauthapi
 	}
 
 	rulesSet := authorization.NewRulesSet()
-	
-	app{{if .HaveCustomMethod}}, cust{{end}} := app.New(r{{if .HaveCustomMethod}}, cr{{end}}, rulesSet)
+	{{if .Notifier}}
+	m := mailer.New(log, cfg.mailer)
+	{{end}}
+	app{{if .HaveCustomMethod}}, cust{{end}} := app.New(r{{if .HaveCustomMethod}}, cr{{end}}, rulesSet{{if .Notifier}}, m{{end}})
 	return app{{if .HaveCustomMethod}}, cust{{end}}, extAuthSvc, nil
 }
 

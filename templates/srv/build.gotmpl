@@ -27,6 +27,9 @@ mockgen -source=./internal/app/app_custom.go -destination=./internal/app/custom_
 {{- end}}
 mockgen -source=./internal/app/rules_set.go -destination=./internal/app/rules_set_mock.generated.go -package=app
 mockgen -source=./internal/api/auth.go -destination=./internal/api/auth_mock.generated.go -package=api
+{{- if .Notifier}}
+mockgen -source=./internal/app/mailer_custom.go -destination=./internal/app/mailer_mock.generated.go -package=app
+{{- end}}
 
 if !(grep -q 'insteadOf = https://github.com/' ~/.gitconfig) || !(grep -q 'url "git@github.com:"' ~/.gitconfig)
 then
