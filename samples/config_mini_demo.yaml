@@ -72,6 +72,7 @@ models:
         pattern: "^[A-Za-z ,.'-]+$"
       age:
         type: "int"
+        sort-on: true
       salary:
         type: "decimal"
       multiplierSalary:
