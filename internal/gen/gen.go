@@ -407,6 +407,9 @@ func Srv(dir string, cfg *models.Config) error {
 	if err := ensureDir(dir, ""); err != nil {
 		return err
 	}
+	if err := ensureDir(dir, cfg.Name); err != nil {
+		return err
+	}
 
 	abs, err = abspath.ExpandFrom("~/mt-gen/templates/srv")
 	if err != nil {
