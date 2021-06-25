@@ -117,6 +117,7 @@ func ExtractName(method string) string {
 }
 
 func extractNamePostfixForAdjustMethods(method string) string {
+	method = CleanMethodsOptions(method)
 	pattern := regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\(.+\)(\[(?P<value>[a-zA-Z0-9]+)\])?$`)
 	result := []byte{}
 	template := "$value"
@@ -127,6 +128,7 @@ func extractNamePostfixForAdjustMethods(method string) string {
 
 // ExtractStrNestedFields - returns the contents of the round brackets for the adjusted method
 func ExtractStrNestedFields(method string) string {
+	method = CleanMethodsOptions(method)
 	pattern := regexp.MustCompile(`^[a-zA-Z0-9]+\*{0,1}\((?P<value>.+)\)(\[[a-zA-Z0-9]+\])?$`)
 	result := []byte{}
 	template := "$value"

@@ -745,8 +745,11 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 		if models.IsAdjustList(method) {
 			var SQLSelect, filtredFields []string
 			fieldsStr := models.ExtractStrNestedFields(method)
+			fmt.Println(method, fieldsStr)
 			fieldsFull := models.SplitFields(fieldsStr)
+			fmt.Println(fieldsFull)
 			fields := models.TrimFieldsSuffix(fieldsFull)
+			fmt.Println(fields)
 			haveID := false
 			result.MethodsProps[i].JSONColumns = map[string]bool{}
 			result.MethodsProps[i].AvailableFilterKeys = map[string]bool{}
