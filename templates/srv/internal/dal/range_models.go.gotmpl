@@ -359,8 +359,10 @@ var {{$modelName}}Props = map[string]columnProps{
 			{{- end}}
 			offset = " OFFSET :offset"
 			namedVars["offset"] = params.Offset
-			limit = " LIMIT :limit"
-			namedVars["limit"] = params.Limit
+			if params.Limit != 0 {
+				limit = " LIMIT :limit"
+				namedVars["limit"] = params.Limit
+			}
 		{{end}}
 		
 		err = a.db.NamedSelect(&ms, sql{{if IsAdjustList $method}}{{ToAppMethodName $method}}{{else}}List{{end}}{{$modelName}}+sqlFilters+orderQuery+offset+limit, namedVars)
