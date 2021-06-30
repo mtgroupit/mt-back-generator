@@ -603,7 +603,7 @@ func fieldIsStruct(field string) bool {
 func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, parent string, nesting []string, isArray bool) ([]models.NestedObjProps, error) {
 	objs := []models.NestedObjProps{}
 	obj := models.NestedObjProps{}
-	obj.AvailableFilterKeys = map[string]bool{}
+	obj.AvailableKeys = map[string]bool{}
 
 	obj.Shared = modelsIn[modelName].Shared
 
@@ -621,8 +621,8 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, parent 
 				structModel = utilities.LowerTitle(options.BusinessType)
 				obj.Type = strings.Title(modelName)
 				haveFieldInColumns = true
-				if !options.IsArray && !isArray && !options.IsCustom {
-					obj.AvailableFilterKeys[strings.Join(append(nesting, field, fields[i]), ".")] = true
+				if !options.IsCustom {
+					obj.AvailableKeys[strings.Join(append(nesting, field, fields[i]), ".")] = true
 				}
 				break
 			}
@@ -749,7 +749,7 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 			fields := models.TrimFieldsSuffix(fieldsFull)
 			haveID := false
 			result.MethodsProps[i].JSONColumns = map[string]bool{}
-			result.MethodsProps[i].AvailableFilterKeys = map[string]bool{}
+			result.MethodsProps[i].AvailableKeys = map[string]bool{}
 			for j := range fields {
 				var haveFieldInColumns bool
 				var structModel string
@@ -757,8 +757,8 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 					if column == fields[j] {
 						structModel = options.Type
 						haveFieldInColumns = true
-						if !options.IsArray && !options.IsCustom {
-							result.MethodsProps[i].AvailableFilterKeys[fields[j]] = true
+						if !options.IsCustom {
+							result.MethodsProps[i].AvailableKeys[fields[j]] = true
 						}
 						break
 					}

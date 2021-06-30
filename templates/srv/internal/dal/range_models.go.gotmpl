@@ -268,19 +268,31 @@ var {{$modelName}}Props = map[string]columnProps{
 			var nestedSort bool
 		{{- end}}
 		switch params.SortBy {
-			{{- range $_, $column := (SortColumns $model.Columns)}}
-				{{- $options := (index $model.Columns $column)}}
-				{{- if and $options.SortOn (not $options.IsStruct) }}
-					case "{{$column}}":
-						orderQuery = "ORDER BY {{NameSQL $column}}"
+			{{- if (IsAdjustList $method)}}
+				{{- range $_, $key := (AvailableSortKeys $model.Columns (AvailableKeys (index $model.MethodsProps $i)))}}
+					{{- if Contains $key "."}}
+						case "{{$key}}":
+							nestedSort = true
+					{{- else}}
+						case "{{$key}}":
+							orderQuery = "ORDER BY {{$key}}"
+					{{- end}}
 				{{- end}}
-			{{- end}}
-			{{- if $haveNestedSorts}}
+			{{- else}}
 				{{- range $_, $column := (SortColumns $model.Columns)}}
 					{{- $options := (index $model.Columns $column)}}
-					{{- range $j, $sort := $options.SortBy}}
-					case "{{$column}}.{{$sort}}":
-						nestedSort = true
+					{{- if and $options.SortOn (not $options.IsStruct) }}
+						case "{{$column}}":
+							orderQuery = "ORDER BY {{NameSQL $column}}"
+					{{- end}}
+				{{- end}}
+				{{- if $haveNestedSorts}}
+					{{- range $_, $column := (SortColumns $model.Columns)}}
+						{{- $options := (index $model.Columns $column)}}
+						{{- range $j, $sort := $options.SortBy}}
+						case "{{$column}}.{{$sort}}":
+							nestedSort = true
+						{{- end}}
 					{{- end}}
 				{{- end}}
 			{{- end}}
@@ -288,7 +300,7 @@ var {{$modelName}}Props = map[string]columnProps{
 				{{- range $column, $options := $model.Columns}}
 					{{- if $options.SortDefault }}
 						orderQuery = "ORDER BY {{NameSQL $column}}"
-						{{- if $options.SortOrderDefault}}
+						{{- if and $options.SortOrderDefault (or ((not (IsAdjustList $method))) (and (IsAdjustList $method) (ContainsStr (AvailableSortKeys $model.Columns (AvailableKeys (index $model.MethodsProps $i))) $column)))}}
 							if params.OrderBy == "" {
 								params.OrderBy = "{{$options.SortOrderDefault}}"
 							}
@@ -459,12 +471,14 @@ var {{$modelName}}Props = map[string]columnProps{
 			{{- range $_, $column := (SortColumns $model.Columns)}}
 				{{- $options := (index $model.Columns $column)}}
 				{{- range $j, $sort := $options.SortBy}}
-				case "{{$column}}.{{$sort}}":
-					if orderByASC {
-						sort.Slice({{if $model.HaveLazyLoading}}result{{else}}result{{end}}, func(i, j int) bool { return {{if $model.HaveLazyLoading}}result{{else}}result{{end}}[i]{{index $options.NestedSorts $j}} < {{if $model.HaveLazyLoading}}result{{else}}result{{end}}[j]{{index $options.NestedSorts $j}} })
-					} else {
-						sort.Slice({{if $model.HaveLazyLoading}}result{{else}}result{{end}}, func(i, j int) bool { return {{if $model.HaveLazyLoading}}result{{else}}result{{end}}[i]{{index $options.NestedSorts $j}} >= {{if $model.HaveLazyLoading}}result{{else}}result{{end}}[j]{{index $options.NestedSorts $j}} })
-					}
+					{{- if or (not (IsAdjustList $method)) (and (IsAdjustList $method) (ContainsStr (AvailableSortKeys $model.Columns (AvailableKeys (index $model.MethodsProps $i))) (printf "%s.%s" $column $sort)))}}
+						case "{{$column}}.{{$sort}}":
+							if orderByASC {
+								sort.Slice({{if $model.HaveLazyLoading}}result{{else}}result{{end}}, func(i, j int) bool { return {{if $model.HaveLazyLoading}}result{{else}}result{{end}}[i]{{index $options.NestedSorts $j}} < {{if $model.HaveLazyLoading}}result{{else}}result{{end}}[j]{{index $options.NestedSorts $j}} })
+							} else {
+								sort.Slice({{if $model.HaveLazyLoading}}result{{else}}result{{end}}, func(i, j int) bool { return {{if $model.HaveLazyLoading}}result{{else}}result{{end}}[i]{{index $options.NestedSorts $j}} >= {{if $model.HaveLazyLoading}}result{{else}}result{{end}}[j]{{index $options.NestedSorts $j}} })
+							}
+					{{- end}}
 				{{- end}}
 			{{- end}}
 				}

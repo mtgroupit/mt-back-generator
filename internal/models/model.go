@@ -71,7 +71,7 @@ type MethodProps struct {
 	HTTPMethod           string
 	IsAdjustList         bool
 	NeedLazyLoading      bool
-	AvailableFilterKeys  map[string]bool
+	AvailableKeys        map[string]bool
 	HaveJSON             bool
 	JSONColumns          map[string]bool
 	AdjustSQLSelect      string
@@ -92,7 +92,7 @@ type NestedObjProps struct {
 	Path                  string
 	ParentStruct          string
 	NeedLazyLoading       bool
-	AvailableFilterKeys   map[string]bool
+	AvailableKeys         map[string]bool
 	IsArray               bool
 	IsFirstForLazyLoading bool
 	IsLastForLazyLoading  bool
