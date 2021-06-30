@@ -93,6 +93,7 @@ type NestedObjProps struct {
 	ParentStruct          string
 	NeedLazyLoading       bool
 	AvailableKeys         map[string]bool
+	JSONColumns           map[string]bool
 	IsArray               bool
 	IsFirstForLazyLoading bool
 	IsLastForLazyLoading  bool
