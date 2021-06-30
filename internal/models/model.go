@@ -79,7 +79,7 @@ type MethodProps struct {
 	CustomSQLEditStr     string
 	FilteredFields       []string
 	EditableFields       []string
-	NestedObjs           []NestedObjProps
+	NestedObjects           []NestedObjProps
 
 	Rules []string
 }

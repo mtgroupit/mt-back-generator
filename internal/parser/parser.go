@@ -410,12 +410,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			options := model.Columns[column]
 			if !options.IsStruct {
 				sqlName := utilities.NameSQL(options.TitleName)
-				titleName := options.TitleName
 				if options.IsArray || options.IsCustom {
 					sqlName += "_json"
-					titleName += "JSON"
-				} else {
-					titleName = "m." + titleName
 				}
 				SQLSelect = append(SQLSelect, sqlName)
 				if options.TitleName != "ID" {
@@ -515,11 +511,11 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 }
 
 func formatName(name string) string {
-	splitedName := regexp.MustCompile("[^a-zA-Z0-9]+").Split(name, -1)
-	for i := range splitedName {
-		splitedName[i] = strings.ToLower(splitedName[i])
+	splitName := regexp.MustCompile("[^a-zA-Z0-9]+").Split(name, -1)
+	for i := range splitName {
+		splitName[i] = strings.ToLower(splitName[i])
 	}
-	return strings.Join(splitedName, "-")
+	return strings.Join(splitName, "-")
 }
 
 func setDeepNesting(cfg *models.Config) (err error) {
@@ -600,8 +596,8 @@ func fieldIsStruct(field string) bool {
 	return regexp.MustCompile(`^[a-zA-Z0-9]+\(.+\)$`).Match([]byte(field))
 }
 
-func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, parent string, nesting []string, isArray bool) ([]models.NestedObjProps, error) {
-	objs := []models.NestedObjProps{}
+func handleNestedObjects(modelsIn map[string]models.Model, modelName, elem, parent string, nesting []string, isArray bool) ([]models.NestedObjProps, error) {
+	objects := []models.NestedObjProps{}
 	obj := models.NestedObjProps{}
 	obj.AvailableKeys = map[string]bool{}
 	obj.JSONColumns = map[string]bool{}
@@ -657,11 +653,11 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, parent 
 		}
 
 		if fieldIsStruct(fieldsFull[i]) {
-			objsForAdd, err := handleNestedObjs(modelsIn, structModel, fieldsFull[i], strings.Title(modelName), append(nesting, field), structIsArr)
+			objectsForAdd, err := handleNestedObjects(modelsIn, structModel, fieldsFull[i], strings.Title(modelName), append(nesting, field), structIsArr)
 			if err != nil {
 				return nil, err
 			}
-			objs = append(objs, objsForAdd...)
+			objects = append(objects, objectsForAdd...)
 		}
 
 	}
@@ -680,8 +676,8 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, parent 
 
 	result := []models.NestedObjProps{}
 	result = append(result, obj)
-	if len(objs) > 0 {
-		result = append(result, objs...)
+	if len(objects) > 0 {
+		result = append(result, objects...)
 	}
 	return result, nil
 }
@@ -749,7 +745,7 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 	result := *model
 	for i, method := range result.Methods {
 		if models.IsAdjustList(method) {
-			var SQLSelect, filtredFields []string
+			var SQLSelect, filteredFields []string
 			fieldsStr := models.ExtractStrNestedFields(method)
 			fieldsFull := models.SplitFields(fieldsStr)
 			fields := models.TrimFieldsSuffix(fieldsFull)
@@ -805,11 +801,11 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 				if fieldIsStruct(fieldsFull[j]) {
 					result.MethodsProps[i].NeedLazyLoading = true
 
-					objsForAdd, err := handleNestedObjs(modelsMap, structModel, fieldsFull[j], modelName, []string{}, structIsArr)
+					objectsForAdd, err := handleNestedObjects(modelsMap, structModel, fieldsFull[j], modelName, []string{}, structIsArr)
 					if err != nil {
 						return err
 					}
-					result.MethodsProps[i].NestedObjs = append(result.MethodsProps[i].NestedObjs, objsForAdd...)
+					result.MethodsProps[i].NestedObjects = append(result.MethodsProps[i].NestedObjects, objectsForAdd...)
 				}
 			}
 
@@ -817,26 +813,26 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 				SQLSelect = append(SQLSelect, "id")
 			}
 			result.MethodsProps[i].AdjustSQLSelect = strings.Join(SQLSelect, ",\n\t\t")
-			result.MethodsProps[i].FilteredFields = filtredFields
+			result.MethodsProps[i].FilteredFields = filteredFields
 			result.MethodsProps[i].IsAdjustList = true
 
-			sort.Slice(result.MethodsProps[i].NestedObjs, func(a, b int) bool {
-				return result.MethodsProps[i].NestedObjs[a].Path < result.MethodsProps[i].NestedObjs[b].Path
+			sort.Slice(result.MethodsProps[i].NestedObjects, func(a, b int) bool {
+				return result.MethodsProps[i].NestedObjects[a].Path < result.MethodsProps[i].NestedObjects[b].Path
 			})
 
-			for j := range result.MethodsProps[i].NestedObjs {
+			for j := range result.MethodsProps[i].NestedObjects {
 				if j == 0 {
-					result.MethodsProps[i].NestedObjs[j].IsFirstForLazyLoading = true
-					if len(result.MethodsProps[i].NestedObjs) == 1 {
-						result.MethodsProps[i].NestedObjs[j].IsLastForLazyLoading = true
+					result.MethodsProps[i].NestedObjects[j].IsFirstForLazyLoading = true
+					if len(result.MethodsProps[i].NestedObjects) == 1 {
+						result.MethodsProps[i].NestedObjects[j].IsLastForLazyLoading = true
 					}
 				} else {
-					if j == len(result.MethodsProps[i].NestedObjs)-1 {
-						result.MethodsProps[i].NestedObjs[j].IsLastForLazyLoading = true
+					if j == len(result.MethodsProps[i].NestedObjects)-1 {
+						result.MethodsProps[i].NestedObjects[j].IsLastForLazyLoading = true
 					}
-					if result.MethodsProps[i].NestedObjs[j].Path != result.MethodsProps[i].NestedObjs[j-1].Path {
-						result.MethodsProps[i].NestedObjs[j-1].IsLastForLazyLoading = true
-						result.MethodsProps[i].NestedObjs[j].IsFirstForLazyLoading = true
+					if result.MethodsProps[i].NestedObjects[j].Path != result.MethodsProps[i].NestedObjects[j-1].Path {
+						result.MethodsProps[i].NestedObjects[j-1].IsLastForLazyLoading = true
+						result.MethodsProps[i].NestedObjects[j].IsFirstForLazyLoading = true
 					}
 				}
 			}

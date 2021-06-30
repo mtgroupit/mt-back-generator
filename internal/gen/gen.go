@@ -318,7 +318,6 @@ var goTmplFuncs = template.FuncMap{
 		case parser.IsTypesAdditionalType(columnOptions.BusinessType):
 			appValue = fmt.Sprintf("%s.Decimal", appValue)
 		case parser.IsTimeFormat(columnOptions.Format):
-			appValue = fmt.Sprintf("%s", appValue)
 		default:
 			appValue = fmt.Sprintf("%s.%s", appValue, strings.Title(columnOptions.BusinessType))
 		}
@@ -368,7 +367,7 @@ var goTmplFuncs = template.FuncMap{
 		for key := range props.AvailableKeys {
 			availableKeys = append(availableKeys, key)
 		}
-		for _, nestProps := range props.NestedObjs {
+		for _, nestProps := range props.NestedObjects {
 			for key := range nestProps.AvailableKeys {
 				availableKeys = append(availableKeys, key)
 			}

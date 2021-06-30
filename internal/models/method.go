@@ -92,12 +92,8 @@ func getNameForAdjustMethods(method string) (result string) {
 
 // CleanMethodsOptions returns method without options ("{noSecure}", "{validate}").
 func CleanMethodsOptions(method string) string {
-	if strings.Contains(method, "{noSecure}") {
-		method = strings.Replace(method, "{noSecure}", "", -1)
-	}
-	if strings.Contains(method, "{validate}") {
-		method = strings.Replace(method, "{validate}", "", -1)
-	}
+	method = strings.Replace(method, "{noSecure}", "", -1)
+	method = strings.Replace(method, "{validate}", "", -1)
 	return method
 }
 
@@ -140,8 +136,8 @@ func SplitFields(fields string) []string {
 	var result []string
 	for {
 		fields = strings.Trim(fields, ", ")
-		if strings.Index(fields, ",") >= 0 {
-			if strings.Index(fields, ",") < strings.Index(fields, "(") || strings.Index(fields, "(") == -1 {
+		if strings.Contains(fields, ",") {
+			if strings.Index(fields, ",") < strings.Index(fields, "(") || !strings.Contains(fields, "(") {
 				substrs := regexp.MustCompile("[^a-zA-Z0-9*]+").Split(fields, 2)
 				result = append(result, substrs[0])
 				fields = substrs[1]

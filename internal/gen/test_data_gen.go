@@ -118,8 +118,7 @@ func genTestValue(columnOptions models.Options) (str string) {
 			}
 			str = fmt.Sprintf(`"%s"`, str)
 		case "date", "date-time":
-			dateTime := strfmt.NewDateTime()
-			dateTime.Scan(gofakeit.Date())
+			dateTime := strfmt.DateTime(gofakeit.Date())
 			str = fmt.Sprintf(`"%s"`, dateTime.String())
 		case "int", "int32", "int64":
 			str = fmt.Sprintf("%d", gofakeit.Int32())

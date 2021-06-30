@@ -150,9 +150,7 @@ func validateModels(cfg *models.Config) error {
 						return errors.Errorf(`Model: "%s". Required is not available for id column`, name)
 					}
 				} else {
-					if strings.HasPrefix(options.Type, arrayTypePrefix) {
-						options.Type = options.Type[len(arrayTypePrefix):]
-					}
+					options.Type = strings.TrimPrefix(options.Type, arrayTypePrefix)
 					lowerTitleBusinessType := utilities.LowerTitle(BusinessType)
 					if strings.HasPrefix(options.Type, structTypePrefix) {
 						if _, ok := cfg.Models[lowerTitleBusinessType]; !ok {
@@ -259,12 +257,8 @@ func validateCustomTypes(customTypes map[string]models.CustomType) error {
 				return errors.Errorf(`Custom type: "%s". "%s" is invalid name for field. %s`, customTypeName, fieldName, correctNameDescription)
 			}
 			fieldType := options.Type
-			if strings.HasPrefix(fieldType, arrayTypePrefix) {
-				fieldType = fieldType[len(arrayTypePrefix):]
-			}
-			if strings.HasPrefix(fieldType, customTypePrefix) {
-				fieldType = fieldType[len(customTypePrefix):]
-			}
+			fieldType = strings.TrimPrefix(fieldType, arrayTypePrefix)
+			fieldType = strings.TrimPrefix(fieldType, customTypePrefix)
 			if !IsStandardType(fieldType) {
 				_, ok := customTypes[fieldType]
 				if !ok {
@@ -307,9 +301,7 @@ func validateFormats(typeName, format string) error {
 	if format == "" {
 		return nil
 	}
-	if strings.HasPrefix(typeName, arrayTypePrefix) {
-		typeName = typeName[len(arrayTypePrefix):]
-	}
+	typeName = strings.TrimPrefix(typeName, arrayTypePrefix)
 
 	typeFormats, ok := formats[typeName]
 	if !ok {

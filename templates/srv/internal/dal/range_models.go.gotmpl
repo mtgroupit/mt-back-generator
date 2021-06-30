@@ -500,7 +500,7 @@ var {{$modelName}}Props = map[string]columnProps{
 	{{- end}}
 
 	{{- if and (IsAdjustList $method) ((index $model.MethodsProps $i).NeedLazyLoading)}}
-		{{- range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
+		{{- range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjects}}
 		{{- if $nestedObj.IsFirstForLazyLoading}}
 			func (m *{{if $nestedObj.Path}}{{$nestedObj.ParentStruct}}{{else}}{{$modelName}}{{end}})LazyLoading{{ToAppMethodName $method}}{{$nestedObj.Path}}({{if $nestedObj.Path}}{{if not  (index $.Models $nestedObj.ParentStruct).Shared}} isolatedEntityID string, {{end}}{{else}}{{if not $model.Shared}}isolatedEntityID string, {{end}}{{end}}a *Repo) (err error) { 
 		{{- end}} 
