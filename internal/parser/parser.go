@@ -410,12 +410,8 @@ func HandleCfg(inCfg *models.Config) (cfg *models.Config, err error) {
 			options := model.Columns[column]
 			if !options.IsStruct {
 				sqlName := utilities.NameSQL(options.TitleName)
-				titleName := options.TitleName
 				if options.IsArray || options.IsCustom {
 					sqlName += "_json"
-					titleName += "JSON"
-				} else {
-					titleName = "m." + titleName
 				}
 				SQLSelect = append(SQLSelect, sqlName)
 				if options.TitleName != "ID" {
