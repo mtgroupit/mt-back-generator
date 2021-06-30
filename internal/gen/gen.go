@@ -53,6 +53,7 @@ var goTmplFuncs = template.FuncMap{
 	"HaveField": func(method, modelName string) bool {
 		return strings.Contains(method, modelName)
 	},
+	"Contains":    strings.Contains,
 	"ContainsStr": utilities.ContainsStr,
 	"IsMyMethod":  models.IsMyMethod,
 	"HaveMyMethod": func(methods []string) bool {
@@ -364,11 +365,11 @@ var goTmplFuncs = template.FuncMap{
 	"SortColumns": parser.SortColumns,
 	"AvailableKeys": func(props models.MethodProps) (result []string) {
 		var availableKeys []string
-		for key := range props.AvailableFilterKeys {
+		for key := range props.AvailableKeys {
 			availableKeys = append(availableKeys, key)
 		}
 		for _, nestProps := range props.NestedObjs {
-			for key := range nestProps.AvailableFilterKeys {
+			for key := range nestProps.AvailableKeys {
 				availableKeys = append(availableKeys, key)
 			}
 		}
@@ -391,6 +392,23 @@ var goTmplFuncs = template.FuncMap{
 				}
 			} else {
 				result = append(result, key)
+			}
+		}
+		return
+	},
+	"AvailableSortKeys": func(columns map[string]models.Options, availableKeys []string) (result []string) {
+		for _, availableKey := range availableKeys {
+			if strings.Contains(availableKey, ".") {
+				parts := strings.SplitN(availableKey, ".", 2)
+				if options, ok := columns[parts[0]]; ok && options.SortOn {
+					if utilities.ContainsStr(options.SortBy, parts[1]) {
+						result = append(result, availableKey)
+					}
+				}
+			} else {
+				if options, ok := columns[availableKey]; ok && options.SortOn && !options.IsStruct {
+					result = append(result, availableKey)
+				}
 			}
 		}
 		return
