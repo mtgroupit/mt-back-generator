@@ -604,6 +604,7 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, parent 
 	objs := []models.NestedObjProps{}
 	obj := models.NestedObjProps{}
 	obj.AvailableKeys = map[string]bool{}
+	obj.JSONColumns = map[string]bool{}
 
 	obj.Shared = modelsIn[modelName].Shared
 
@@ -638,7 +639,11 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, parent 
 		for column, options := range modelsIn[modelName].Columns {
 			if fields[i] == column {
 				if !options.IsStruct {
-					SQLSelect = append(SQLSelect, utilities.NameSQL(column))
+					sqlName := utilities.NameSQL(options.TitleName)
+					if options.IsArray || options.IsCustom {
+						sqlName += "_json"
+					}
+					SQLSelect = append(SQLSelect, sqlName)
 				} else {
 					if !options.IsArray {
 						SQLSelect = append(SQLSelect, utilities.NameSQL(fields[i])+"_id")
@@ -647,6 +652,7 @@ func handleNestedObjs(modelsIn map[string]models.Model, modelName, elem, parent 
 					}
 					obj.NeedLazyLoading = true
 				}
+				obj.JSONColumns[column] = (!options.IsStruct && options.IsArray) || options.IsCustom
 			}
 		}
 
@@ -792,7 +798,7 @@ func handleAdjustLists(modelsMap map[string]models.Model, model *models.Model, m
 								structIsArr = true
 							}
 						}
-						result.MethodsProps[i].JSONColumns[column] = options.IsArray || options.IsCustom
+						result.MethodsProps[i].JSONColumns[column] = (!options.IsStruct && options.IsArray) || options.IsCustom
 					}
 				}
 

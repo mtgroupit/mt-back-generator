@@ -526,6 +526,15 @@ var {{$modelName}}Props = map[string]columnProps{
 					}); err != nil {
 						return
 					}
+					{{- range $column2, $options2 := $model2.Columns}}
+						{{- if  (index $nestedObj.JSONColumns $column2)}}
+							if err != sql.ErrNoRows {
+								if err = json.Unmarshal(elem.{{$options2.TitleName}}JSON, &elem.{{$options2.TitleName}}); err != nil {
+									return
+								}
+							}
+						{{- end}}
+					{{- end}}
 					{{- if $nestedObj.NeedLazyLoading}}
 						if err == nil {
 							if err = elem.LazyLoading{{ToAppMethodName $method}}{{$nestedObj.Path}}{{$nestedObj.Name}}({{if not $model2.Shared}}isolatedEntityID, {{end}}a); err != nil {
@@ -544,6 +553,15 @@ var {{$modelName}}Props = map[string]columnProps{
 				}); err != nil && err != sql.ErrNoRows {
 					return
 				}
+				{{- range $column2, $options2 := $model2.Columns}}
+					{{- if  (index $nestedObj.JSONColumns $column2)}}
+						if err != sql.ErrNoRows {
+							if err = json.Unmarshal(m.{{$nestedObj.Name}}.{{$options2.TitleName}}JSON, &m.{{$nestedObj.Name}}.{{$options2.TitleName}}); err != nil {
+								return
+							}
+						}
+					{{- end}}
+				{{- end}}
 				{{- if $nestedObj.NeedLazyLoading}}
 				if err == nil {
 					if err = m.{{$nestedObj.Name}}.LazyLoading{{ToAppMethodName $method}}{{$nestedObj.Name}}({{if not $model2.Shared}}isolatedEntityID, {{end}}a); err != nil {

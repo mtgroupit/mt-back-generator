@@ -102,7 +102,7 @@ models:
       - editMy(links)
       - deleteMy
       - list
-      - list(id, name, company(name, locations(id, name)))[withCompanyLocations]
+      - list(id, name, company(name, contacts, locations(id, name, links)))[withCompanyLocations]
       - custom
     rules-set:
       checkUserLocation:
@@ -120,7 +120,7 @@ models:
         - get
         - get(id, name, email, defaultPhone, phones)[contact]
         - list
-        - list(id, name, company(name, locations(id, name)))[withCompanyLocations]
+        - list(id, name, company(name, contacts, locations(id, name, links)))[withCompanyLocations]
         - custom
 
   company:
@@ -198,6 +198,8 @@ models:
       name:
         type: "string"
         required: true
+      links:
+        type: "custom.webContact"
     methods:
       - get{noSecure}
       - add
