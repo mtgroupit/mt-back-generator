@@ -318,7 +318,6 @@ var goTmplFuncs = template.FuncMap{
 		case parser.IsTypesAdditionalType(columnOptions.BusinessType):
 			appValue = fmt.Sprintf("%s.Decimal", appValue)
 		case parser.IsTimeFormat(columnOptions.Format):
-			appValue = fmt.Sprintf("%s", appValue)
 		default:
 			appValue = fmt.Sprintf("%s.%s", appValue, strings.Title(columnOptions.BusinessType))
 		}
