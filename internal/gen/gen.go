@@ -368,7 +368,7 @@ var goTmplFuncs = template.FuncMap{
 		for key := range props.AvailableKeys {
 			availableKeys = append(availableKeys, key)
 		}
-		for _, nestProps := range props.NestedObjs {
+		for _, nestProps := range props.NestedObjects {
 			for key := range nestProps.AvailableKeys {
 				availableKeys = append(availableKeys, key)
 			}

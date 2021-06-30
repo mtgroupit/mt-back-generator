@@ -207,7 +207,7 @@ const (
 		NOT deleted
 	`
 			{{if (index $model.MethodsProps $i).NeedLazyLoading}}
-				{{- range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjs}}
+				{{- range $j, $nestedObj := (index $model.MethodsProps $i).NestedObjects}}
 					{{- $model2 := (index $.Models $nestedObj.Type)}}
 						sqlGet{{$nestedObj.Name}}For{{ToAppMethodName $method}} = `
 	SELECT
