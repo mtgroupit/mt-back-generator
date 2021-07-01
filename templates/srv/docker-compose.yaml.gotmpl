@@ -17,6 +17,8 @@ services:
         GITHUB_PASS: ${GITHUB_PASS:?}
     ports:
       - ${MSRV_PORT:-9091}:${MSRV_PORT:-9091}
+    depends_on:
+      - db
     environment:
       MSRV_PORT: ${MSRV_PORT:-9091}
       MSRV_EXTAUTH_ENDPOINT: ${MSRV_EXTAUTH_ENDPOINT:-http://127.0.0.1:9090}
