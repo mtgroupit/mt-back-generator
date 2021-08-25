@@ -424,8 +424,7 @@ func Srv(dir string, cfg *models.Config) error {
 	if err := ensureDir(dir, ""); err != nil {
 		return err
 	}
-
-	if err := buildTreeDirs(dir, cfg.Name); err != nil {
+	if err := ensureDir(dir, cfg.Name); err != nil {
 		return err
 	}
 
@@ -449,6 +448,12 @@ func gen(dirTMPL, dirTarget string, cfg models.Config) error {
 
 	for _, info := range files {
 		if info.IsDir() {
+			if info.Name() == "mailer" && cfg.Notifier == "" {
+				continue
+			}
+			if err := ensureDir(dirTarget, info.Name()); err != nil {
+				return err
+			}
 			if err := gen(path.Join(dirTMPL, info.Name()), path.Join(dirTarget, info.Name()), cfg); err != nil {
 				return err
 			}
@@ -552,40 +557,44 @@ func exec(name, dirTMPL, dirTarget string, cfg models.Config) error {
 		}
 		fileName := name[:len(name)-len(".gotmpl")]
 		if strings.HasSuffix(name, "custom.go.gotmpl") && checkExistenseFile(path.Join(dirTarget, fileName)) {
-			file, err := ioutil.ReadFile(path.Join(dirTarget, fileName))
-			if err != nil {
-				return err
-			}
-			if strings.HasSuffix(dirTarget, "authorization") {
-				for _, attr := range cfg.AccessAttributes {
-					attrName := nameToTitle(attr)
-					if !regexp.MustCompile(`func \(attr \*attributes\) ` + attrName + `\(.*\) bool`).Match(file) {
-						t := template.Must(template.New("func").Parse(fmt.Sprintf(attrPattern, attrName)))
-						var buf bytes.Buffer
-						if err := t.Execute(&buf, nil); err != nil {
-							return err
-						}
-						file = append(file, buf.Bytes()...)
-					}
+			if !strings.HasSuffix(dirTarget, "mailer") && !strings.HasPrefix(fileName, "mailer_custom") {
+				file, err := ioutil.ReadFile(path.Join(dirTarget, fileName))
+				if err != nil {
+					return err
 				}
-			} else {
-				for modelName, model := range cfg.Models {
-					for _, method := range model.Methods {
-						if !model.IsStandardMethod(method) && !regexp.MustCompile(`\s`+models.ToAppMethodName(method)+modelName).Match(file) {
-							parts := strings.SplitN(string(file), "\n}\n", 3)
-							file = []byte(parts[0] + "\n\t" + models.ToAppMethodName(method) + modelName + `(prof Profile, m *` + modelName + ") error\n}\n" +
-								parts[1] + "\n\t" + models.ToAppMethodName(method) + modelName + `(m *` + modelName + ") error\n}\n" +
-								parts[2])
+				if strings.HasSuffix(dirTarget, "authorization") {
+					for _, attr := range cfg.AccessAttributes {
+						attrName := nameToTitle(attr)
+						if !regexp.MustCompile(`func \(attr \*attributes\) ` + attrName + `\(.*\) bool`).Match(file) {
+							t := template.Must(template.New("func").Parse(fmt.Sprintf(attrPattern, attrName)))
+							var buf bytes.Buffer
+							if err := t.Execute(&buf, nil); err != nil {
+								return err
+							}
+							file = append(file, buf.Bytes()...)
 						}
 					}
+				} else {
+					for modelName, model := range cfg.Models {
+						for _, method := range model.Methods {
+							if !model.IsStandardMethod(method) && !regexp.MustCompile(`\s`+models.ToAppMethodName(method)+modelName).Match(file) {
+								parts := strings.SplitN(string(file), "\n}\n", 3)
+								file = []byte(parts[0] + "\n\t" + models.ToAppMethodName(method) + modelName + `(prof Profile, m *` + modelName + ") error\n}\n" +
+									parts[1] + "\n\t" + models.ToAppMethodName(method) + modelName + `(m *` + modelName + ") error\n}\n" +
+									parts[2])
+							}
+						}
+					}
 				}
-			}
-			if err := ioutil.WriteFile(path.Join(dirTarget, fileName), file, 0644); err != nil {
-				return nil
+				if err := ioutil.WriteFile(path.Join(dirTarget, fileName), file, 0644); err != nil {
+					return nil
+				}
 			}
 		} else {
-			if err := createFile(fileName, dirTMPL, dirTarget, cfg, tmp); err != nil {
-				return err
+			if cfg.Notifier != "" || (!strings.HasSuffix(dirTarget, "mailer") && !strings.HasPrefix(fileName, "mailer_custom")) {
+				if err := createFile(fileName, dirTMPL, dirTarget, cfg, tmp); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -604,46 +613,6 @@ func createFile(name, dirTMPL, dirTarget string, cfg models.Config, tmp *templat
 	}
 
 	log.Printf("%s created", path.Clean(path.Join(dirTarget, name)))
-	return nil
-}
-
-func buildTreeDirs(p, srvName string) error {
-	if err := ensureDir(p, srvName); err != nil {
-		return err
-	}
-	if err := ensureDir(path.Join(p, srvName), "cmd"); err != nil {
-		return err
-	}
-	if err := ensureDir(path.Join(p, srvName, "cmd"), "main"); err != nil {
-		return err
-	}
-	if err := ensureDir(path.Join(p, srvName), "internal"); err != nil {
-		return err
-	}
-	if err := ensureDir(path.Join(p, srvName, "internal"), "app"); err != nil {
-		return err
-	}
-	if err := ensureDir(path.Join(p, srvName, "internal"), "api"); err != nil {
-		return err
-	}
-	if err := ensureDir(path.Join(p, srvName, "internal", "api"), "restapi"); err != nil {
-		return err
-	}
-	if err := ensureDir(path.Join(p, srvName, "internal"), "dal"); err != nil {
-		return err
-	}
-	if err := ensureDir(path.Join(p, srvName, "internal"), "def"); err != nil {
-		return err
-	}
-	if err := ensureDir(path.Join(p, srvName, "internal"), "types"); err != nil {
-		return err
-	}
-	if err := ensureDir(path.Join(p, srvName, "internal"), "authorization"); err != nil {
-		return err
-	}
-	if err := ensureDir(path.Join(p, srvName), "migration"); err != nil {
-		return err
-	}
 	return nil
 }
 
