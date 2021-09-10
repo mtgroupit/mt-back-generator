@@ -1,0 +1,18 @@
+#!/bin/bash
+# Swagger API generate
+
+if ! [ -x "$(command -v docker)" ]; then
+  echo 'Error: "docker" is not installed.' >&2
+  exit 1
+fi
+
+set -x -e -o pipefail
+
+rm -rf ./internal/api/restapi
+mkdir ./internal/api/restapi
+
+shopt -s expand_aliases
+alias swagger="docker run --rm -it -e GOPATH=$HOME/go:/go -v $HOME:$HOME -w $(pwd) quay.io/goswagger/swagger"
+swagger generate server -t ./internal/api/restapi -f ./swagger.yaml --exclude-main
+swagger generate client -t ./internal/api/restapi -f ./swagger.yaml
+sudo chown -R "$USER:$USER" ./internal/api/restapi/*

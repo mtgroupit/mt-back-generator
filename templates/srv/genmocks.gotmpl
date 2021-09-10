@@ -1,0 +1,16 @@
+#!/bin/bash
+# Mock generate
+
+if ! [ -x "$(command -v go)" ]; then
+  echo 'Error: "go" is not installed.' >&2
+  exit 1
+fi
+
+set -x -e -o pipefail
+
+go get github.com/golang/mock/mockgen
+export PATH=$PATH:$(go env GOPATH)/bin
+mockgen -source=./internal/app/app.go -destination=./internal/app/app_mock.generated.go -package=app
+mockgen -source=./internal/app/app_custom.go -destination=./internal/app/custom_mock.generated.go -package=app
+mockgen -source=./internal/app/rules_set.go -destination=./internal/app/rules_set_mock.generated.go -package=app
+mockgen -source=./internal/api/auth.go -destination=./internal/api/auth_mock.generated.go -package=api
