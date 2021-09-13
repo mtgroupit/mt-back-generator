@@ -74,8 +74,13 @@ func NewServer(appl app.App,{{if .HaveCustomMethod}}cust app.Customs,{{end}} ext
 	api := operations.New{{FormatName .Name}}API(swaggerSpec)
 
 	api.Logger = structlog.New(structlog.KeyUnit, "swagger").Printf
-	api.CookieKeyAuth = svc.checkerAuth
-	api.CsrfTokenAuth = svc.csrfTokenAuth
+	{{- if eq .AuthPath "bearer"}}
+		api.AuthKeyAuth = svc.checkerAuth
+	{{- end}}
+	{{- if eq .AuthPath "cookie"}}
+		api.CookieKeyAuth = svc.checkerAuth
+		api.CsrfTokenAuth = svc.csrfTokenAuth
+	{{- end}}
 
 	api.StandardHealthCheckHandler = standard.HealthCheckHandlerFunc(healthCheck)
 	{{- if .Debug}}

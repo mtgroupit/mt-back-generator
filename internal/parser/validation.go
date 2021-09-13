@@ -21,6 +21,9 @@ func validate(cfg *models.Config) error {
 	if cfg.AuthSrv == "" {
 		return errors.New("auth-srv is empty")
 	}
+	if !utilities.ContainsStr(authPaths, cfg.AuthPath) {
+		return errors.Errorf(`auth-path is required and must bu one of: %s. auth-path: "%s"`, strings.Join(authPaths, ", "), cfg.AuthPath)
+	}
 	if err := validateAccessAttributes(cfg.AccessAttributes); err != nil {
 		return err
 	}

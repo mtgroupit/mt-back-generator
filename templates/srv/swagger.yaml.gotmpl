@@ -10,6 +10,14 @@ produces:
 schemes:
   - http
 securityDefinitions:
+{{- if eq .AuthPath "bearer"}}
+  authKey:
+    description: Session token inside Authorization header.
+    type: apiKey
+    in: header
+    name: Authorization
+{{- end}}
+{{- if eq .AuthPath "cookie"}}
   cookieKey:
     description: Session token inside cookie.
     type: apiKey
@@ -20,10 +28,16 @@ securityDefinitions:
     type: apiKey
     in: header
     name: X-CSRFTokenBound
+{{- end}}
 security:
+{{- if eq .AuthPath "bearer"}}
+  - authKey: []
+{{- end}}
+{{- if eq .AuthPath "cookie"}}
   - cookieKey: []
   - cookieKey: []
     csrfToken: []
+{{- end}}
 paths:  
   /healthCheck:    
     get:
