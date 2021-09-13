@@ -3,6 +3,7 @@ module: "demo"
 description: "demo generated app"
 debug: true
 auth-srv: "github.com/mtgroupit/mt-mock-extauthapi"
+auth-path: "bearer"
 notifier: "github.com/Lisss13/notifier"
 
 add-profile-fields:

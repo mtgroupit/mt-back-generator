@@ -19,7 +19,8 @@ var (
 	isCorrectName          = regexp.MustCompile(`^[a-z][A-Za-z0-9]+$`).MatchString
 	correctNameDescription = "A valid name must contain only letters and numbers in camelCase"
 
-	roles = []string{"admin", "manager", "user", "guest"}
+	roles     = []string{"admin", "manager", "user", "guest"}
+	authPaths = []string{"bearer", "cookie"}
 )
 
 // ReadYAMLCfg create models.Config from configFile
