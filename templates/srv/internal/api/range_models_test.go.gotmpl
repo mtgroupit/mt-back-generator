@@ -1,4 +1,7 @@
-package api  {{$modelName := .CurModel}} {{$model := (index $.Models $modelName)}}
+package api
+{{- $modelName := .CurModel}}
+{{- $authPath := .AuthPath}}
+{{- $model := (index $.Models $modelName)}}
 
 import (
 	"testing"
@@ -22,7 +25,7 @@ func Test{{ToAppMethodName $method}}{{$modelName}}(tt *testing.T) {
 	})
 
 	{{- if not (IsNoSecureMethod $method)}}
-		mockExtAuthSvc.EXPECT().GetUserProfile(gomock.Any(), {{if eq .AuthPath "bearer"}}sess{{end}}{{if eq .AuthPath "cookie"}}matchCookie(sess){{end}}).Return(profile, nil)
+		mockExtAuthSvc.EXPECT().GetUserProfile(gomock.Any(), {{if eq $authPath "bearer"}}sess{{end}}{{if eq $authPath "cookie"}}matchCookie(sess){{end}}).Return(profile, nil)
 	{{- end}}
 	{{- if IsValidateMethod $method}}
 		mockExtAuthSvc.EXPECT().Validate(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -37,7 +40,7 @@ func Test{{ToAppMethodName $method}}{{$modelName}}(tt *testing.T) {
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
-			geted, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params{{if not (IsNoSecureMethod $method)}}, {{if eq .AuthPath "bearer"}}cl.APIKeyAuth("Authorization", "header", sess){{end}}{{if eq .AuthPath "cookie"}}cl.APIKeyAuth("Cookie", "header", sess){{end}}{{end}})
+			geted, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params{{if not (IsNoSecureMethod $method)}}, {{if eq $authPath "bearer"}}cl.APIKeyAuth("Authorization", "header", sess){{end}}{{if eq $authPath "cookie"}}cl.APIKeyAuth("Cookie", "header", sess){{end}}{{end}})
 			t.Nil(err)
 			t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}})))
 		})
@@ -48,7 +51,7 @@ func Test{{ToAppMethodName $method}}{{$modelName}}(tt *testing.T) {
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
-			geted, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params{{if not (IsNoSecureMethod $method)}}, {{if eq .AuthPath "bearer"}}cl.APIKeyAuth("Authorization", "header", sess){{end}}{{if eq .AuthPath "cookie"}}cl.APIKeyAuth("Cookie", "header", sess){{end}}{{end}})
+			geted, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params{{if not (IsNoSecureMethod $method)}}, {{if eq $authPath "bearer"}}cl.APIKeyAuth("Authorization", "header", sess){{end}}{{if eq $authPath "cookie"}}cl.APIKeyAuth("Cookie", "header", sess){{end}}{{end}})
 			t.Nil(err)
 			t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if $model.HaveLazyLoading}}, true{{end}})))
 		})
@@ -61,7 +64,7 @@ func Test{{ToAppMethodName $method}}{{$modelName}}(tt *testing.T) {
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
-			_, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params{{if not (IsNoSecureMethod $method)}}, {{if eq .AuthPath "bearer"}}cl.APIKeyAuth("Authorization", "header", sess){{end}}{{if eq .AuthPath "cookie"}}cl.APIKeyAuth("Cookie", "header", sess){{end}}{{end}})
+			_, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params{{if not (IsNoSecureMethod $method)}}, {{if eq $authPath "bearer"}}cl.APIKeyAuth("Authorization", "header", sess){{end}}{{if eq $authPath "cookie"}}cl.APIKeyAuth("Cookie", "header", sess){{end}}{{end}})
 			t.Nil(err)
 		})
 	{{- end}}
@@ -96,7 +99,7 @@ func Test{{ToAppMethodName $method}}{{$modelName}}(tt *testing.T) {
 		mockApp.EXPECT().{{ToAppMethodName $method}}{{$modelName}}(gomock.Any(), {{if not (IsMyMethod $method)}}gomock.Any(), {{end}}gomock.Any()).Return({{if $model.ReturnWhenEdit}}app{{$modelName}}(test{{$modelName}}1{{if IsAdjustEdit $method}}Edited{{end}}{{if $model.HaveLazyLoading}}, true{{end}}), {{end}}nil)
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
-			{{if $model.ReturnWhenEdit}}geted{{else}}_{{end}}, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params, {{if eq .AuthPath "bearer"}}cl.APIKeyAuth("Authorization", "header", sess){{end}}{{if eq .AuthPath "cookie"}}cl.APIKeyAuth("Cookie", "header", sess){{end}})
+			{{if $model.ReturnWhenEdit}}geted{{else}}_{{end}}, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params, {{if eq $authPath "bearer"}}cl.APIKeyAuth("Authorization", "header", sess){{end}}{{if eq $authPath "cookie"}}cl.APIKeyAuth("Cookie", "header", sess){{end}})
 			t.Nil(err)
 			{{- if $model.ReturnWhenEdit}}
 				t.DeepEqual(geted.Payload, api{{$modelName}}(app{{$modelName}}(test{{$modelName}}1{{if IsAdjustEdit $method}}Edited{{end}}{{if $model.HaveLazyLoading}}, true{{end}})))
@@ -109,7 +112,7 @@ func Test{{ToAppMethodName $method}}{{$modelName}}(tt *testing.T) {
 
 		t.Run("", func(tt *testing.T) {
 			t := check.T(tt)
-			list, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params{{if not (IsNoSecureMethod $method)}}, {{if eq .AuthPath "bearer"}}cl.APIKeyAuth("Authorization", "header", sess){{end}}{{if eq .AuthPath "cookie"}}cl.APIKeyAuth("Cookie", "header", sess){{end}}{{end}})
+			list, err := c.{{$model.TitleName}}.{{ToAppMethodName $method}}{{$modelName}}(params{{if not (IsNoSecureMethod $method)}}, {{if eq $authPath "bearer"}}cl.APIKeyAuth("Authorization", "header", sess){{end}}{{if eq $authPath "cookie"}}cl.APIKeyAuth("Cookie", "header", sess){{end}}{{end}})
 			t.Nil(err)
 			t.DeepEqual(list.Payload.Items, api{{$modelName}}s(app{{$modelName}}s(test{{$modelName}}s{{if $model.HaveLazyLoading}}, true{{end}})))
 		})
