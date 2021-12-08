@@ -143,6 +143,13 @@ type Bind struct {
 	IsArray   bool
 }
 
+//Bind binds tables for build add method
+type BindAdd struct {
+	ModelName string
+	FieldName string
+	IsArray   bool
+}
+
 // AddBind - adding external bind to model with name 'nameModelTo'.
 func (c *Config) AddBind(nameModelTo string, bind Bind) error {
 	modelTo, ok := c.Models[nameModelTo]
