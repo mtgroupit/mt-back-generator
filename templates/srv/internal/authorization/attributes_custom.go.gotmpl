@@ -6,7 +6,7 @@ import (
 )
 
 {{range $_, $attr := $.AccessAttributes}}
-    func (attr *attributes) {{Title $attr}}(prof app.Profile) bool {
+    func (a *attributes) {{Title $attr}}(prof app.Profile) bool {
         return true
     }
 {{end}}
