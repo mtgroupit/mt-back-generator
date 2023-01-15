@@ -25,18 +25,18 @@ func newAttributes() Attributes {
 	return &attributes{}
 }
 
-func (a *attributes) IsAdmin(prof app.Profile) bool {
+func (attr *attributes) IsAdmin(prof app.Profile) bool {
 	return prof.Authz.Admin
 }
 
-func (a *attributes) IsManager(prof app.Profile) bool {
+func (attr *attributes) IsManager(prof app.Profile) bool {
 	return prof.Authz.Manager
 }
 
-func (a *attributes) IsUser(prof app.Profile) bool {
+func (attr *attributes) IsUser(prof app.Profile) bool {
 	return prof.Authz.User
 }
 
-func (a *attributes) IsGuest(prof app.Profile) bool {
+func (attr *attributes) IsGuest(prof app.Profile) bool {
 	return !prof.Authn
 }
