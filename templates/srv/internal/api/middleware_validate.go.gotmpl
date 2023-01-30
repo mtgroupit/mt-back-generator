@@ -4,14 +4,13 @@ package api
 import (
 	"net"
 	"net/http"
-
-	extauthapi "{{.AuthSrv}}"
+    "github.com/go-openapi/runtime"
 )
 
 // Make sure not to overwrite this file after you generated it because all your edits would be lost!
 
 const (
-	headerValidate = extauthapi.ValidateHeaderName
+	headerValidate = runtime.HeaderAuthorization
 )
 
 // makeValidateToken creates middleware for checks validation token
