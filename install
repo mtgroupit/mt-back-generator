@@ -10,7 +10,7 @@ go mod tidy
 rm -rf ./bin
 mkdir ./bin
 go build -o ./bin ./cmd/mt-gen
-sudo cp ./bin/mt-gen /usr/bin/
+sudo cp ./bin/mt-gen /usr/bin
 rm -rf ./bin
 
 rm -rf ~/mt-gen
