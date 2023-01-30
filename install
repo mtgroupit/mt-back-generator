@@ -10,11 +10,7 @@ go mod tidy
 rm -rf ./bin
 mkdir ./bin
 go build -o ./bin ./cmd/mt-gen
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  sudo cp ./bin/mt-gen /usr/local/bin/
-else
-  sudo cp ./bin/mt-gen /usr/bin/
-fi
+sudo cp ./bin/mt-gen /usr/bin/
 rm -rf ./bin
 
 rm -rf ~/mt-gen

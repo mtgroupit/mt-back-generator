@@ -18,10 +18,16 @@ For using this app install:
 
 ## Installation
 
+
 ```bash
 git clone git@github.com:mtgroupit/mt-back-generator.git
 cd mt-back-generator
 bash install
+```
+
+### Installation via docker
+```bash
+   alias mt-gen="docker run --rm -it -w  $(pwd) -v $HOME:$HOME  docker.io/akhmaos/mt-gen:latest"
 ```
 
 ## Using
